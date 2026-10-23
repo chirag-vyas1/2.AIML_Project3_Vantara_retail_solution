@@ -1,0 +1,35 @@
+# Secrets
+customer-behaviour-prediction/.env
+customer-behaviour-prediction/.env.*
+!customer-behaviour-prediction/.env.example
+
+# Python environments and caches
+customer-behaviour-prediction/.venv/
+customer-behaviour-prediction/venv/
+customer-behaviour-prediction/env/
+customer-behaviour-prediction/**/__pycache__/
+customer-behaviour-prediction/**/*.py[cod]
+customer-behaviour-prediction/**/.pytest_cache/
+customer-behaviour-prediction/**/.ipynb_checkpoints/
+
+# IDE and operating system files
+customer-behaviour-prediction/.vscode/
+customer-behaviour-prediction/**/.vscode/
+customer-behaviour-prediction/**/.idea/
+customer-behaviour-prediction/**/.DS_Store
+customer-behaviour-prediction/**/Thumbs.db
+
+# Raw datasets
+customer-behaviour-prediction/data/raw/
+
+# Large intermediate dataset — keep locally for dashboard
+customer-behaviour-prediction/data/interim/cleaned_transactions.csv
+
+# Archives and backup files
+*.zip
+*.7z
+*.rar
+*.tar
+*.gz
+*.bak
+*.dump

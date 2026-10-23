@@ -1,0 +1,11 @@
+Feature_Condition,LIME_Weight,Direction
+Recency > 326.25,0.1884222961149384,Supports churn
+Engagement_Score <= 29.03,0.1434369683255088,Supports churn
+Stationery_Paper_Affinity > 0.10,-0.022571126140406603,Opposes churn
+0.50 < Seasonal_Purchase_Concentration <= 1.00,0.020092686608414033,Supports churn
+Total_Monetary_Value <= 325.61,0.01460753760984695,Supports churn
+Gifts_Seasonal_Affinity <= 0.00,0.01028818669977031,Supports churn
+-0.01 < Purchase_Frequency_Trend <= 0.00,0.009613439279820111,Supports churn
+0.00 < Lighting_Candles_Affinity <= 0.05,-0.008470857082979451,Opposes churn
+Interpurchase_Variance <= 0.00,-0.008372295322451928,Opposes churn
+148.38 < Average_Basket_Size <= 251.45,-0.0060700458780997765,Opposes churn

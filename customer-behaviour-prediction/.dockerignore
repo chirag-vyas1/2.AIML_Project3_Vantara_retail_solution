@@ -1,0 +1,16 @@
+.git
+.gitignore
+.vscode
+.ipynb_checkpoints
+__pycache__
+*.py[cod]
+.pytest_cache
+.coverage
+.venv
+venv
+.env
+.env.*
+!.env.example
+data/raw/
+notebook/
+backups/
