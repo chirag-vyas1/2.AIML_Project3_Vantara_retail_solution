@@ -1,36 +1,36 @@
 
-from pydantic import BaseModel, ConfigDict, StrictInt, StrictFloat
+from pydantic import BaseModel, ConfigDict, FiniteFloat, StrictInt
 
 
 class CustomerFeatures(BaseModel):
-    """The 27 engineered features required by the churn model."""
+    """Validate the 27 engineered features used by the churn model."""
 
     model_config = ConfigDict(extra="forbid")
 
-    Recency: StrictFloat
+    Recency: FiniteFloat
     Frequency: StrictInt
-    Total_Monetary_Value: StrictFloat
-    Average_Order_Spend: StrictFloat
-    Customer_Lifetime_Days: StrictFloat
-    Average_Basket_Size: StrictFloat
-    Purchase_Frequency_Trend: StrictFloat
-    Interpurchase_Variance: StrictFloat
-    Seasonal_Purchase_Concentration: StrictFloat
-    Home_Fragrance_Affinity: StrictFloat
-    Lighting_Candles_Affinity: StrictFloat
-    Stationery_Paper_Affinity: StrictFloat
-    Jewelry_Fashion_Accessories_Affinity: StrictFloat
-    Bags_Travel_Accessories_Affinity: StrictFloat
-    Kitchen_Dining_Affinity: StrictFloat
-    Storage_Organization_Affinity: StrictFloat
-    Garden_Outdoor_Affinity: StrictFloat
-    Bath_Personal_Care_Affinity: StrictFloat
-    Toys_Games_Affinity: StrictFloat
-    Party_Celebration_Affinity: StrictFloat
-    Gifts_Seasonal_Affinity: StrictFloat
-    Food_Consumables_Affinity: StrictFloat
-    Home_Decor_Affinity: StrictFloat
-    Other___Unclassified_Affinity: StrictFloat
-    Return_Rate: StrictFloat
-    Discount_Markdown_Sensitivity: StrictFloat
-    Engagement_Score: StrictFloat
+    Total_Monetary_Value: FiniteFloat
+    Average_Order_Spend: FiniteFloat
+    Customer_Lifetime_Days: FiniteFloat
+    Average_Basket_Size: FiniteFloat
+    Purchase_Frequency_Trend: FiniteFloat
+    Interpurchase_Variance: FiniteFloat
+    Seasonal_Purchase_Concentration: FiniteFloat
+    Home_Fragrance_Affinity: FiniteFloat
+    Lighting_Candles_Affinity: FiniteFloat
+    Stationery_Paper_Affinity: FiniteFloat
+    Jewelry_Fashion_Accessories_Affinity: FiniteFloat
+    Bags_Travel_Accessories_Affinity: FiniteFloat
+    Kitchen_Dining_Affinity: FiniteFloat
+    Storage_Organization_Affinity: FiniteFloat
+    Garden_Outdoor_Affinity: FiniteFloat
+    Bath_Personal_Care_Affinity: FiniteFloat
+    Toys_Games_Affinity: FiniteFloat
+    Party_Celebration_Affinity: FiniteFloat
+    Gifts_Seasonal_Affinity: FiniteFloat
+    Food_Consumables_Affinity: FiniteFloat
+    Home_Decor_Affinity: FiniteFloat
+    Other___Unclassified_Affinity: FiniteFloat
+    Return_Rate: FiniteFloat
+    Discount_Markdown_Sensitivity: FiniteFloat
+    Engagement_Score: FiniteFloat

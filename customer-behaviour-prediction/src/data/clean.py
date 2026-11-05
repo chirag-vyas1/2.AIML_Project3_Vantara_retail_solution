@@ -1,6 +1,7 @@
 ############################################## Data Cleaning Functions ################################################
 import pandas as pd
-
+ 
+    
 # 1. -------------- duplicate removal ---------------
 def clean_duplicates(df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -23,7 +24,6 @@ def clean_duplicates(df: pd.DataFrame) -> pd.DataFrame:
         cleaned_df = cleaned_df.drop_duplicates().reset_index(drop=True)
 
     return cleaned_df
-
 
 # 2. ----------- Handle Quantity And Price ----------
 def handle_quantity_and_price(
@@ -485,7 +485,6 @@ def handle_quantity_and_price(
 
 
 # 3. ----------- Standardize Descriptions ------------
-
 def standardize_descriptions(df: pd.DataFrame) -> pd.DataFrame:
     """
     Standardize product descriptions using a lookup table keyed by StockCode.
@@ -765,6 +764,8 @@ def clean_transaction_data(df: pd.DataFrame) -> pd.DataFrame:
     cleaned_df = handle_customer_id(cleaned_df)
 
     return cleaned_df
+
+
 # 6. ----------------- Private methods --------------------------------
 def validate_cleaned_data(
     df: pd.DataFrame,
@@ -1033,7 +1034,7 @@ def validate_cleaned_data(
     return validation_results
 
 
-# 7.-------------------  Validation ----------------------------------
+# 7.-------------------  Validation ---------------------------------- 
 def summarize_quantity_price_treatment(
     df: pd.DataFrame,
 ) -> dict:

@@ -725,7 +725,6 @@ def explain_customer_for_dashboard(
         "figure": figure,
     }
 
-
 """
 def explain_global_for_dashboard(
     explainer,
@@ -778,7 +777,6 @@ def explain_global_for_dashboard(
         "shap_explanation": explanation,
         "figure": figure,
     }"""
-
 
 def explain_global_for_dashboard(
     explainer,
@@ -834,3 +832,18 @@ def explain_global_for_dashboard(
         "shap_explanation": explanation,
         "figure": figure,
     }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

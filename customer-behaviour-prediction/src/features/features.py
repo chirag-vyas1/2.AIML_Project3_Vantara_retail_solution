@@ -5197,12 +5197,11 @@ def validate_seasonal_purchase_concentration_features(
 
 
 
-
 ###############################################################
 #---------- 7. product category affinity vectors --------------
 ###############################################################
 
-#---- 7.1 Create product category affinity vectors ----------------
+#---- 7.1 Analyze product category affinity vectors ----------------
 def analyze_product_taxonomy(df_cleaned):
     """
     Analyse and assign product categories for the genuine product universe.
