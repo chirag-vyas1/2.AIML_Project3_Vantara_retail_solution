@@ -1,84 +1,136 @@
 # Vantara Customer Behaviour Prediction API
 
-**API version:** 1.0.0  
+**API Version:** 1.0.0  
 **Framework:** FastAPI  
-**Purpose:** Customer churn prediction and SHAP-based model explanations
+**Model:** XGBoost Tuned Classifier (`xgboost_tuned_v2`)  
+**Purpose:** Customer churn prediction, batch inference and SHAP-based model explainability.
 
-This document describes the endpoints and request/response structures implemented in the supplied API source files.
+---
 
-## 1. Running the API
+# 1. Introduction
 
-When the API starts, it loads configuration and the classification model artifact using the `xgboost` model key. It stores the loaded model bundle in the FastAPI application state and initializes a SHAP `TreeExplainer` for reuse by explanation requests.
+The Vantara Customer Behaviour Prediction API provides machine-learning-powered customer churn predictions using engineered retail customer behavioural features.
 
-With the local Docker deployment running, use:
+The API exposes endpoints for:
 
-- API base URL: `http://localhost:8000`
-- Interactive Swagger documentation: `http://localhost:8000/docs`
-- OpenAPI schema: `http://localhost:8000/openapi.json`
-- Health check: `http://localhost:8000/health`
+- Individual customer churn prediction.
+- Batch customer prediction using JSON.
+- Batch customer prediction using CSV uploads.
+- Prediction using customer records stored in PostgreSQL.
+- Individual SHAP-based prediction explanations.
+- Global SHAP-based feature importance analysis.
+- Model metadata and service health monitoring.
+
+The application is implemented using FastAPI and integrates the trained classification model, SHAP explainability and PostgreSQL persistence functionality.
+
+## 1.1 API Deployment Information
+
+When running through Docker Compose:
+
+| Component | URL / Port |
+|---|---|
+| API Base URL | `http://localhost:8000` |
+| Swagger UI | `http://localhost:8000/docs` |
+| OpenAPI Schema | `http://localhost:8000/openapi.json` |
+| Health Endpoint | `http://localhost:8000/health` |
+| Dashboard | `http://localhost:8501` |
 
 The API application declares version `1.0.0`.
 
-## 2. Endpoint summary
+## 1.2 Model Initialization
 
-| Method | Endpoint | Purpose |
+During application startup:
+
+1. The application loads its configuration.
+2. The classification model artifact is loaded using the `xgboost` model key.
+3. The model bundle is stored in the FastAPI application state.
+4. A SHAP `TreeExplainer` is initialized for explainability operations.
+5. The loaded model is reused for subsequent prediction requests.
+
+The model bundle contains the model information and expected feature names used during prediction.
+
+---
+
+# 2. API Endpoint Overview
+
+The API provides eight endpoints.
+
+| Method | Endpoint | Description |
 |---|---|---|
 | GET | `/health` | Check API service health |
 | GET | `/metadata` | Retrieve loaded model metadata |
-| POST | `/predict` | Predict churn for one customer supplied in the request |
-| POST | `/predict/batch` | Predict churn for multiple customers supplied in the request |
-| POST | `/predict/customer/{customer_id}` | Retrieve stored customer features, predict churn, and persist the prediction |
-| POST | `/predict/batch/csv` | Upload a CSV and download a CSV prediction report |
-| POST | `/explain/shap/customer` | Return an individual prediction and SHAP contributions |
-| POST | `/explain/shap/global` | Return SHAP values and global mean-absolute feature importance |
+| POST | `/predict` | Predict churn for an individual customer |
+| POST | `/predict/batch` | Predict churn for multiple customers using JSON |
+| POST | `/predict/customer/{customer_id}` | Retrieve stored customer features and persist prediction |
+| POST | `/predict/batch/csv` | Upload a CSV and download prediction results |
+| POST | `/explain/shap/customer` | Generate individual SHAP explanations |
+| POST | `/explain/shap/global` | Generate global SHAP feature importance |
 
-## 3. Shared customer input schema
+---
 
-The single-customer prediction and individual SHAP endpoints accept a JSON object containing **all 27 engineered features** listed below.
+# 3. Customer Input Feature Schema
 
-The same `CustomerFeatures` schema is used for each customer in `/predict/batch` and for each item in the `customers` array of `/explain/shap/global`.
+The prediction model expects 27 engineered customer behavioural features.
 
-Validation rules implemented by Pydantic:
+The `CustomerFeatures` schema is used by:
 
-- All 27 fields are required.
-- All fields except `Frequency` must be finite numeric values (`FiniteFloat`).
-- `Frequency` must be a strict integer (`StrictInt`); a floating-point value such as `12.0` is not accepted as an integer.
-- Additional/unrecognized fields are forbidden.
-- Non-finite numeric values such as `NaN` and infinity are not accepted.
+- `POST /predict`
+- `POST /predict/batch`
+- `POST /explain/shap/customer`
+- `POST /explain/shap/global`
 
-| # | Field | Type |
+Each customer record must contain all 27 required features.
+
+## 3.1 Feature Definitions and Data Types
+
+| # | Feature Name | Data Type |
 |---:|---|---|
-| 1 | `Recency` | Finite number |
+| 1 | `Recency` | Finite numeric |
 | 2 | `Frequency` | Strict integer |
-| 3 | `Total_Monetary_Value` | Finite number |
-| 4 | `Average_Order_Spend` | Finite number |
-| 5 | `Customer_Lifetime_Days` | Finite number |
-| 6 | `Average_Basket_Size` | Finite number |
-| 7 | `Purchase_Frequency_Trend` | Finite number |
-| 8 | `Interpurchase_Variance` | Finite number |
-| 9 | `Seasonal_Purchase_Concentration` | Finite number |
-| 10 | `Home_Fragrance_Affinity` | Finite number |
-| 11 | `Lighting_Candles_Affinity` | Finite number |
-| 12 | `Stationery_Paper_Affinity` | Finite number |
-| 13 | `Jewelry_Fashion_Accessories_Affinity` | Finite number |
-| 14 | `Bags_Travel_Accessories_Affinity` | Finite number |
-| 15 | `Kitchen_Dining_Affinity` | Finite number |
-| 16 | `Storage_Organization_Affinity` | Finite number |
-| 17 | `Garden_Outdoor_Affinity` | Finite number |
-| 18 | `Bath_Personal_Care_Affinity` | Finite number |
-| 19 | `Toys_Games_Affinity` | Finite number |
-| 20 | `Party_Celebration_Affinity` | Finite number |
-| 21 | `Gifts_Seasonal_Affinity` | Finite number |
-| 22 | `Food_Consumables_Affinity` | Finite number |
-| 23 | `Home_Decor_Affinity` | Finite number |
-| 24 | `Other___Unclassified_Affinity` | Finite number |
-| 25 | `Return_Rate` | Finite number |
-| 26 | `Discount_Markdown_Sensitivity` | Finite number |
-| 27 | `Engagement_Score` | Finite number |
+| 3 | `Total_Monetary_Value` | Finite numeric |
+| 4 | `Average_Order_Spend` | Finite numeric |
+| 5 | `Customer_Lifetime_Days` | Finite numeric |
+| 6 | `Average_Basket_Size` | Finite numeric |
+| 7 | `Purchase_Frequency_Trend` | Finite numeric |
+| 8 | `Interpurchase_Variance` | Finite numeric |
+| 9 | `Seasonal_Purchase_Concentration` | Finite numeric |
+| 10 | `Home_Fragrance_Affinity` | Finite numeric |
+| 11 | `Lighting_Candles_Affinity` | Finite numeric |
+| 12 | `Stationery_Paper_Affinity` | Finite numeric |
+| 13 | `Jewelry_Fashion_Accessories_Affinity` | Finite numeric |
+| 14 | `Bags_Travel_Accessories_Affinity` | Finite numeric |
+| 15 | `Kitchen_Dining_Affinity` | Finite numeric |
+| 16 | `Storage_Organization_Affinity` | Finite numeric |
+| 17 | `Garden_Outdoor_Affinity` | Finite numeric |
+| 18 | `Bath_Personal_Care_Affinity` | Finite numeric |
+| 19 | `Toys_Games_Affinity` | Finite numeric |
+| 20 | `Party_Celebration_Affinity` | Finite numeric |
+| 21 | `Gifts_Seasonal_Affinity` | Finite numeric |
+| 22 | `Food_Consumables_Affinity` | Finite numeric |
+| 23 | `Home_Decor_Affinity` | Finite numeric |
+| 24 | `Other___Unclassified_Affinity` | Finite numeric |
+| 25 | `Return_Rate` | Finite numeric |
+| 26 | `Discount_Markdown_Sensitivity` | Finite numeric |
+| 27 | `Engagement_Score` | Finite numeric |
 
-### Illustrative customer payload
+## 3.2 Input Validation Rules
 
-The values below are synthetic examples to demonstrate the JSON structure. They are not recommended business thresholds or a sample from the project dataset.
+The Pydantic schema implements the following validation rules:
+
+1. All 27 features are mandatory.
+2. `Frequency` must be a strict integer (`StrictInt`).
+3. All other features must be finite numeric values (`FiniteFloat`).
+4. Floating-point values such as `12.0` are not accepted for `Frequency`.
+5. Additional or unrecognised JSON fields are not permitted.
+6. Non-finite values such as NaN and infinity are rejected.
+
+Invalid JSON payloads return HTTP `422 Unprocessable Entity`.
+
+## 3.3 Illustrative Customer Payload
+
+The following example demonstrates the expected JSON structure.
+
+These values are synthetic examples and do not represent actual customer records or recommended business thresholds.
 
 ```json
 {
@@ -112,15 +164,17 @@ The values below are synthetic examples to demonstrate the JSON structure. They 
 }
 ```
 
-## 4. Endpoint details
+---
 
-### 4.1 Health check
+# 4. API Endpoint Documentation
 
-`GET /health`
+## 4.1 Health Check
 
-Checks that the API health route is responding.
+**Endpoint:** `GET /health`
 
-**Successful response — `200 OK`**
+**Purpose:** Verify that the API health endpoint is responding.
+
+### Successful Response – HTTP 200
 
 ```json
 {
@@ -129,19 +183,28 @@ Checks that the API health route is responding.
 }
 ```
 
-This route reports the API service status. It does not perform a separate database health check.
+**Response fields:**
 
-### 4.2 Model metadata
+| Field | Description |
+|---|---|
+| `status` | API service status |
+| `service` | Application service name |
 
-`GET /metadata`
+**Important:** This endpoint checks API service responsiveness. It does not independently verify PostgreSQL database health.
 
-Returns metadata for the model bundle loaded when the API started.
+---
 
-**Successful response — `200 OK`**
+## 4.2 Model Metadata
+
+**Endpoint:** `GET /metadata`
+
+**Purpose:** Retrieve metadata associated with the classification model loaded during API startup.
+
+### Successful Response – HTTP 200
 
 ```json
 {
-  "model_name": "loaded-model-name",
+  "model_name": "xgboost_tuned_v2",
   "model_type": "classification",
   "n_features": 27,
   "feature_names": [
@@ -151,33 +214,31 @@ Returns metadata for the model bundle loaded when the API started.
 }
 ```
 
-The `feature_names` array contains the full feature list returned by the loaded model bundle. The shortened array above is illustrative, not a complete live response.
+The shortened `feature_names` array above is illustrative. The actual response contains the complete feature list returned by the loaded model bundle.
 
-### 4.3 Single-customer prediction
+**Response fields:**
 
-`POST /predict`
+| Field | Description |
+|---|---|
+| `model_name` | Loaded model name |
+| `model_type` | Model task type |
+| `n_features` | Number of model input features |
+| `feature_names` | Expected model feature names and order |
 
-Accepts one `CustomerFeatures` JSON object and returns a churn prediction.
+---
 
-**Request body:** One customer object using all 27 fields in Section 3.
+## 4.3 Individual Customer Prediction
 
-**Successful response — `200 OK`**
+**Endpoint:** `POST /predict`
 
-```json
-{
-  "model_name": "loaded-model-name",
-  "predicted_class": 1,
-  "churn_probability": 0.853
-}
-```
+**Purpose:** Generate a churn prediction for one customer.
 
-Response fields:
+### Request
 
-- `model_name`: Name of the loaded model artifact.
-- `predicted_class`: Predicted class returned by the classifier.
-- `churn_probability`: Probability corresponding specifically to class `1` (the churn class in this implementation).
+- Content-Type: `application/json`
+- Request body: One complete customer object containing all 27 features.
 
-**Example using curl**
+### Example using cURL
 
 ```bash
 curl -X POST "http://localhost:8000/predict" \
@@ -185,20 +246,53 @@ curl -X POST "http://localhost:8000/predict" \
   -d @customer.json
 ```
 
-Here, `customer.json` contains one complete customer payload matching Section 3.
+The `customer.json` file must contain a valid payload following Section 3.
 
-**Errors**
+### Successful Response – HTTP 200
 
-- `422 Unprocessable Entity`: Request body fails Pydantic validation, such as a missing field, extra field, invalid number, or non-integer `Frequency`.
-- `500 Internal Server Error`: The model prediction fails. The endpoint returns the detail message `The model could not generate a prediction.`
+```json
+{
+  "model_name": "xgboost_tuned_v2",
+  "predicted_class": 1,
+  "churn_probability": 0.853
+}
+```
 
-### 4.4 Batch prediction using JSON
+### Response Fields
 
-`POST /predict/batch`
+| Field | Description |
+|---|---|
+| `model_name` | Model used for prediction |
+| `predicted_class` | Predicted customer class |
+| `churn_probability` | Probability corresponding to class 1 |
 
-Accepts a JSON array of customer objects and predicts all customers in one model batch.
+### Error Responses
 
-**Request body:** An array of one or more complete customer objects matching Section 3.
+| HTTP Status | Description |
+|---|---|
+| 422 | Invalid request payload or Pydantic validation failure |
+| 500 | Model prediction failure |
+
+For model prediction errors, the endpoint returns:
+
+`The model could not generate a prediction.`
+
+---
+
+## 4.4 JSON Batch Prediction
+
+**Endpoint:** `POST /predict/batch`
+
+**Purpose:** Generate predictions for multiple customers in a single request.
+
+### Request
+
+- Content-Type: `application/json`
+- Request body: Array of complete customer objects.
+
+Each customer must contain all 27 required features.
+
+### Illustrative Request
 
 ```json
 [
@@ -234,15 +328,15 @@ Accepts a JSON array of customer objects and predicts all customers in one model
 ]
 ```
 
-**Successful response — `200 OK`**
+### Successful Response – HTTP 200
 
 ```json
 {
-  "model_name": "loaded-model-name",
+  "model_name": "xgboost_tuned_v2",
   "total_customers": 1,
   "predictions": [
     {
-      "model_name": "loaded-model-name",
+      "model_name": "xgboost_tuned_v2",
       "predicted_class": 1,
       "churn_probability": 0.853
     }
@@ -250,65 +344,124 @@ Accepts a JSON array of customer objects and predicts all customers in one model
 }
 ```
 
-**Errors**
+The example shows one customer for simplicity. The actual response contains one prediction record for each submitted customer.
 
-- `422 Unprocessable Entity`: Invalid customer payload or an empty array. The explicit empty-array detail is `At least one customer must be provided.`
-- `500 Internal Server Error`: The model could not generate batch predictions.
+### Validation and Errors
 
-### 4.5 Prediction for a customer stored in PostgreSQL
+| HTTP Status | Description |
+|---|---|
+| 422 | Invalid customer payload |
+| 422 | Empty customer array |
+| 500 | Batch model prediction failure |
 
-`POST /predict/customer/{customer_id}`
+An empty customer array returns:
 
-Uses a customer ID to retrieve that customer's stored feature values, generate a churn prediction, save the prediction, and return the result.
+`At least one customer must be provided.`
 
-**Path parameter**
+---
+
+## 4.5 Prediction Using a Customer Stored in PostgreSQL
+
+**Endpoint:** `POST /predict/customer/{customer_id}`
+
+**Purpose:** Retrieve an existing customer's stored feature values, generate a churn prediction and save the prediction result.
+
+This endpoint integrates the prediction API with the PostgreSQL persistence layer.
+
+### Path Parameter
 
 | Parameter | Type | Description |
 |---|---|---|
-| `customer_id` | Integer | Positive customer identifier used to retrieve stored features |
+| `customer_id` | Integer | Positive identifier of the customer |
 
-**Example**
+### Example
 
 ```bash
 curl -X POST "http://localhost:8000/predict/customer/12345"
 ```
 
-Replace `12345` with a customer ID whose feature record exists in the configured PostgreSQL database.
+Replace `12345` with a valid customer ID whose feature record exists in the configured database.
 
-**Successful response — `200 OK`**
+### Processing Workflow
+
+1. Receive the customer ID.
+2. Retrieve the customer's stored feature values.
+3. Generate a prediction using the loaded classification model.
+4. Save the prediction through the persistence function.
+5. Return the prediction response.
+
+### Successful Response – HTTP 200
 
 ```json
 {
-  "model_name": "loaded-model-name",
+  "model_name": "xgboost_tuned_v2",
   "predicted_class": 1,
   "churn_probability": 0.853
 }
 ```
 
-On success, the endpoint calls the prediction persistence function with the customer ID, model name, predicted class, and churn probability.
+### Error Responses
 
-**Errors**
+| HTTP Status | Description |
+|---|---|
+| 400 | Customer ID is not positive |
+| 404 | Customer feature record not found |
+| 422 | ValueError during stored feature processing |
+| 500 | Prediction or database persistence failure |
 
-- `400 Bad Request`: Customer ID is not a positive integer. Detail: `Customer ID must be a positive integer.`
-- `404 Not Found`: No stored customer feature record was found for that ID.
-- `422 Unprocessable Entity`: A `ValueError` occurred while processing the stored customer features.
-- `500 Internal Server Error`: Prediction or database persistence failed.
+**Important:** The endpoint requires a valid customer feature record in PostgreSQL. Database integration should be validated using an existing customer record before claiming this workflow has passed live testing.
 
-### 4.6 Batch prediction using CSV upload
+---
 
-`POST /predict/batch/csv`
+## 4.6 CSV Batch Prediction
 
-Accepts a multipart file upload and returns a downloadable CSV report.
+**Endpoint:** `POST /predict/batch/csv`
 
-**Request format:** `multipart/form-data`
+**Purpose:** Upload a CSV containing multiple customer records and download a CSV containing their churn predictions.
 
-| Form field | Type | Required | Description |
-|---|---|---:|---|
-| `file` | File | Yes | CSV file containing customer features |
+This endpoint is suitable for batch inference when customer data is available in tabular format.
 
-The uploaded filename must have a `.csv` extension. The endpoint writes the upload to a temporary directory, calls the batch CSV prediction service, reads the generated report, and streams it back. The temporary directory is removed after processing and the upload is closed.
+### Request Format
 
-**Example using curl**
+- Method: `POST`
+- Content-Type: `multipart/form-data`
+- Form field: `file`
+- Accepted file extension: `.csv`
+
+### Request Parameters
+
+| Form Field | Type | Required | Description |
+|---|---|---|---|
+| `file` | File | Yes | CSV containing customer features |
+
+### Input CSV Requirements
+
+The uploaded CSV must satisfy the following conditions:
+
+1. The filename must have a `.csv` extension.
+2. All 27 model feature columns must be present.
+3. Additional columns are permitted.
+4. All required model feature values must be numeric.
+5. Missing values in required model feature columns are rejected.
+6. Infinite or invalid model feature values are rejected.
+7. The CSV must contain customer records.
+
+### Processing Workflow
+
+The CSV prediction service performs these operations:
+
+1. Reads the uploaded CSV using Pandas.
+2. Checks that the input contains customer records.
+3. Validates the presence of all required model feature columns.
+4. Allows additional input columns.
+5. Selects the 27 model features in the expected model feature order.
+6. Converts and validates feature values as numeric.
+7. Checks for missing and invalid feature values.
+8. Generates predicted classes and class-1 probabilities.
+9. Preserves the original input columns.
+10. Appends the prediction results to the output CSV.
+
+### Example using cURL
 
 ```bash
 curl -X POST "http://localhost:8000/predict/batch/csv" \
@@ -316,33 +469,81 @@ curl -X POST "http://localhost:8000/predict/batch/csv" \
   --output churn_predictions.csv
 ```
 
-**Successful response — `200 OK`**
+### Successful Response – HTTP 200
 
-- Media type: `text/csv`
-- Download filename: `churn_predictions.csv`
-- Response body: CSV content produced by the batch prediction service.
+| Response Property | Value |
+|---|---|
+| Content-Type | `text/csv` |
+| Download filename | `churn_predictions.csv` |
+| Response body | Generated CSV prediction report |
 
-**Errors**
+### Output CSV Structure
 
-- `400 Bad Request`: Missing filename or filename extension is not `.csv`. Detail: `Please upload a CSV file.`
-- `422 Unprocessable Entity`: CSV parsing, file reading, or input validation error; the endpoint returns the underlying exception message.
-- `500 Internal Server Error`: Other CSV batch prediction failure.
+The service preserves all original input columns and appends three prediction columns.
 
-**Important implementation note:** The uploaded router delegates CSV column validation, prediction processing, and output-column construction to `src.services.batch_prediction_service.predict_batch_from_csv`. That service source was not included with the files used to prepare this document. Therefore, this document does not invent a CSV column order, extra CSV columns, or the exact output CSV headers. Confirm those details against the service implementation or a real generated report before publishing a CSV template.
+| Output Column | Description |
+|---|---|
+| `Predicted_Class` | Predicted customer class |
+| `Churn_Probability` | Probability corresponding to class 1 |
+| `Model_Name` | Model used to generate the prediction |
 
-### 4.7 Individual SHAP explanation
+### Illustrative Output
 
-`POST /explain/shap/customer`
+The following example demonstrates the appended prediction columns. Original customer feature columns are omitted for readability.
 
-Accepts one complete customer feature object and returns the model prediction together with SHAP contributions for that customer.
+| Customer | Predicted_Class | Churn_Probability | Model_Name |
+|---|---:|---:|---|
+| Customer 1 | 1 | 0.6181 | xgboost_tuned_v2 |
+| Customer 2 | 1 | 0.5884 | xgboost_tuned_v2 |
+| Customer 3 | 1 | 0.5709 | xgboost_tuned_v2 |
 
-**Request body:** One customer object using all 27 fields in Section 3.
+These values are from the synthetic records used during API validation.
 
-**Successful response — `200 OK`**
+### Error Responses
+
+| HTTP Status | Description |
+|---|---|
+| 400 | Missing filename or invalid CSV file extension |
+| 422 | CSV parsing or input validation failure |
+| 500 | Other CSV batch prediction failure |
+
+The service validates missing columns, empty records, missing feature values, non-numeric values and invalid/infinite feature values.
+
+### Live API Validation
+
+The endpoint was tested successfully using three synthetic customer records.
+
+Observed results:
+
+- HTTP status: `200`.
+- Response content type: `text/csv`.
+- Output CSV downloaded successfully.
+- All original input columns were preserved.
+- Three prediction columns were appended.
+- CSV predictions matched the JSON batch predictions for the same three customer records.
+
+**API Test Result: PASS**
+
+---
+
+## 4.7 Individual SHAP Explanation
+
+**Endpoint:** `POST /explain/shap/customer`
+
+**Purpose:** Generate an individual churn prediction with feature-level SHAP contributions.
+
+The endpoint accepts one complete customer feature object and returns the prediction together with the contribution of each feature to the model output.
+
+### Request
+
+- Content-Type: `application/json`
+- Request body: One customer object containing all 27 features.
+
+### Successful Response – HTTP 200
 
 ```json
 {
-  "model_name": "loaded-model-name",
+  "model_name": "xgboost_tuned_v2",
   "predicted_class": 1,
   "prediction_label": "Churn",
   "churn_probability": 0.853,
@@ -361,28 +562,86 @@ Accepts one complete customer feature object and returns the model prediction to
 }
 ```
 
-The values and shortened arrays above are illustrative. A real response contains the complete feature arrays and contribution records. Contribution records are sorted by descending absolute SHAP value.
+The shortened arrays and values are illustrative. The actual response contains all 27 feature records and corresponding arrays.
 
-Response fields:
+### Response Fields
 
-- `prediction_label`: `Churn` when predicted class is `1`, otherwise `No Churn`.
-- `churn_probability`: Probability for class `1`.
-- `contributions`: Feature name, input value, signed SHAP value, and absolute SHAP value for each feature.
-- `base_value`: Explainer base value returned by SHAP.
-- `feature_names`, `feature_values`, `shap_values`: Arrays aligned to the model feature order.
+| Field | Description |
+|---|---|
+| `model_name` | Model used for prediction |
+| `predicted_class` | Predicted class |
+| `prediction_label` | `Churn` or `No Churn` |
+| `churn_probability` | Probability for class 1 |
+| `contributions` | Individual feature-level SHAP contributions |
+| `base_value` | SHAP explainer base value |
+| `feature_names` | Model feature names |
+| `feature_values` | Input feature values |
+| `shap_values` | Corresponding SHAP values |
 
-**Errors**
+Contribution records are sorted in descending order of absolute SHAP value.
 
-- `422 Unprocessable Entity`: Invalid customer feature payload.
-- `500 Internal Server Error`: SHAP explanation could not be generated. Detail: `Unable to generate the customer SHAP explanation.`
+### Error Responses
 
-### 4.8 Global SHAP explanation
+| HTTP Status | Description |
+|---|---|
+| 422 | Invalid customer feature payload |
+| 500 | SHAP explanation generation failure |
 
-`POST /explain/shap/global`
+For SHAP explanation failures, the endpoint returns:
 
-Returns SHAP values for a group of customers and global feature importance calculated as mean absolute SHAP value across the submitted customers.
+`Unable to generate the customer SHAP explanation.`
 
-**Request body**
+### Live API Validation
+
+The endpoint was successfully tested using the same synthetic customer profile supplied to the individual prediction endpoint.
+
+Observed results:
+
+- Model: `xgboost_tuned_v2`.
+- Predicted class: `1`.
+- Churn probability: approximately `0.56655`.
+- SHAP contributions returned for all 27 features.
+- Base value and feature arrays returned successfully.
+
+The highest absolute SHAP contributions in this test were:
+
+1. `Engagement_Score`
+2. `Recency`
+3. `Seasonal_Purchase_Concentration`
+
+**API Test Result: PASS**
+
+---
+
+## 4.8 Global SHAP Explanation
+
+**Endpoint:** `POST /explain/shap/global`
+
+**Purpose:** Generate SHAP values for multiple customer records and calculate global feature importance.
+
+Global feature importance is calculated using the mean absolute SHAP value across the submitted customer records.
+
+### Request Structure
+
+The request contains:
+
+- `customers`: Array of customer feature objects.
+- `max_features`: Optional maximum number of features to return.
+
+### Request Constraints
+
+| Parameter | Requirement |
+|---|---|
+| `customers` | Required |
+| Minimum customers | 1 |
+| Maximum customers | 500 |
+| Customer schema | All 27 required features |
+| `max_features` | Optional |
+| Default `max_features` | 15 |
+| Minimum `max_features` | 1 |
+| Maximum `max_features` | 27 |
+
+### Illustrative Request
 
 ```json
 {
@@ -417,21 +676,15 @@ Returns SHAP values for a group of customers and global feature importance calcu
       "Engagement_Score": 0.72
     }
   ],
-  "max_features": 15
+  "max_features": 10
 }
 ```
 
-Request constraints:
-
-- `customers` is required and must contain between 1 and 500 customer objects.
-- Each customer must satisfy the complete `CustomerFeatures` schema.
-- `max_features` is optional; default is `15`, minimum is `1`, maximum is `27`.
-
-**Successful response — `200 OK`**
+### Successful Response – HTTP 200
 
 ```json
 {
-  "model_name": "loaded-model-name",
+  "model_name": "xgboost_tuned_v2",
   "customers_analysed": 1,
   "feature_names": ["Recency", "Frequency"],
   "feature_values": [[30.0, 12]],
@@ -445,48 +698,195 @@ Request constraints:
 }
 ```
 
-The shortened arrays above are illustrative. A real response contains all model features in `feature_names`, `feature_values`, and `shap_values`. The `importance` list is sorted by descending `mean_absolute_shap` and limited by `max_features`.
+The shortened arrays above are illustrative. The actual response contains the complete feature arrays and the requested number of importance records.
 
-**Errors**
+### Response Fields
 
-- `422 Unprocessable Entity`: Invalid request structure, customer features, empty or oversized customer list, or invalid `max_features`.
-- `500 Internal Server Error`: Global SHAP insights could not be generated. Detail: `Unable to generate global SHAP insights.`
+| Field | Description |
+|---|---|
+| `model_name` | Model used for explanation |
+| `customers_analysed` | Number of submitted customers |
+| `feature_names` | Model feature names |
+| `feature_values` | Customer feature matrix |
+| `shap_values` | SHAP contribution matrix |
+| `importance` | Global feature importance ranking |
 
-## 5. Prediction interpretation
+The `importance` list is sorted in descending order of `mean_absolute_shap` and limited by `max_features`.
 
-The implementation treats class `1` as the churn class when selecting the probability column. Interpret the response as follows:
+### Error Responses
 
-- `predicted_class = 1`: model predicts churn.
-- `predicted_class = 0`: model predicts no churn.
-- `churn_probability`: model probability for class `1`, represented as a numeric value between 0 and 1.
+| HTTP Status | Description |
+|---|---|
+| 422 | Invalid request structure or customer features |
+| 422 | Empty or oversized customer list |
+| 422 | Invalid `max_features` |
+| 500 | Global SHAP explanation failure |
 
-A probability is a model estimate, not a guarantee that a customer will churn. SHAP values describe how features contribute to the model output; they should not be interpreted as proof of causation.
+For SHAP global explanation failures, the endpoint returns:
 
-## 6. Validation and error handling
+`Unable to generate global SHAP insights.`
 
-FastAPI/Pydantic request validation is used for the JSON endpoints. Invalid request bodies generally return `422 Unprocessable Entity`. Endpoint-specific errors are listed under each endpoint above.
+### Live API Validation
 
-The application also exposes FastAPI's generated interactive API documentation at `/docs` and the OpenAPI schema at `/openapi.json`.
+The endpoint was successfully tested with three synthetic customer records and `max_features=10`.
 
-## 7. Implementation notes and scope
+Observed results:
 
-- The model and SHAP explainer are loaded once during application startup and stored on `app.state`.
-- The API startup code requests the `xgboost` classification artifact.
-- Model feature order is taken from the loaded model bundle when constructing prediction DataFrames.
-- The SHAP implementation uses `shap.TreeExplainer`.
-- The stored-customer endpoint reads customer features and persists its prediction through repository functions.
-- The CSV endpoint delegates CSV processing to a separate service module.
-- The supplied source files do not define authentication, authorization, rate limiting, or an explicit API-wide request-size limit. Do not assume those controls are present.
-- Database connection settings and schema/table definitions are outside the supplied API source files and are not specified here.
+- Customers analysed: 3.
+- SHAP values returned for all 27 features.
+- Global feature importance returned for 10 features.
+- Importance records sorted by descending mean absolute SHAP value.
 
-## 8. Source files reviewed
+The leading features in this test were:
 
-This documentation was prepared from the following supplied files:
+1. `Engagement_Score`
+2. `Recency`
+3. `Seasonal_Purchase_Concentration`
+4. `Stationery_Paper_Affinity`
+5. `Frequency`
+
+**API Test Result: PASS**
+
+---
+
+# 5. Prediction Interpretation
+
+The classification implementation treats class `1` as the churn class when selecting the probability column.
+
+| Prediction Output | Interpretation |
+|---|---|
+| `predicted_class = 1` | Model predicts that the customer will churn |
+| `predicted_class = 0` | Model predicts that the customer will not churn |
+| `churn_probability` | Model-estimated probability of class 1 |
+
+A churn probability is a model estimate, not a guarantee of future customer behaviour.
+
+SHAP values explain how individual features contribute to the model output. They should not be interpreted as proof of causation.
+
+---
+
+# 6. Validation and Error Handling
+
+The API uses FastAPI and Pydantic validation for JSON request bodies.
+
+The main validation and error-handling mechanisms include:
+
+- Required customer feature validation.
+- Strict integer validation for `Frequency`.
+- Finite numeric validation for other customer features.
+- Rejection of unexpected JSON fields.
+- Batch request size validation for global SHAP.
+- CSV file extension validation.
+- CSV column and data validation.
+- Database record lookup and prediction persistence handling.
+- Endpoint-specific error responses.
+
+## 6.1 Common HTTP Status Codes
+
+| Status Code | Meaning | Typical Scenario |
+|---|---|---|
+| 200 | OK | Successful API request |
+| 400 | Bad Request | Invalid CSV file or customer ID |
+| 404 | Not Found | Customer feature record not found |
+| 422 | Unprocessable Entity | Invalid input or schema validation |
+| 500 | Internal Server Error | Prediction, SHAP or persistence failure |
+
+FastAPI also provides interactive API documentation through `/docs` and an OpenAPI specification through `/openapi.json`.
+
+---
+
+# 7. API Testing Summary
+
+Live API testing was performed against the running Dockerized Vantara application.
+
+The tests used synthetic customer profiles and the loaded `xgboost_tuned_v2` model.
+
+## 7.1 Test Execution Results
+
+| Test ID | Test Description | Result |
+|---|---|---|
+| TC-01 | Docker services status | PASS |
+| TC-02 | Health and model metadata | PASS |
+| TC-03 | Individual customer prediction | PASS |
+| TC-04 | JSON batch prediction | PASS |
+| TC-05 | CSV batch prediction | PASS |
+| TC-06 | Individual SHAP explanation | PASS |
+| TC-07 | Global SHAP explanation | PASS |
+| TC-08 | PostgreSQL stored-customer prediction | PENDING |
+
+## 7.2 Test Environment
+
+| Component | Observed Configuration |
+|---|---|
+| API | Dockerized FastAPI application |
+| Dashboard | Dockerized dashboard application |
+| Database | PostgreSQL 18 |
+| Model | `xgboost_tuned_v2` |
+| Model Features | 27 |
+| API Port | 8000 |
+| Dashboard Port | 8501 |
+| Database Port | 5432 |
+
+## 7.3 Overall Test Status
+
+| Metric | Result |
+|---|---:|
+| Total planned tests | 8 |
+| Passed | 7 |
+| Failed | 0 |
+| Pending | 1 |
+| Executed test pass rate | 100% |
+
+The PostgreSQL database inspection confirmed the following application tables:
+
+- `vantara.customers`
+- `vantara.customer_features`
+- `vantara.churn_predictions`
+
+However, the table structures and stored customer records have not yet been validated for TC-08. Therefore, the stored-customer prediction endpoint remains pending.
+
+**Note:** The executed API tests validate endpoint functionality using synthetic inputs. They do not independently establish model accuracy or business effectiveness.
+
+---
+
+# 8. Implementation Notes and Limitations
+
+1. The classification model is loaded during application startup.
+2. The model bundle is stored in FastAPI application state.
+3. The API uses the `xgboost` model artifact key.
+4. Model feature order is taken from the loaded model bundle.
+5. SHAP explainability uses `shap.TreeExplainer`.
+6. Individual SHAP explanations return feature-level contributions.
+7. Global SHAP importance is calculated using mean absolute SHAP values.
+8. Stored-customer prediction uses repository functions for retrieving features and persisting predictions.
+9. CSV batch prediction delegates processing to `src/services/batch_prediction_service.py`.
+10. The CSV endpoint preserves original input columns and appends prediction results.
+11. The supplied implementation does not establish authentication, authorization, rate limiting or an explicit API-wide request-size limit. These capabilities should not be assumed to exist.
+12. The API health endpoint does not independently validate PostgreSQL connectivity.
+
+---
+
+# 9. Source Files Reviewed
+
+The API documentation was prepared using the following project files:
 
 - `api/main.py`
 - `api/schemas/prediction.py`
 - `api/routers/predict.py`
 - `api/routers/metadata.py`
 - `api/routers/explainability.py`
+- `src/services/batch_prediction_service.py`
 
-Before final submission, verify the CSV input/output contract against `src/services/batch_prediction_service.py` and verify the database behavior against the repository/persistence modules. Also run the live requests against the deployed container and compare the actual responses with the illustrative examples in this document.
+Live API behaviour was also checked through requests to the running Dockerized application.
+
+---
+
+# 10. Conclusion
+
+The Vantara Customer Behaviour Prediction API provides a modular interface for individual and batch customer churn prediction, CSV-based inference, database-backed prediction workflows and SHAP-based explainability.
+
+The API successfully executed seven live functional test cases covering service health, model metadata, individual prediction, JSON batch prediction, CSV batch prediction and individual and global SHAP explanations.
+
+PostgreSQL stored-customer prediction remains pending further validation.
+
+This API documentation describes the implemented functionality and the observed test results of the Vantara Retail Customer Behaviour Prediction application.
