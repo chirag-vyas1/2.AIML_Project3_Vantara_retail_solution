@@ -346,15 +346,24 @@ The notebooks support experimentation, while the Python modules organize reusabl
 
 ## 14. Current Project Status
 
-The following components have been exercised in the local development environment:
+## 14. Current Project Status
+
+The following components have been tested in the local development environment:
 
 - Docker image build and container startup
-- PostgreSQL database restoration and persistence
-- API startup and metadata endpoint
-- API-to-PostgreSQL connectivity
+- PostgreSQL database startup, connectivity, and persistence
+- FastAPI startup and metadata endpoint
+- Individual and batch prediction API endpoints
+- CSV-based batch prediction
+- Global and customer-level SHAP explanation endpoints
 - Streamlit dashboard access
+- Automated test suite: **108 tests passed**
+- Code quality checks using Ruff and Black
 
-These checks describe the local development environment and do not imply that the application has been deployed to a public production server.
+The project achieved **82% test coverage** across the source code.
+
+These results reflect testing in the local development environment. The application has not yet been deployed to a public production server.
+
 
 ## 15. Future Enhancements
 
@@ -378,6 +387,21 @@ AI/ML Engineering | Data Science | Machine Learning | Explainable AI | Model Dep
 GitHub: [@chirag-vyas1](https://github.com/chirag-vyas1)
 
 ---
+
 **Fresh-clone setup note:** This repository does not include all local datasets or a database backup. Before running the dashboard and database-dependent features in a fresh environment, provide any required input or intermediate datasets and initialize or restore the PostgreSQL database using the project's supported workflow. The local database contents from the development environment are not automatically included when cloning this repository.
 
 *This project is intended for learning, experimentation, and retail analytics development. Predictions and customer insights should be validated before being used to make consequential business decisions.*
+
+### Important: Existing Docker Image and Local Environment
+
+The application has been containerized and tested using Docker Compose in the local development environment.
+
+The following services are running successfully:
+
+- **FastAPI:** `http://localhost:8000`
+- **Streamlit Dashboard:** `http://localhost:8501`
+- **PostgreSQL:** Configured as the application's database service.
+
+The existing Docker image is the tested application image used in the current local environment. It is not necessary to rebuild the image unless the application source code or Docker dependencies are updated.
+
+**Note:** The repository does not include all local datasets, database backups, or environment credentials. For a fresh environment, provide the required datasets, configure the `.env` file, and initialize the database as described in Section 11.
