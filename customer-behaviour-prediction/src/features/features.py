@@ -1,12 +1,14 @@
-import pandas as pd
-import numpy as np
 import re
-from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import train_test_split
 from pathlib import Path
 
+import numpy as np
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+
+
 ################################################################################
-#--- Display function for dicumentation ----
+# --- Display function for dicumentation ----
 ################################################################
 def display_feature_validation(
     validation_result: dict,
@@ -63,9 +65,7 @@ def display_feature_validation(
             " ",
         ).title()
 
-        print(
-            f"{status:<8} {display_name}"
-        )
+        print(f"{status:<8} {display_name}")
 
     # ------------------------------------------------------------
     # Overall result
@@ -98,9 +98,7 @@ def display_feature_validation(
             " ",
         ).title()
 
-        print(
-            f"{display_name:<40}: {value}"
-        )
+        print(f"{display_name:<40}: {value}")
 
     # ------------------------------------------------------------
     # Failed checks
@@ -121,12 +119,12 @@ def display_feature_validation(
     print("=" * 75)
 
 
-
 ########################################################################
 #  1. Resency Frequency Monetary feature
 ########################################################################
 
-#------------ 1A. Analyze RFM basis ----------------
+
+# ------------ 1A. Analyze RFM basis ----------------
 def analyze_rfm_basis(
     df: pd.DataFrame,
     cutoff_date: pd.Timestamp,
@@ -172,8 +170,7 @@ def analyze_rfm_basis(
     # ---------------------------------------------------------
 
     customer_analysis = (
-        rfm_transactions
-        .groupby("Customer ID")
+        rfm_transactions.groupby("Customer ID")
         .agg(
             Last_Purchase_Date=("InvoiceDate", "max"),
             Frequency=("Invoice", "nunique"),
@@ -190,8 +187,7 @@ def analyze_rfm_basis(
     # ---------------------------------------------------------
 
     customer_analysis["Recency"] = (
-        cutoff_date
-        - customer_analysis["Last_Purchase_Date"]
+        cutoff_date - customer_analysis["Last_Purchase_Date"]
     ).dt.total_seconds() / (24 * 60 * 60)
 
     # ---------------------------------------------------------
@@ -199,25 +195,22 @@ def analyze_rfm_basis(
     # ---------------------------------------------------------
 
     customer_analysis["Average_Order_Spend"] = (
-        customer_analysis["Total_Monetary_Value"]
-        / customer_analysis["Frequency"]
+        customer_analysis["Total_Monetary_Value"] / customer_analysis["Frequency"]
     )
 
     # ---------------------------------------------------------
     # 5. Round analytical values
     # ---------------------------------------------------------
 
-    customer_analysis["Recency"] = (
-        customer_analysis["Recency"].round(2)
-    )
+    customer_analysis["Recency"] = customer_analysis["Recency"].round(2)
 
-    customer_analysis["Total_Monetary_Value"] = (
-        customer_analysis["Total_Monetary_Value"].round(2)
-    )
+    customer_analysis["Total_Monetary_Value"] = customer_analysis[
+        "Total_Monetary_Value"
+    ].round(2)
 
-    customer_analysis["Average_Order_Spend"] = (
-        customer_analysis["Average_Order_Spend"].round(2)
-    )
+    customer_analysis["Average_Order_Spend"] = customer_analysis[
+        "Average_Order_Spend"
+    ].round(2)
 
     # ---------------------------------------------------------
     # 6. Summary information
@@ -249,6 +242,7 @@ def analyze_rfm_basis(
         "customer_analysis": customer_analysis,
         "rfm_transactions": rfm_transactions,
     }
+
 
 # ----------- 1B. Create RMF feature ------------
 def create_rfm_features(
@@ -308,9 +302,7 @@ def create_rfm_features(
     missing_columns = required_columns - set(df.columns)
 
     if missing_columns:
-        raise ValueError(
-            f"Missing required columns: {sorted(missing_columns)}"
-        )
+        raise ValueError(f"Missing required columns: {sorted(missing_columns)}")
 
     # ---------------------------------------------------------
     # 2. Work on a copy so the input dataframe is not modified
@@ -334,15 +326,11 @@ def create_rfm_features(
     max_date = working_df["InvoiceDate"].max()
 
     if pd.isna(max_date):
-        raise ValueError(
-            "InvoiceDate contains no valid dates."
-        )
+        raise ValueError("InvoiceDate contains no valid dates.")
 
     if cutoff_date is None:
 
-        cutoff_date = (
-            max_date - pd.Timedelta(days=90)
-        )
+        cutoff_date = max_date - pd.Timedelta(days=90)
 
     else:
 
@@ -369,25 +357,16 @@ def create_rfm_features(
     # 6. Recency
     # ---------------------------------------------------------
 
-    last_purchase = (
-        rfm_transactions
-        .groupby("Customer ID")["InvoiceDate"]
-        .max()
-    )
+    last_purchase = rfm_transactions.groupby("Customer ID")["InvoiceDate"].max()
 
-    recency = (
-        cutoff_date - last_purchase
-    ).dt.total_seconds() / (24 * 60 * 60)
+    recency = (cutoff_date - last_purchase).dt.total_seconds() / (24 * 60 * 60)
 
     # ---------------------------------------------------------
     # 7. Frequency
     # ---------------------------------------------------------
 
     frequency = (
-        rfm_transactions
-        .groupby("Customer ID")["Invoice"]
-        .nunique()
-        .rename("Frequency")
+        rfm_transactions.groupby("Customer ID")["Invoice"].nunique().rename("Frequency")
     )
 
     # ---------------------------------------------------------
@@ -395,8 +374,7 @@ def create_rfm_features(
     # ---------------------------------------------------------
 
     total_monetary_value = (
-        rfm_transactions
-        .groupby("Customer ID")["Analytical Transaction Value"]
+        rfm_transactions.groupby("Customer ID")["Analytical Transaction Value"]
         .sum()
         .rename("Total_Monetary_Value")
     )
@@ -405,9 +383,9 @@ def create_rfm_features(
     # 9. Average Order Spend
     # ---------------------------------------------------------
 
-    average_order_spend = (
-        total_monetary_value / frequency
-    ).rename("Average_Order_Spend")
+    average_order_spend = (total_monetary_value / frequency).rename(
+        "Average_Order_Spend"
+    )
 
     # ---------------------------------------------------------
     # 10. Combine customer-level RFM features
@@ -429,64 +407,43 @@ def create_rfm_features(
 
     rfm["Recency"] = rfm["Recency"].round(2)
 
-    rfm["Total_Monetary_Value"] = (
-        rfm["Total_Monetary_Value"].round(2)
-    )
+    rfm["Total_Monetary_Value"] = rfm["Total_Monetary_Value"].round(2)
 
-    rfm["Average_Order_Spend"] = (
-        rfm["Average_Order_Spend"].round(2)
-    )
+    rfm["Average_Order_Spend"] = rfm["Average_Order_Spend"].round(2)
 
     # ---------------------------------------------------------
     # 12. Final validation
     # ---------------------------------------------------------
 
     if rfm["Customer ID"].duplicated().any():
-        raise ValueError(
-            "RFM output contains duplicate Customer IDs."
-        )
+        raise ValueError("RFM output contains duplicate Customer IDs.")
 
     if rfm["Recency"].isna().any():
-        raise ValueError(
-            "RFM output contains missing Recency values."
-        )
+        raise ValueError("RFM output contains missing Recency values.")
 
     if (rfm["Recency"] < 0).any():
-        raise ValueError(
-            "RFM output contains negative Recency values."
-        )
+        raise ValueError("RFM output contains negative Recency values.")
 
     if rfm["Frequency"].isna().any():
-        raise ValueError(
-            "RFM output contains missing Frequency values."
-        )
+        raise ValueError("RFM output contains missing Frequency values.")
 
     if (rfm["Frequency"] <= 0).any():
-        raise ValueError(
-            "RFM output contains zero or negative Frequency values."
-        )
+        raise ValueError("RFM output contains zero or negative Frequency values.")
 
     if rfm["Total_Monetary_Value"].isna().any():
-        raise ValueError(
-            "RFM output contains missing Total Monetary Value."
-        )
+        raise ValueError("RFM output contains missing Total Monetary Value.")
 
     if (rfm["Total_Monetary_Value"] <= 0).any():
-        raise ValueError(
-            "RFM output contains zero or negative Total Monetary Value."
-        )
+        raise ValueError("RFM output contains zero or negative Total Monetary Value.")
 
     if rfm["Average_Order_Spend"].isna().any():
-        raise ValueError(
-            "RFM output contains missing Average Order Spend."
-        )
+        raise ValueError("RFM output contains missing Average Order Spend.")
 
     if (rfm["Average_Order_Spend"] <= 0).any():
-        raise ValueError(
-            "RFM output contains zero or negative Average Order Spend."
-        )
+        raise ValueError("RFM output contains zero or negative Average Order Spend.")
 
     return rfm
+
 
 # ----------- 1C. Vadlidate RMF feature  ----------------
 def validate_rfm_features(
@@ -536,14 +493,10 @@ def validate_rfm_features(
     # ---------------------------------------------------------
 
     missing_columns = [
-        column
-        for column in required_columns
-        if column not in rfm_features.columns
+        column for column in required_columns if column not in rfm_features.columns
     ]
 
-    validation_results["required_columns_present"] = (
-        len(missing_columns) == 0
-    )
+    validation_results["required_columns_present"] = len(missing_columns) == 0
 
     validation_results["missing_columns"] = missing_columns
 
@@ -557,9 +510,7 @@ def validate_rfm_features(
 
     validation_results["customer_count"] = len(rfm_features)
 
-    validation_results["has_customers"] = (
-        len(rfm_features) > 0
-    )
+    validation_results["has_customers"] = len(rfm_features) > 0
 
     # ---------------------------------------------------------
     # 3. Customer ID validation
@@ -573,9 +524,7 @@ def validate_rfm_features(
         rfm_features["Customer ID"].duplicated().sum()
     )
 
-    validation_results["unique_customer_ids"] = (
-        rfm_features["Customer ID"].nunique()
-    )
+    validation_results["unique_customer_ids"] = rfm_features["Customer ID"].nunique()
 
     validation_results["customer_ids_valid"] = (
         validation_results["missing_customer_ids"] == 0
@@ -586,13 +535,9 @@ def validate_rfm_features(
     # 4. Recency validation
     # ---------------------------------------------------------
 
-    validation_results["missing_recency"] = int(
-        rfm_features["Recency"].isna().sum()
-    )
+    validation_results["missing_recency"] = int(rfm_features["Recency"].isna().sum())
 
-    validation_results["negative_recency"] = int(
-        (rfm_features["Recency"] < 0).sum()
-    )
+    validation_results["negative_recency"] = int((rfm_features["Recency"] < 0).sum())
 
     validation_results["recency_valid"] = (
         validation_results["missing_recency"] == 0
@@ -655,18 +600,14 @@ def validate_rfm_features(
     # ---------------------------------------------------------
 
     expected_average_order_spend = (
-        rfm_features["Total_Monetary_Value"]
-        / rfm_features["Frequency"]
+        rfm_features["Total_Monetary_Value"] / rfm_features["Frequency"]
     )
 
     monetary_difference = (
-        expected_average_order_spend
-        - rfm_features["Average_Order_Spend"]
+        expected_average_order_spend - rfm_features["Average_Order_Spend"]
     ).abs()
 
-    validation_results["maximum_monetary_difference"] = float(
-        monetary_difference.max()
-    )
+    validation_results["maximum_monetary_difference"] = float(monetary_difference.max())
 
     # Average Order Spend is rounded to 2 decimal places.
     # Therefore, a maximum difference of approximately 0.005
@@ -674,14 +615,11 @@ def validate_rfm_features(
 
     rounding_tolerance = 0.005 + 1e-9
 
-    validation_results["rounding_tolerance"] = (
-    rounding_tolerance
-    )
+    validation_results["rounding_tolerance"] = rounding_tolerance
 
     validation_results["monetary_consistency_valid"] = (
-    validation_results["maximum_monetary_difference"]
-    <= rounding_tolerance
-     )
+        validation_results["maximum_monetary_difference"] <= rounding_tolerance
+    )
 
     # ---------------------------------------------------------
     # 9. Overall validation
@@ -698,19 +636,17 @@ def validate_rfm_features(
         validation_results["monetary_consistency_valid"],
     ]
 
-    validation_results["passed"] = all(
-        validation_checks
-    )
+    validation_results["passed"] = all(validation_checks)
 
     return validation_results
 
 
-
 ####################################################################
-#------------ 2. CLV Feature Engineering -------------------
+# ------------ 2. CLV Feature Engineering -------------------
 ####################################################################
 
-#---------- 2.1.Analyze CLV feature -------------------
+
+# ---------- 2.1.Analyze CLV feature -------------------
 def analyze_clv_basis(
     df_cleaned: pd.DataFrame,
     rfm_features: pd.DataFrame,
@@ -769,14 +705,11 @@ def analyze_clv_basis(
         "Average_Order_Spend",
     }
 
-    missing_rfm_columns = (
-        required_rfm_columns - set(rfm_features.columns)
-    )
+    missing_rfm_columns = required_rfm_columns - set(rfm_features.columns)
 
     if missing_rfm_columns:
         raise ValueError(
-            f"Missing required RFM columns: "
-            f"{sorted(missing_rfm_columns)}"
+            f"Missing required RFM columns: " f"{sorted(missing_rfm_columns)}"
         )
 
     # =========================================================
@@ -793,9 +726,7 @@ def analyze_clv_basis(
         "Analytical Transaction Value",
     }
 
-    missing_transaction_columns = (
-        required_transaction_columns - set(df_cleaned.columns)
-    )
+    missing_transaction_columns = required_transaction_columns - set(df_cleaned.columns)
 
     if missing_transaction_columns:
         raise ValueError(
@@ -826,16 +757,11 @@ def analyze_clv_basis(
     maximum_invoice_date = working_df["InvoiceDate"].max()
 
     if pd.isna(maximum_invoice_date):
-        raise ValueError(
-            "InvoiceDate contains no valid dates."
-        )
+        raise ValueError("InvoiceDate contains no valid dates.")
 
     if cutoff_date is None:
 
-        cutoff_date = (
-            maximum_invoice_date
-            - pd.Timedelta(days=90)
-        )
+        cutoff_date = maximum_invoice_date - pd.Timedelta(days=90)
 
         cutoff_source = "Automatically calculated"
 
@@ -876,29 +802,20 @@ def analyze_clv_basis(
     # 8. Compare customer population with RFM
     # =========================================================
 
-    transaction_customers = set(
-        clv_transactions["Customer ID"].unique()
-    )
+    transaction_customers = set(clv_transactions["Customer ID"].unique())
 
-    rfm_customers = set(
-        rfm["Customer ID"].unique()
-    )
+    rfm_customers = set(rfm["Customer ID"].unique())
 
-    missing_from_rfm = (
-        transaction_customers - rfm_customers
-    )
+    missing_from_rfm = transaction_customers - rfm_customers
 
-    extra_rfm_customers = (
-        rfm_customers - transaction_customers
-    )
+    # extra_rfm_customers = (rfm_customers - transaction_customers)
 
     # =========================================================
     # 9. Customer-level historical information
     # =========================================================
 
     transaction_history = (
-        clv_transactions
-        .groupby("Customer ID")
+        clv_transactions.groupby("Customer ID")
         .agg(
             First_Purchase_Date=("InvoiceDate", "min"),
             Last_Purchase_Date=("InvoiceDate", "max"),
@@ -931,67 +848,50 @@ def analyze_clv_basis(
     # 12. Historical CLV
     # =========================================================
 
-    clv_analysis["Historical_CLV"] = (
-        clv_analysis["Total_Monetary_Value"]
-    )
+    clv_analysis["Historical_CLV"] = clv_analysis["Total_Monetary_Value"]
 
     # =========================================================
     # 13. Historical average order value
     # =========================================================
 
     clv_analysis["Historical_Average_Order_Value"] = (
-        clv_analysis["Historical_CLV"]
-        / clv_analysis["Frequency"]
+        clv_analysis["Historical_CLV"] / clv_analysis["Frequency"]
     )
 
     # =========================================================
     # 14. Round analytical values
     # =========================================================
 
-    clv_analysis["Customer_Lifetime_Days"] = (
-        clv_analysis["Customer_Lifetime_Days"].round(2)
-    )
+    clv_analysis["Customer_Lifetime_Days"] = clv_analysis[
+        "Customer_Lifetime_Days"
+    ].round(2)
 
-    clv_analysis["Historical_CLV"] = (
-        clv_analysis["Historical_CLV"].round(2)
-    )
+    clv_analysis["Historical_CLV"] = clv_analysis["Historical_CLV"].round(2)
 
-    clv_analysis["Historical_Average_Order_Value"] = (
-        clv_analysis[
-            "Historical_Average_Order_Value"
-        ].round(2)
-    )
+    clv_analysis["Historical_Average_Order_Value"] = clv_analysis[
+        "Historical_Average_Order_Value"
+    ].round(2)
 
     # =========================================================
     # 15. CLV distribution
     # =========================================================
 
-    clv_distribution = (
-        clv_analysis[
-            [
-                "Historical_CLV",
-                "Customer_Lifetime_Days",
-                "Historical_Average_Order_Value",
-            ]
-        ].describe()
-    )
+    clv_distribution = clv_analysis[
+        [
+            "Historical_CLV",
+            "Customer_Lifetime_Days",
+            "Historical_Average_Order_Value",
+        ]
+    ].describe()
 
     # =========================================================
     # 16. Lifetime analysis
     # =========================================================
 
-    zero_lifetime_customers = int(
-        (
-            clv_analysis["Customer_Lifetime_Days"]
-            == 0
-        ).sum()
-    )
+    zero_lifetime_customers = int((clv_analysis["Customer_Lifetime_Days"] == 0).sum())
 
     multiple_purchase_date_customers = int(
-        (
-            clv_analysis["Customer_Lifetime_Days"]
-            > 0
-        ).sum()
+        (clv_analysis["Customer_Lifetime_Days"] > 0).sum()
     )
 
     # =========================================================
@@ -999,36 +899,27 @@ def analyze_clv_basis(
     # =========================================================
 
     monetary_difference = (
-        clv_analysis["Total_Monetary_Value"]
-        - clv_analysis["Historical_CLV"]
+        clv_analysis["Total_Monetary_Value"] - clv_analysis["Historical_CLV"]
     ).abs()
 
-    maximum_rfm_clv_difference = float(
-        monetary_difference.max()
-    )
+    maximum_rfm_clv_difference = float(monetary_difference.max())
 
     # =========================================================
     # 18. RFM-to-CLV frequency consistency
     # =========================================================
 
     frequency_difference = (
-        clv_analysis["Frequency"]
-        - clv_analysis["Historical_Invoice_Count"]
+        clv_analysis["Frequency"] - clv_analysis["Historical_Invoice_Count"]
     ).abs()
 
-    maximum_frequency_difference = int(
-        frequency_difference.max()
-    )
+    maximum_frequency_difference = int(frequency_difference.max())
 
     # =========================================================
     # 19. Point-in-time leakage check
     # =========================================================
 
     transactions_after_cutoff = int(
-        (
-            clv_transactions["InvoiceDate"]
-            > cutoff_date
-        ).sum()
+        (clv_transactions["InvoiceDate"] > cutoff_date).sum()
     )
 
     # =========================================================
@@ -1040,69 +931,26 @@ def analyze_clv_basis(
         "cutoff_date": cutoff_date,
         "cutoff_source": cutoff_source,
         "prediction_window_days": 90,
-
-        "historical_transaction_count": len(
-            clv_transactions
-        ),
-
-        "customer_count": clv_analysis[
-            "Customer ID"
-        ].nunique(),
-
-        "distinct_invoice_count": clv_transactions[
-            "Invoice"
-        ].nunique(),
-
+        "historical_transaction_count": len(clv_transactions),
+        "customer_count": clv_analysis["Customer ID"].nunique(),
+        "distinct_invoice_count": clv_transactions["Invoice"].nunique(),
         "total_historical_revenue": round(
-            clv_transactions[
-                "Analytical Transaction Value"
-            ].sum(),
+            clv_transactions["Analytical Transaction Value"].sum(),
             2,
         ),
-
-        "minimum_historical_clv": clv_analysis[
-            "Historical_CLV"
-        ].min(),
-
-        "median_historical_clv": clv_analysis[
-            "Historical_CLV"
-        ].median(),
-
-        "maximum_historical_clv": clv_analysis[
-            "Historical_CLV"
-        ].max(),
-
-        "minimum_customer_lifetime_days": clv_analysis[
-            "Customer_Lifetime_Days"
-        ].min(),
-
+        "minimum_historical_clv": clv_analysis["Historical_CLV"].min(),
+        "median_historical_clv": clv_analysis["Historical_CLV"].median(),
+        "maximum_historical_clv": clv_analysis["Historical_CLV"].max(),
+        "minimum_customer_lifetime_days": clv_analysis["Customer_Lifetime_Days"].min(),
         "median_customer_lifetime_days": clv_analysis[
             "Customer_Lifetime_Days"
         ].median(),
-
-        "maximum_customer_lifetime_days": clv_analysis[
-            "Customer_Lifetime_Days"
-        ].max(),
-
-        "zero_lifetime_customers": (
-            zero_lifetime_customers
-        ),
-
-        "multiple_purchase_date_customers": (
-            multiple_purchase_date_customers
-        ),
-
-        "maximum_rfm_clv_difference": (
-            maximum_rfm_clv_difference
-        ),
-
-        "maximum_frequency_difference": (
-            maximum_frequency_difference
-        ),
-
-        "transactions_after_cutoff": (
-            transactions_after_cutoff
-        ),
+        "maximum_customer_lifetime_days": clv_analysis["Customer_Lifetime_Days"].max(),
+        "zero_lifetime_customers": (zero_lifetime_customers),
+        "multiple_purchase_date_customers": (multiple_purchase_date_customers),
+        "maximum_rfm_clv_difference": (maximum_rfm_clv_difference),
+        "maximum_frequency_difference": (maximum_frequency_difference),
+        "transactions_after_cutoff": (transactions_after_cutoff),
     }
 
     # =========================================================
@@ -1110,36 +958,17 @@ def analyze_clv_basis(
     # =========================================================
 
     validation = {
-        "customer_population_valid": (
-            len(missing_from_rfm) == 0
-        ),
-
-        "rfm_clv_monetary_consistency": (
-            maximum_rfm_clv_difference == 0
-        ),
-
-        "rfm_clv_frequency_consistency": (
-            maximum_frequency_difference == 0
-        ),
-
-        "point_in_time_cutoff_valid": (
-            transactions_after_cutoff == 0
-        ),
-
+        "customer_population_valid": (len(missing_from_rfm) == 0),
+        "rfm_clv_monetary_consistency": (maximum_rfm_clv_difference == 0),
+        "rfm_clv_frequency_consistency": (maximum_frequency_difference == 0),
+        "point_in_time_cutoff_valid": (transactions_after_cutoff == 0),
         "historical_clv_values_valid": (
-            clv_analysis["Historical_CLV"]
-            .notna()
-            .all()
-            and
-            (
-                clv_analysis["Historical_CLV"] > 0
-            ).all()
+            clv_analysis["Historical_CLV"].notna().all()
+            and (clv_analysis["Historical_CLV"] > 0).all()
         ),
     }
 
-    validation["passed"] = all(
-        validation.values()
-    )
+    validation["passed"] = all(validation.values())
 
     # =========================================================
     # 22. Return results
@@ -1152,6 +981,7 @@ def analyze_clv_basis(
         "clv_transactions": clv_transactions,
         "validation": validation,
     }
+
 
 # --------- 2.2 Create CLV feature ----------------
 def create_clv_features(
@@ -1213,14 +1043,11 @@ def create_clv_features(
         "Total_Monetary_Value",
     }
 
-    missing_rfm_columns = (
-        required_rfm_columns - set(rfm_features.columns)
-    )
+    missing_rfm_columns = required_rfm_columns - set(rfm_features.columns)
 
     if missing_rfm_columns:
         raise ValueError(
-            f"Missing required RFM columns: "
-            f"{sorted(missing_rfm_columns)}"
+            f"Missing required RFM columns: " f"{sorted(missing_rfm_columns)}"
         )
 
     # =========================================================
@@ -1237,9 +1064,7 @@ def create_clv_features(
         "Analytical Transaction Value",
     }
 
-    missing_transaction_columns = (
-        required_transaction_columns - set(df_cleaned.columns)
-    )
+    missing_transaction_columns = required_transaction_columns - set(df_cleaned.columns)
 
     if missing_transaction_columns:
         raise ValueError(
@@ -1270,16 +1095,11 @@ def create_clv_features(
     maximum_invoice_date = working_df["InvoiceDate"].max()
 
     if pd.isna(maximum_invoice_date):
-        raise ValueError(
-            "InvoiceDate contains no valid dates."
-        )
+        raise ValueError("InvoiceDate contains no valid dates.")
 
     if cutoff_date is None:
 
-        cutoff_date = (
-            maximum_invoice_date
-            - pd.Timedelta(days=90)
-        )
+        cutoff_date = maximum_invoice_date - pd.Timedelta(days=90)
 
     else:
 
@@ -1290,10 +1110,7 @@ def create_clv_features(
     # =========================================================
 
     if cutoff_date > maximum_invoice_date:
-        raise ValueError(
-            "Cutoff date cannot be later than "
-            "the maximum InvoiceDate."
-        )
+        raise ValueError("Cutoff date cannot be later than " "the maximum InvoiceDate.")
 
     # =========================================================
     # 7. Select qualifying historical transactions
@@ -1317,8 +1134,7 @@ def create_clv_features(
     # =========================================================
 
     customer_history = (
-        clv_transactions
-        .groupby("Customer ID")
+        clv_transactions.groupby("Customer ID")
         .agg(
             First_Purchase_Date=("InvoiceDate", "min"),
             Last_Purchase_Date=("InvoiceDate", "max"),
@@ -1332,8 +1148,7 @@ def create_clv_features(
     # =========================================================
 
     customer_history["Customer_Lifetime_Days"] = (
-        customer_history["Last_Purchase_Date"]
-        - customer_history["First_Purchase_Date"]
+        customer_history["Last_Purchase_Date"] - customer_history["First_Purchase_Date"]
     ).dt.total_seconds() / (24 * 60 * 60)
 
     # =========================================================
@@ -1352,9 +1167,7 @@ def create_clv_features(
     # 11. Historical CLV
     # =========================================================
 
-    clv_features["Historical_CLV"] = (
-        clv_features["Total_Monetary_Value"]
-    )
+    clv_features["Historical_CLV"] = clv_features["Total_Monetary_Value"]
 
     # =========================================================
     # 12. Merge customer history
@@ -1380,8 +1193,7 @@ def create_clv_features(
     # =========================================================
 
     clv_features["Historical_Average_Order_Value"] = (
-        clv_features["Historical_CLV"]
-        / clv_features["Frequency"]
+        clv_features["Historical_CLV"] / clv_features["Frequency"]
     )
 
     # =========================================================
@@ -1404,63 +1216,42 @@ def create_clv_features(
     # 15. Round numerical features
     # =========================================================
 
-    clv_features["Historical_CLV"] = (
-        clv_features["Historical_CLV"].round(2)
-    )
+    clv_features["Historical_CLV"] = clv_features["Historical_CLV"].round(2)
 
-    clv_features["Customer_Lifetime_Days"] = (
-        clv_features["Customer_Lifetime_Days"].round(2)
-    )
+    clv_features["Customer_Lifetime_Days"] = clv_features[
+        "Customer_Lifetime_Days"
+    ].round(2)
 
-    clv_features["Historical_Average_Order_Value"] = (
-        clv_features[
-            "Historical_Average_Order_Value"
-        ].round(2)
-    )
+    clv_features["Historical_Average_Order_Value"] = clv_features[
+        "Historical_Average_Order_Value"
+    ].round(2)
 
     # =========================================================
     # 16. Final validation
     # =========================================================
 
     if clv_features["Customer ID"].duplicated().any():
-        raise ValueError(
-            "CLV output contains duplicate Customer IDs."
-        )
+        raise ValueError("CLV output contains duplicate Customer IDs.")
 
     if clv_features["Historical_CLV"].isna().any():
-        raise ValueError(
-            "CLV output contains missing Historical CLV values."
-        )
+        raise ValueError("CLV output contains missing Historical CLV values.")
 
-    if (
-        clv_features["Historical_CLV"] <= 0
-    ).any():
-        raise ValueError(
-            "CLV output contains non-positive Historical CLV."
-        )
+    if (clv_features["Historical_CLV"] <= 0).any():
+        raise ValueError("CLV output contains non-positive Historical CLV.")
 
     if clv_features["Customer_Lifetime_Days"].isna().any():
-        raise ValueError(
-            "CLV output contains missing Customer Lifetime values."
-        )
+        raise ValueError("CLV output contains missing Customer Lifetime values.")
 
-    if (
-        clv_features["Customer_Lifetime_Days"] < 0
-    ).any():
-        raise ValueError(
-            "CLV output contains negative Customer Lifetime values."
-        )
+    if (clv_features["Customer_Lifetime_Days"] < 0).any():
+        raise ValueError("CLV output contains negative Customer Lifetime values.")
 
-    if clv_features[
-        "Historical_Average_Order_Value"
-    ].isna().any():
-        raise ValueError(
-            "CLV output contains missing Historical Average Order Value."
-        )
+    if clv_features["Historical_Average_Order_Value"].isna().any():
+        raise ValueError("CLV output contains missing Historical Average Order Value.")
 
     return clv_features
 
-#---------- 2.3 Validate CLV feature ----------------
+
+# ---------- 2.3 Validate CLV feature ----------------
 def validate_clv_features(
     clv_features: pd.DataFrame,
 ) -> dict:
@@ -1510,14 +1301,10 @@ def validate_clv_features(
     # =========================================================
 
     missing_columns = [
-        column
-        for column in required_columns
-        if column not in clv_features.columns
+        column for column in required_columns if column not in clv_features.columns
     ]
 
-    validation_results["required_columns_present"] = (
-        len(missing_columns) == 0
-    )
+    validation_results["required_columns_present"] = len(missing_columns) == 0
 
     validation_results["missing_columns"] = missing_columns
 
@@ -1529,13 +1316,9 @@ def validate_clv_features(
     # 2. Customer population
     # =========================================================
 
-    validation_results["customer_count"] = len(
-        clv_features
-    )
+    validation_results["customer_count"] = len(clv_features)
 
-    validation_results["has_customers"] = (
-        len(clv_features) > 0
-    )
+    validation_results["has_customers"] = len(clv_features) > 0
 
     # =========================================================
     # 3. Customer ID validation
@@ -1549,9 +1332,7 @@ def validate_clv_features(
         clv_features["Customer ID"].duplicated().sum()
     )
 
-    validation_results["unique_customer_ids"] = (
-        clv_features["Customer ID"].nunique()
-    )
+    validation_results["unique_customer_ids"] = clv_features["Customer ID"].nunique()
 
     validation_results["customer_ids_valid"] = (
         validation_results["missing_customer_ids"] == 0
@@ -1605,8 +1386,7 @@ def validate_clv_features(
     )
 
     invalid_purchase_date_order = (
-        clv_features["Last_Purchase_Date"]
-        < clv_features["First_Purchase_Date"]
+        clv_features["Last_Purchase_Date"] < clv_features["First_Purchase_Date"]
     )
 
     validation_results["invalid_purchase_date_order"] = int(
@@ -1624,26 +1404,16 @@ def validate_clv_features(
     # =========================================================
 
     validation_results["missing_historical_invoice_count"] = int(
-        clv_features[
-            "Historical_Invoice_Count"
-        ].isna().sum()
+        clv_features["Historical_Invoice_Count"].isna().sum()
     )
 
     validation_results["non_positive_historical_invoice_count"] = int(
-        (
-            clv_features[
-                "Historical_Invoice_Count"
-            ] <= 0
-        ).sum()
+        (clv_features["Historical_Invoice_Count"] <= 0).sum()
     )
 
     validation_results["historical_invoice_count_valid"] = (
-        validation_results[
-            "missing_historical_invoice_count"
-        ] == 0
-        and validation_results[
-            "non_positive_historical_invoice_count"
-        ] == 0
+        validation_results["missing_historical_invoice_count"] == 0
+        and validation_results["non_positive_historical_invoice_count"] == 0
     )
 
     # =========================================================
@@ -1651,26 +1421,16 @@ def validate_clv_features(
     # =========================================================
 
     validation_results["missing_average_order_value"] = int(
-        clv_features[
-            "Historical_Average_Order_Value"
-        ].isna().sum()
+        clv_features["Historical_Average_Order_Value"].isna().sum()
     )
 
     validation_results["non_positive_average_order_value"] = int(
-        (
-            clv_features[
-                "Historical_Average_Order_Value"
-            ] <= 0
-        ).sum()
+        (clv_features["Historical_Average_Order_Value"] <= 0).sum()
     )
 
     validation_results["average_order_value_valid"] = (
-        validation_results[
-            "missing_average_order_value"
-        ] == 0
-        and validation_results[
-            "non_positive_average_order_value"
-        ] == 0
+        validation_results["missing_average_order_value"] == 0
+        and validation_results["non_positive_average_order_value"] == 0
     )
 
     # =========================================================
@@ -1678,24 +1438,18 @@ def validate_clv_features(
     # =========================================================
 
     expected_average_order_value = (
-        clv_features["Historical_CLV"]
-        / clv_features["Historical_Invoice_Count"]
+        clv_features["Historical_CLV"] / clv_features["Historical_Invoice_Count"]
     )
 
     average_order_difference = (
-        expected_average_order_value
-        - clv_features[
-            "Historical_Average_Order_Value"
-        ]
+        expected_average_order_value - clv_features["Historical_Average_Order_Value"]
     ).abs()
 
-    maximum_average_order_difference = float(
-        average_order_difference.max()
-    )
+    maximum_average_order_difference = float(average_order_difference.max())
 
-    validation_results[
-        "maximum_average_order_difference"
-    ] = maximum_average_order_difference
+    validation_results["maximum_average_order_difference"] = (
+        maximum_average_order_difference
+    )
 
     # Values are rounded to two decimal places in the
     # feature-generation function, so a difference of
@@ -1703,15 +1457,10 @@ def validate_clv_features(
 
     rounding_tolerance = 0.005 + 1e-9
 
-    validation_results["rounding_tolerance"] = (
-        rounding_tolerance
-    )
+    validation_results["rounding_tolerance"] = rounding_tolerance
 
-    validation_results[
-        "average_order_value_consistency_valid"
-    ] = (
-        maximum_average_order_difference
-        <= rounding_tolerance
+    validation_results["average_order_value_consistency_valid"] = (
+        maximum_average_order_difference <= rounding_tolerance
     )
 
     # =========================================================
@@ -1719,26 +1468,18 @@ def validate_clv_features(
     # =========================================================
 
     expected_lifetime_days = (
-        clv_features["Last_Purchase_Date"]
-        - clv_features["First_Purchase_Date"]
+        clv_features["Last_Purchase_Date"] - clv_features["First_Purchase_Date"]
     ).dt.total_seconds() / (24 * 60 * 60)
 
     lifetime_difference = (
-        expected_lifetime_days
-        - clv_features["Customer_Lifetime_Days"]
+        expected_lifetime_days - clv_features["Customer_Lifetime_Days"]
     ).abs()
 
-    maximum_lifetime_difference = float(
-        lifetime_difference.max()
-    )
+    maximum_lifetime_difference = float(lifetime_difference.max())
 
-    validation_results[
-        "maximum_lifetime_difference"
-    ] = maximum_lifetime_difference
+    validation_results["maximum_lifetime_difference"] = maximum_lifetime_difference
 
-    validation_results[
-        "customer_lifetime_consistency_valid"
-    ] = (
+    validation_results["customer_lifetime_consistency_valid"] = (
         maximum_lifetime_difference <= 0.01
     )
 
@@ -1755,27 +1496,21 @@ def validate_clv_features(
         validation_results["purchase_dates_valid"],
         validation_results["historical_invoice_count_valid"],
         validation_results["average_order_value_valid"],
-        validation_results[
-            "average_order_value_consistency_valid"
-        ],
-        validation_results[
-            "customer_lifetime_consistency_valid"
-        ],
+        validation_results["average_order_value_consistency_valid"],
+        validation_results["customer_lifetime_consistency_valid"],
     ]
 
-    validation_results["passed"] = all(
-        validation_checks
-    )
+    validation_results["passed"] = all(validation_checks)
 
     return validation_results
 
 
-
 ################################################################
-#---------- 3. Average_basket_size feature engineering----------------
+# ---------- 3. Average_basket_size feature engineering----------------
 ################################################################
 
-#---- 3.1 A. analyze Average_basket_size feature -----
+
+# ---- 3.1 A. analyze Average_basket_size feature -----
 def analyze_avg_basket_size_basis(
     df_cleaned: pd.DataFrame,
     cutoff_date: pd.Timestamp | None = None,
@@ -1817,9 +1552,7 @@ def analyze_avg_basket_size_basis(
     missing_columns = required_columns - set(df_cleaned.columns)
 
     if missing_columns:
-        raise ValueError(
-            f"Missing required columns: {sorted(missing_columns)}"
-        )
+        raise ValueError(f"Missing required columns: {sorted(missing_columns)}")
 
     working_df = df_cleaned.copy()
 
@@ -1835,24 +1568,17 @@ def analyze_avg_basket_size_basis(
     maximum_invoice_date = working_df["InvoiceDate"].max()
 
     if pd.isna(maximum_invoice_date):
-        raise ValueError(
-            "InvoiceDate contains no valid dates."
-        )
+        raise ValueError("InvoiceDate contains no valid dates.")
 
     if cutoff_date is None:
-        cutoff_date = (
-            maximum_invoice_date
-            - pd.Timedelta(days=90)
-        )
+        cutoff_date = maximum_invoice_date - pd.Timedelta(days=90)
         cutoff_source = "Automatically calculated"
     else:
         cutoff_date = pd.Timestamp(cutoff_date)
         cutoff_source = "User supplied"
 
     if cutoff_date > maximum_invoice_date:
-        raise ValueError(
-            "cutoff_date cannot be later than the maximum InvoiceDate."
-        )
+        raise ValueError("cutoff_date cannot be later than the maximum InvoiceDate.")
 
     # ---------------------------------------------------------
     # Select qualifying historical purchases
@@ -1875,16 +1601,11 @@ def analyze_avg_basket_size_basis(
     # Calculate basket size at invoice level
     # ---------------------------------------------------------
 
-    invoice_baskets = (
-        basket_transactions
-        .groupby(
-            ["Customer ID", "Invoice"],
-            as_index=False
-        )
-        .agg(
-            Basket_Size=("Quantity", "sum"),
-            Invoice_Date=("InvoiceDate", "max"),
-        )
+    invoice_baskets = basket_transactions.groupby(
+        ["Customer ID", "Invoice"], as_index=False
+    ).agg(
+        Basket_Size=("Quantity", "sum"),
+        Invoice_Date=("InvoiceDate", "max"),
     )
 
     # ---------------------------------------------------------
@@ -1892,39 +1613,19 @@ def analyze_avg_basket_size_basis(
     # ---------------------------------------------------------
 
     customer_basket_analysis = (
-        invoice_baskets
-        .groupby("Customer ID")
+        invoice_baskets.groupby("Customer ID")
         .agg(
-            Total_Qualifying_Quantity=(
-                "Basket_Size",
-                "sum"
-            ),
-            Number_of_Orders=(
-                "Invoice",
-                "nunique"
-            ),
-            Minimum_Basket_Size=(
-                "Basket_Size",
-                "min"
-            ),
-            Median_Basket_Size=(
-                "Basket_Size",
-                "median"
-            ),
-            Maximum_Basket_Size=(
-                "Basket_Size",
-                "max"
-            ),
+            Total_Qualifying_Quantity=("Basket_Size", "sum"),
+            Number_of_Orders=("Invoice", "nunique"),
+            Minimum_Basket_Size=("Basket_Size", "min"),
+            Median_Basket_Size=("Basket_Size", "median"),
+            Maximum_Basket_Size=("Basket_Size", "max"),
         )
         .reset_index()
     )
 
-    customer_basket_analysis[
-        "Average_Basket_Size"
-    ] = (
-        customer_basket_analysis[
-            "Total_Qualifying_Quantity"
-        ]
+    customer_basket_analysis["Average_Basket_Size"] = (
+        customer_basket_analysis["Total_Qualifying_Quantity"]
         / customer_basket_analysis["Number_of_Orders"]
     )
 
@@ -1937,53 +1638,24 @@ def analyze_avg_basket_size_basis(
         "cutoff_date": cutoff_date,
         "cutoff_source": cutoff_source,
         "prediction_window_days": 90,
-
-        "historical_transaction_count": len(
-            basket_transactions
-        ),
-
-        "customer_count": (
-            customer_basket_analysis[
-                "Customer ID"
-            ].nunique()
-        ),
-
-        "distinct_invoice_count": (
-            invoice_baskets["Invoice"].nunique()
-        ),
-
-        "total_qualifying_quantity": float(
-            basket_transactions["Quantity"].sum()
-        ),
-
+        "historical_transaction_count": len(basket_transactions),
+        "customer_count": (customer_basket_analysis["Customer ID"].nunique()),
+        "distinct_invoice_count": (invoice_baskets["Invoice"].nunique()),
+        "total_qualifying_quantity": float(basket_transactions["Quantity"].sum()),
         "minimum_average_basket_size": float(
-            customer_basket_analysis[
-                "Average_Basket_Size"
-            ].min()
+            customer_basket_analysis["Average_Basket_Size"].min()
         ),
-
         "median_average_basket_size": float(
-            customer_basket_analysis[
-                "Average_Basket_Size"
-            ].median()
+            customer_basket_analysis["Average_Basket_Size"].median()
         ),
-
         "maximum_average_basket_size": float(
-            customer_basket_analysis[
-                "Average_Basket_Size"
-            ].max()
+            customer_basket_analysis["Average_Basket_Size"].max()
         ),
-
         "minimum_orders_per_customer": int(
-            customer_basket_analysis[
-                "Number_of_Orders"
-            ].min()
+            customer_basket_analysis["Number_of_Orders"].min()
         ),
-
         "maximum_orders_per_customer": int(
-            customer_basket_analysis[
-                "Number_of_Orders"
-            ].max()
+            customer_basket_analysis["Number_of_Orders"].max()
         ),
     }
 
@@ -1992,50 +1664,19 @@ def analyze_avg_basket_size_basis(
     # ---------------------------------------------------------
 
     validation = {
-        "customer_count_valid": (
-            customer_basket_analysis["Customer ID"]
-            .notna()
-            .all()
-        ),
-
+        "customer_count_valid": (customer_basket_analysis["Customer ID"].notna().all()),
         "no_duplicate_customer_ids": (
-            not customer_basket_analysis[
-                "Customer ID"
-            ].duplicated().any()
+            not customer_basket_analysis["Customer ID"].duplicated().any()
         ),
-
-        "basket_sizes_positive": (
-            (
-                invoice_baskets["Basket_Size"] > 0
-            ).all()
-        ),
-
+        "basket_sizes_positive": ((invoice_baskets["Basket_Size"] > 0).all()),
         "average_basket_sizes_positive": (
-            (
-                customer_basket_analysis[
-                    "Average_Basket_Size"
-                ] > 0
-            ).all()
+            (customer_basket_analysis["Average_Basket_Size"] > 0).all()
         ),
-
-        "orders_positive": (
-            (
-                customer_basket_analysis[
-                    "Number_of_Orders"
-                ] > 0
-            ).all()
-        ),
-
-        "cutoff_valid": (
-            basket_transactions["InvoiceDate"]
-            .max()
-            <= cutoff_date
-        ),
+        "orders_positive": ((customer_basket_analysis["Number_of_Orders"] > 0).all()),
+        "cutoff_valid": (basket_transactions["InvoiceDate"].max() <= cutoff_date),
     }
 
-    validation["passed"] = all(
-        validation.values()
-    )
+    validation["passed"] = all(validation.values())
 
     return {
         "summary": summary,
@@ -2045,7 +1686,8 @@ def analyze_avg_basket_size_basis(
         "validation": validation,
     }
 
-#---- 3.2 Create Average_basket_size feature ----------------
+
+# ---- 3.2 Create Average_basket_size feature ----------------
 def create_avg_basket_size_features(
     df_cleaned: pd.DataFrame,
     cutoff_date: pd.Timestamp | None = None,
@@ -2093,9 +1735,7 @@ def create_avg_basket_size_features(
     missing_columns = required_columns - set(df_cleaned.columns)
 
     if missing_columns:
-        raise ValueError(
-            f"Missing required columns: {sorted(missing_columns)}"
-        )
+        raise ValueError(f"Missing required columns: {sorted(missing_columns)}")
 
     working_df = df_cleaned.copy()
 
@@ -2111,22 +1751,15 @@ def create_avg_basket_size_features(
     maximum_invoice_date = working_df["InvoiceDate"].max()
 
     if pd.isna(maximum_invoice_date):
-        raise ValueError(
-            "InvoiceDate contains no valid dates."
-        )
+        raise ValueError("InvoiceDate contains no valid dates.")
 
     if cutoff_date is None:
-        cutoff_date = (
-            maximum_invoice_date
-            - pd.Timedelta(days=90)
-        )
+        cutoff_date = maximum_invoice_date - pd.Timedelta(days=90)
     else:
         cutoff_date = pd.Timestamp(cutoff_date)
 
     if cutoff_date > maximum_invoice_date:
-        raise ValueError(
-            "cutoff_date cannot be later than the maximum InvoiceDate."
-        )
+        raise ValueError("cutoff_date cannot be later than the maximum InvoiceDate.")
 
     # ---------------------------------------------------------
     # Select qualifying historical purchases
@@ -2149,15 +1782,11 @@ def create_avg_basket_size_features(
     # Calculate basket size for each customer and invoice
     # ---------------------------------------------------------
 
-    invoice_baskets = (
-        basket_transactions
-        .groupby(
-            ["Customer ID", "Invoice"],
-            as_index=False,
-        )
-        .agg(
-            Basket_Size=("Quantity", "sum"),
-        )
+    invoice_baskets = basket_transactions.groupby(
+        ["Customer ID", "Invoice"],
+        as_index=False,
+    ).agg(
+        Basket_Size=("Quantity", "sum"),
     )
 
     # ---------------------------------------------------------
@@ -2165,8 +1794,7 @@ def create_avg_basket_size_features(
     # ---------------------------------------------------------
 
     customer_basket = (
-        invoice_baskets
-        .groupby("Customer ID")
+        invoice_baskets.groupby("Customer ID")
         .agg(
             Total_Qualifying_Quantity=(
                 "Basket_Size",
@@ -2196,40 +1824,30 @@ def create_avg_basket_size_features(
         ]
     ].copy()
 
-    avg_basket_features["Average_Basket_Size"] = (
-        avg_basket_features["Average_Basket_Size"]
-        .round(2)
-    )
+    avg_basket_features["Average_Basket_Size"] = avg_basket_features[
+        "Average_Basket_Size"
+    ].round(2)
 
     # ---------------------------------------------------------
     # Basic structural validation
     # ---------------------------------------------------------
 
     if avg_basket_features["Customer ID"].isna().any():
-        raise ValueError(
-            "Average Basket Size features contain missing Customer IDs."
-        )
+        raise ValueError("Average Basket Size features contain missing Customer IDs.")
 
     if avg_basket_features["Customer ID"].duplicated().any():
-        raise ValueError(
-            "Average Basket Size features contain duplicate Customer IDs."
-        )
+        raise ValueError("Average Basket Size features contain duplicate Customer IDs.")
 
     if avg_basket_features["Average_Basket_Size"].isna().any():
-        raise ValueError(
-            "Average Basket Size contains missing values."
-        )
+        raise ValueError("Average Basket Size contains missing values.")
 
-    if (
-        avg_basket_features["Average_Basket_Size"] <= 0
-    ).any():
-        raise ValueError(
-            "Average Basket Size contains zero or negative values."
-        )
+    if (avg_basket_features["Average_Basket_Size"] <= 0).any():
+        raise ValueError("Average Basket Size contains zero or negative values.")
 
     return avg_basket_features
 
-#---- 3.3 Validate Average_basket_size feature ----------------
+
+# ---- 3.3 Validate Average_basket_size feature ----------------
 def validate_avg_basket_size_features(
     avg_basket_features: pd.DataFrame,
 ) -> dict:
@@ -2261,9 +1879,7 @@ def validate_avg_basket_size_features(
         if column not in avg_basket_features.columns
     ]
 
-    validation_results["required_columns_present"] = (
-        len(missing_columns) == 0
-    )
+    validation_results["required_columns_present"] = len(missing_columns) == 0
 
     validation_results["missing_columns"] = missing_columns
 
@@ -2275,30 +1891,21 @@ def validate_avg_basket_size_features(
     # Customer ID validation
     # ---------------------------------------------------------
 
-    validation_results["customer_count"] = len(
-        avg_basket_features
-    )
+    validation_results["customer_count"] = len(avg_basket_features)
 
-    validation_results["has_customers"] = (
-        len(avg_basket_features) > 0
-    )
+    validation_results["has_customers"] = len(avg_basket_features) > 0
 
     validation_results["missing_customer_ids"] = int(
-        avg_basket_features["Customer ID"]
-        .isna()
-        .sum()
+        avg_basket_features["Customer ID"].isna().sum()
     )
 
     validation_results["duplicate_customer_ids"] = int(
-        avg_basket_features["Customer ID"]
-        .duplicated()
-        .sum()
+        avg_basket_features["Customer ID"].duplicated().sum()
     )
 
-    validation_results["unique_customer_ids"] = (
-        avg_basket_features["Customer ID"]
-        .nunique()
-    )
+    validation_results["unique_customer_ids"] = avg_basket_features[
+        "Customer ID"
+    ].nunique()
 
     validation_results["customer_ids_valid"] = (
         validation_results["missing_customer_ids"] == 0
@@ -2310,23 +1917,16 @@ def validate_avg_basket_size_features(
     # ---------------------------------------------------------
 
     validation_results["missing_average_basket_size"] = int(
-        avg_basket_features["Average_Basket_Size"]
-        .isna()
-        .sum()
+        avg_basket_features["Average_Basket_Size"].isna().sum()
     )
 
     validation_results["non_positive_average_basket_size"] = int(
-        (
-            avg_basket_features["Average_Basket_Size"]
-            <= 0
-        ).sum()
+        (avg_basket_features["Average_Basket_Size"] <= 0).sum()
     )
 
     validation_results["average_basket_size_valid"] = (
         validation_results["missing_average_basket_size"] == 0
-        and validation_results[
-            "non_positive_average_basket_size"
-        ] == 0
+        and validation_results["non_positive_average_basket_size"] == 0
     )
 
     # ---------------------------------------------------------
@@ -2340,20 +1940,17 @@ def validate_avg_basket_size_features(
         validation_results["average_basket_size_valid"],
     ]
 
-    validation_results["passed"] = all(
-        validation_checks
-    )
+    validation_results["passed"] = all(validation_checks)
 
     return validation_results
 
 
-
 ################################################################
-#---------- 4. analyze_purchase_frequency_trend_basis ----------------
+# ---------- 4. analyze_purchase_frequency_trend_basis ----------------
 ################################################################
 
 
-#---- 4.1 Analyze purchase frequency trend basis ----------------
+# ---- 4.1 Analyze purchase frequency trend basis ----------------
 def analyze_purchase_frequency_trend_basis(
     df_cleaned: pd.DataFrame,
     cutoff_date: pd.Timestamp | None = None,
@@ -2413,9 +2010,7 @@ def analyze_purchase_frequency_trend_basis(
     missing_columns = required_columns - set(df_cleaned.columns)
 
     if missing_columns:
-        raise ValueError(
-            f"Missing required columns: {sorted(missing_columns)}"
-        )
+        raise ValueError(f"Missing required columns: {sorted(missing_columns)}")
 
     working_df = df_cleaned.copy()
 
@@ -2431,25 +2026,17 @@ def analyze_purchase_frequency_trend_basis(
     maximum_invoice_date = working_df["InvoiceDate"].max()
 
     if pd.isna(maximum_invoice_date):
-        raise ValueError(
-            "InvoiceDate contains no valid dates."
-        )
+        raise ValueError("InvoiceDate contains no valid dates.")
 
     if cutoff_date is None:
-        cutoff_date = (
-            maximum_invoice_date
-            - pd.Timedelta(days=90)
-        )
+        cutoff_date = maximum_invoice_date - pd.Timedelta(days=90)
         cutoff_source = "Automatically calculated"
     else:
         cutoff_date = pd.Timestamp(cutoff_date)
         cutoff_source = "User supplied"
 
     if cutoff_date > maximum_invoice_date:
-        raise ValueError(
-            "cutoff_date cannot be later than "
-            "the maximum InvoiceDate."
-        )
+        raise ValueError("cutoff_date cannot be later than " "the maximum InvoiceDate.")
 
     # ---------------------------------------------------------
     # Select qualifying historical purchases
@@ -2472,20 +2059,14 @@ def analyze_purchase_frequency_trend_basis(
     # Create monthly purchase frequency
     # ---------------------------------------------------------
 
-    frequency_transactions["Purchase_Month"] = (
-        frequency_transactions["InvoiceDate"]
-        .dt.to_period("M")
-    )
+    frequency_transactions["Purchase_Month"] = frequency_transactions[
+        "InvoiceDate"
+    ].dt.to_period("M")
 
     monthly_purchase_frequency = (
-        frequency_transactions
-        .groupby(
-            ["Customer ID", "Purchase_Month"]
-        )["Invoice"]
+        frequency_transactions.groupby(["Customer ID", "Purchase_Month"])["Invoice"]
         .nunique()
-        .reset_index(
-            name="Monthly_Purchase_Frequency"
-        )
+        .reset_index(name="Monthly_Purchase_Frequency")
     )
 
     # ---------------------------------------------------------
@@ -2498,11 +2079,9 @@ def analyze_purchase_frequency_trend_basis(
 
     cutoff_month = cutoff_date.to_period("M")
 
-    customer_first_month = (
-        monthly_purchase_frequency
-        .groupby("Customer ID")["Purchase_Month"]
-        .min()
-    )
+    customer_first_month = monthly_purchase_frequency.groupby("Customer ID")[
+        "Purchase_Month"
+    ].min()
 
     complete_monthly_frequency = []
 
@@ -2521,46 +2100,33 @@ def analyze_purchase_frequency_trend_basis(
             }
         )
 
-        complete_monthly_frequency.append(
-            customer_month_df
-        )
+        complete_monthly_frequency.append(customer_month_df)
 
     complete_monthly_frequency = pd.concat(
         complete_monthly_frequency,
         ignore_index=True,
     )
 
-    monthly_frequency = (
-        complete_monthly_frequency
-        .merge(
-            monthly_purchase_frequency,
-            on=[
-                "Customer ID",
-                "Purchase_Month",
-            ],
-            how="left",
-            validate="one_to_one",
-        )
+    monthly_frequency = complete_monthly_frequency.merge(
+        monthly_purchase_frequency,
+        on=[
+            "Customer ID",
+            "Purchase_Month",
+        ],
+        how="left",
+        validate="one_to_one",
     )
 
-    monthly_frequency[
-        "Monthly_Purchase_Frequency"
-    ] = (
-        monthly_frequency[
-            "Monthly_Purchase_Frequency"
-        ]
-        .fillna(0)
-        .astype(int)
+    monthly_frequency["Monthly_Purchase_Frequency"] = (
+        monthly_frequency["Monthly_Purchase_Frequency"].fillna(0).astype(int)
     )
 
     # ---------------------------------------------------------
     # Create ordered numeric month index
     # ---------------------------------------------------------
 
-    monthly_frequency["Month_Index"] = (
-        monthly_frequency[
-            "Purchase_Month"
-        ].astype("int64")
+    monthly_frequency["Month_Index"] = monthly_frequency["Purchase_Month"].astype(
+        "int64"
     )
 
     # ---------------------------------------------------------
@@ -2577,48 +2143,31 @@ def analyze_purchase_frequency_trend_basis(
         months receive a slope of zero.
         """
 
-        observed_purchase_months = (
-            group["Monthly_Purchase_Frequency"] > 0
-        ).sum()
+        observed_purchase_months = (group["Monthly_Purchase_Frequency"] > 0).sum()
 
         if observed_purchase_months < 2:
             return 0.0
 
-        x = group[
-            "Month_Index"
-        ].to_numpy(dtype=float)
+        x = group["Month_Index"].to_numpy(dtype=float)
 
-        y = group[
-            "Monthly_Purchase_Frequency"
-        ].to_numpy(dtype=float)
+        y = group["Monthly_Purchase_Frequency"].to_numpy(dtype=float)
 
-        denominator = (
-            (x - x.mean()) ** 2
-        ).sum()
+        denominator = ((x - x.mean()) ** 2).sum()
 
         if denominator == 0:
             return 0.0
 
-        slope = (
-            (
-                (x - x.mean())
-                * (y - y.mean())
-            ).sum()
-            / denominator
-        )
+        slope = ((x - x.mean()) * (y - y.mean())).sum() / denominator
 
         return float(slope)
 
     customer_frequency_trend = (
-        monthly_frequency
-        .groupby("Customer ID")
+        monthly_frequency.groupby("Customer ID")
         .apply(
             calculate_frequency_slope,
             include_groups=False,
         )
-        .rename(
-            "Purchase_Frequency_Trend"
-        )
+        .rename("Purchase_Frequency_Trend")
         .reset_index()
     )
 
@@ -2627,14 +2176,11 @@ def analyze_purchase_frequency_trend_basis(
     # ---------------------------------------------------------
 
     customer_month_statistics = (
-        monthly_frequency
-        .groupby("Customer ID")
+        monthly_frequency.groupby("Customer ID")
         .agg(
             Observed_Purchase_Months=(
                 "Monthly_Purchase_Frequency",
-                lambda values: int(
-                    (values > 0).sum()
-                ),
+                lambda values: int((values > 0).sum()),
             ),
             Analysis_Months=(
                 "Purchase_Month",
@@ -2648,14 +2194,11 @@ def analyze_purchase_frequency_trend_basis(
         .reset_index()
     )
 
-    customer_frequency_trend = (
-        customer_frequency_trend
-        .merge(
-            customer_month_statistics,
-            on="Customer ID",
-            how="left",
-            validate="one_to_one",
-        )
+    customer_frequency_trend = customer_frequency_trend.merge(
+        customer_month_statistics,
+        on="Customer ID",
+        how="left",
+        validate="one_to_one",
     )
 
     # ---------------------------------------------------------
@@ -2667,77 +2210,37 @@ def analyze_purchase_frequency_trend_basis(
         "cutoff_date": cutoff_date,
         "cutoff_source": cutoff_source,
         "prediction_window_days": 90,
-
-        "historical_transaction_count": len(
-            frequency_transactions
-        ),
-
-        "customer_count": (
-            customer_frequency_trend[
-                "Customer ID"
-            ].nunique()
-        ),
-
+        "historical_transaction_count": len(frequency_transactions),
+        "customer_count": (customer_frequency_trend["Customer ID"].nunique()),
         "observed_calendar_month_count": (
-            monthly_frequency[
-                "Purchase_Month"
-            ].nunique()
+            monthly_frequency["Purchase_Month"].nunique()
         ),
-
         "minimum_observed_purchase_months": int(
-            customer_frequency_trend[
-                "Observed_Purchase_Months"
-            ].min()
+            customer_frequency_trend["Observed_Purchase_Months"].min()
         ),
-
         "median_observed_purchase_months": float(
-            customer_frequency_trend[
-                "Observed_Purchase_Months"
-            ].median()
+            customer_frequency_trend["Observed_Purchase_Months"].median()
         ),
-
         "maximum_observed_purchase_months": int(
-            customer_frequency_trend[
-                "Observed_Purchase_Months"
-            ].max()
+            customer_frequency_trend["Observed_Purchase_Months"].max()
         ),
-
         "minimum_analysis_months": int(
-            customer_frequency_trend[
-                "Analysis_Months"
-            ].min()
+            customer_frequency_trend["Analysis_Months"].min()
         ),
-
         "maximum_analysis_months": int(
-            customer_frequency_trend[
-                "Analysis_Months"
-            ].max()
+            customer_frequency_trend["Analysis_Months"].max()
         ),
-
         "minimum_frequency_trend": float(
-            customer_frequency_trend[
-                "Purchase_Frequency_Trend"
-            ].min()
+            customer_frequency_trend["Purchase_Frequency_Trend"].min()
         ),
-
         "median_frequency_trend": float(
-            customer_frequency_trend[
-                "Purchase_Frequency_Trend"
-            ].median()
+            customer_frequency_trend["Purchase_Frequency_Trend"].median()
         ),
-
         "maximum_frequency_trend": float(
-            customer_frequency_trend[
-                "Purchase_Frequency_Trend"
-            ].max()
+            customer_frequency_trend["Purchase_Frequency_Trend"].max()
         ),
-
         "customers_with_single_purchase_month": int(
-            (
-                customer_frequency_trend[
-                    "Observed_Purchase_Months"
-                ] == 1
-            ).sum()
+            (customer_frequency_trend["Observed_Purchase_Months"] == 1).sum()
         ),
     }
 
@@ -2746,51 +2249,23 @@ def analyze_purchase_frequency_trend_basis(
     # ---------------------------------------------------------
 
     validation = {
-        "customer_count_valid": (
-            customer_frequency_trend[
-                "Customer ID"
-            ].notna().all()
-        ),
-
+        "customer_count_valid": (customer_frequency_trend["Customer ID"].notna().all()),
         "no_duplicate_customer_ids": (
-            not customer_frequency_trend[
-                "Customer ID"
-            ].duplicated().any()
+            not customer_frequency_trend["Customer ID"].duplicated().any()
         ),
-
         "frequency_values_valid": (
-            (
-                monthly_frequency[
-                    "Monthly_Purchase_Frequency"
-                ] >= 0
-            ).all()
+            (monthly_frequency["Monthly_Purchase_Frequency"] >= 0).all()
         ),
-
         "trend_values_valid": (
-            customer_frequency_trend[
-                "Purchase_Frequency_Trend"
-            ].notna().all()
+            customer_frequency_trend["Purchase_Frequency_Trend"].notna().all()
         ),
-
         "analysis_months_valid": (
-            (
-                customer_frequency_trend[
-                    "Analysis_Months"
-                ] > 0
-            ).all()
+            (customer_frequency_trend["Analysis_Months"] > 0).all()
         ),
-
-        "cutoff_valid": (
-            frequency_transactions[
-                "InvoiceDate"
-            ].max()
-            <= cutoff_date
-        ),
+        "cutoff_valid": (frequency_transactions["InvoiceDate"].max() <= cutoff_date),
     }
 
-    validation["passed"] = all(
-        validation.values()
-    )
+    validation["passed"] = all(validation.values())
 
     return {
         "summary": summary,
@@ -2800,7 +2275,8 @@ def analyze_purchase_frequency_trend_basis(
         "validation": validation,
     }
 
-#---- 4.2 Create purchase frequency trend feature ----------------
+
+# ---- 4.2 Create purchase frequency trend feature ----------------
 def create_purchase_frequency_trend_features(
     df_cleaned: pd.DataFrame,
     cutoff_date: pd.Timestamp | None = None,
@@ -2868,15 +2344,10 @@ def create_purchase_frequency_trend_features(
         "Include In Sales Analysis",
     }
 
-    missing_columns = (
-        required_columns - set(df_cleaned.columns)
-    )
+    missing_columns = required_columns - set(df_cleaned.columns)
 
     if missing_columns:
-        raise ValueError(
-            f"Missing required columns: "
-            f"{sorted(missing_columns)}"
-        )
+        raise ValueError(f"Missing required columns: " f"{sorted(missing_columns)}")
 
     working_df = df_cleaned.copy()
 
@@ -2893,33 +2364,21 @@ def create_purchase_frequency_trend_features(
     # Determine point-in-time cutoff
     # ---------------------------------------------------------
 
-    maximum_invoice_date = (
-        working_df["InvoiceDate"].max()
-    )
+    maximum_invoice_date = working_df["InvoiceDate"].max()
 
     if pd.isna(maximum_invoice_date):
-        raise ValueError(
-            "InvoiceDate contains no valid dates."
-        )
+        raise ValueError("InvoiceDate contains no valid dates.")
 
     if cutoff_date is None:
 
-        cutoff_date = (
-            maximum_invoice_date
-            - pd.Timedelta(days=90)
-        )
+        cutoff_date = maximum_invoice_date - pd.Timedelta(days=90)
 
     else:
 
-        cutoff_date = pd.Timestamp(
-            cutoff_date
-        )
+        cutoff_date = pd.Timestamp(cutoff_date)
 
     if cutoff_date > maximum_invoice_date:
-        raise ValueError(
-            "cutoff_date cannot be later than "
-            "the maximum InvoiceDate."
-        )
+        raise ValueError("cutoff_date cannot be later than " "the maximum InvoiceDate.")
 
     # ---------------------------------------------------------
     # Select qualifying historical purchases
@@ -2927,18 +2386,9 @@ def create_purchase_frequency_trend_features(
 
     frequency_transactions = working_df[
         (working_df["InvoiceDate"] <= cutoff_date)
-        & (
-            working_df["Transaction Type"]
-            == "Purchase"
-        )
-        & (
-            working_df["Customer ID Missing Flag"]
-            == 0
-        )
-        & (
-            working_df["Include In Sales Analysis"]
-            == True
-        )
+        & (working_df["Transaction Type"] == "Purchase")
+        & (working_df["Customer ID Missing Flag"] == 0)
+        & (working_df["Include In Sales Analysis"] == True)
     ].copy()
 
     if frequency_transactions.empty:
@@ -2951,29 +2401,23 @@ def create_purchase_frequency_trend_features(
     # Create purchase month
     # ---------------------------------------------------------
 
-    frequency_transactions[
-        "Purchase_Month"
-    ] = (
-        frequency_transactions["InvoiceDate"]
-        .dt.to_period("M")
-    )
+    frequency_transactions["Purchase_Month"] = frequency_transactions[
+        "InvoiceDate"
+    ].dt.to_period("M")
 
     # ---------------------------------------------------------
     # Monthly distinct purchase-order frequency
     # ---------------------------------------------------------
 
     monthly_purchase_frequency = (
-        frequency_transactions
-        .groupby(
+        frequency_transactions.groupby(
             [
                 "Customer ID",
                 "Purchase_Month",
             ]
         )["Invoice"]
         .nunique()
-        .reset_index(
-            name="Monthly_Purchase_Frequency"
-        )
+        .reset_index(name="Monthly_Purchase_Frequency")
     )
 
     # ---------------------------------------------------------
@@ -2984,23 +2428,15 @@ def create_purchase_frequency_trend_features(
     # Months without purchases receive frequency = 0.
     # ---------------------------------------------------------
 
-    cutoff_month = (
-        cutoff_date.to_period("M")
-    )
+    cutoff_month = cutoff_date.to_period("M")
 
-    customer_first_month = (
-        monthly_purchase_frequency
-        .groupby("Customer ID")[
-            "Purchase_Month"
-        ]
-        .min()
-    )
+    customer_first_month = monthly_purchase_frequency.groupby("Customer ID")[
+        "Purchase_Month"
+    ].min()
 
     complete_monthly_frequency = []
 
-    for customer_id, first_month in (
-        customer_first_month.items()
-    ):
+    for customer_id, first_month in customer_first_month.items():
 
         customer_month_range = pd.period_range(
             start=first_month,
@@ -3011,56 +2447,41 @@ def create_purchase_frequency_trend_features(
         customer_month_df = pd.DataFrame(
             {
                 "Customer ID": customer_id,
-                "Purchase_Month": (
-                    customer_month_range
-                ),
+                "Purchase_Month": (customer_month_range),
             }
         )
 
-        complete_monthly_frequency.append(
-            customer_month_df
-        )
+        complete_monthly_frequency.append(customer_month_df)
 
     complete_monthly_frequency = pd.concat(
         complete_monthly_frequency,
         ignore_index=True,
     )
 
-    monthly_frequency = (
-        complete_monthly_frequency
-        .merge(
-            monthly_purchase_frequency,
-            on=[
-                "Customer ID",
-                "Purchase_Month",
-            ],
-            how="left",
-            validate="one_to_one",
-        )
+    monthly_frequency = complete_monthly_frequency.merge(
+        monthly_purchase_frequency,
+        on=[
+            "Customer ID",
+            "Purchase_Month",
+        ],
+        how="left",
+        validate="one_to_one",
     )
 
     # ---------------------------------------------------------
     # Fill months without purchases with zero
     # ---------------------------------------------------------
 
-    monthly_frequency[
-        "Monthly_Purchase_Frequency"
-    ] = (
-        monthly_frequency[
-            "Monthly_Purchase_Frequency"
-        ]
-        .fillna(0)
-        .astype(int)
+    monthly_frequency["Monthly_Purchase_Frequency"] = (
+        monthly_frequency["Monthly_Purchase_Frequency"].fillna(0).astype(int)
     )
 
     # ---------------------------------------------------------
     # Create ordered numeric month index
     # ---------------------------------------------------------
 
-    monthly_frequency["Month_Index"] = (
-        monthly_frequency[
-            "Purchase_Month"
-        ].astype("int64")
+    monthly_frequency["Month_Index"] = monthly_frequency["Purchase_Month"].astype(
+        "int64"
     )
 
     # ---------------------------------------------------------
@@ -3069,52 +2490,33 @@ def create_purchase_frequency_trend_features(
 
     def calculate_frequency_slope(group):
 
-        observed_purchase_months = (
-            group[
-                "Monthly_Purchase_Frequency"
-            ] > 0
-        ).sum()
+        observed_purchase_months = (group["Monthly_Purchase_Frequency"] > 0).sum()
 
         # A trend cannot be estimated from
         # only one observed purchase month.
         if observed_purchase_months < 2:
             return 0.0
 
-        x = group[
-            "Month_Index"
-        ].to_numpy(dtype=float)
+        x = group["Month_Index"].to_numpy(dtype=float)
 
-        y = group[
-            "Monthly_Purchase_Frequency"
-        ].to_numpy(dtype=float)
+        y = group["Monthly_Purchase_Frequency"].to_numpy(dtype=float)
 
-        denominator = (
-            (x - x.mean()) ** 2
-        ).sum()
+        denominator = ((x - x.mean()) ** 2).sum()
 
         if denominator == 0:
             return 0.0
 
-        slope = (
-            (
-                (x - x.mean())
-                * (y - y.mean())
-            ).sum()
-            / denominator
-        )
+        slope = ((x - x.mean()) * (y - y.mean())).sum() / denominator
 
         return float(slope)
 
     purchase_frequency_trend = (
-        monthly_frequency
-        .groupby("Customer ID")
+        monthly_frequency.groupby("Customer ID")
         .apply(
             calculate_frequency_slope,
             include_groups=False,
         )
-        .rename(
-            "Purchase_Frequency_Trend"
-        )
+        .rename("Purchase_Frequency_Trend")
         .reset_index()
     )
 
@@ -3122,51 +2524,27 @@ def create_purchase_frequency_trend_features(
     # Round final feature
     # ---------------------------------------------------------
 
-    purchase_frequency_trend[
+    purchase_frequency_trend["Purchase_Frequency_Trend"] = purchase_frequency_trend[
         "Purchase_Frequency_Trend"
-    ] = (
-        purchase_frequency_trend[
-            "Purchase_Frequency_Trend"
-        ].round(6)
-    )
+    ].round(6)
 
     # ---------------------------------------------------------
     # Structural validation
     # ---------------------------------------------------------
 
-    if (
-        purchase_frequency_trend[
-            "Customer ID"
-        ].isna().any()
-    ):
-        raise ValueError(
-            "Purchase Frequency Trend contains "
-            "missing Customer IDs."
-        )
+    if purchase_frequency_trend["Customer ID"].isna().any():
+        raise ValueError("Purchase Frequency Trend contains " "missing Customer IDs.")
 
-    if (
-        purchase_frequency_trend[
-            "Customer ID"
-        ].duplicated().any()
-    ):
-        raise ValueError(
-            "Purchase Frequency Trend contains "
-            "duplicate Customer IDs."
-        )
+    if purchase_frequency_trend["Customer ID"].duplicated().any():
+        raise ValueError("Purchase Frequency Trend contains " "duplicate Customer IDs.")
 
-    if (
-        purchase_frequency_trend[
-            "Purchase_Frequency_Trend"
-        ].isna().any()
-    ):
-        raise ValueError(
-            "Purchase Frequency Trend contains "
-            "missing values."
-        )
+    if purchase_frequency_trend["Purchase_Frequency_Trend"].isna().any():
+        raise ValueError("Purchase Frequency Trend contains " "missing values.")
 
     return purchase_frequency_trend
 
-#---- 4.3 Validate purchase frequency trend feature ----------------
+
+# ---- 4.3 Validate purchase frequency trend feature ----------------
 def validate_purchase_frequency_trend_features(
     purchase_frequency_trend_features: pd.DataFrame,
 ) -> dict:
@@ -3198,9 +2576,7 @@ def validate_purchase_frequency_trend_features(
         if column not in purchase_frequency_trend_features.columns
     ]
 
-    validation_results["required_columns_present"] = (
-        len(missing_columns) == 0
-    )
+    validation_results["required_columns_present"] = len(missing_columns) == 0
 
     validation_results["missing_columns"] = missing_columns
 
@@ -3212,36 +2588,21 @@ def validate_purchase_frequency_trend_features(
     # Customer ID validation
     # ---------------------------------------------------------
 
-    validation_results["customer_count"] = len(
-        purchase_frequency_trend_features
-    )
+    validation_results["customer_count"] = len(purchase_frequency_trend_features)
 
-    validation_results["has_customers"] = (
-        len(purchase_frequency_trend_features) > 0
-    )
+    validation_results["has_customers"] = len(purchase_frequency_trend_features) > 0
 
     validation_results["missing_customer_ids"] = int(
-        purchase_frequency_trend_features[
-            "Customer ID"
-        ]
-        .isna()
-        .sum()
+        purchase_frequency_trend_features["Customer ID"].isna().sum()
     )
 
     validation_results["duplicate_customer_ids"] = int(
-        purchase_frequency_trend_features[
-            "Customer ID"
-        ]
-        .duplicated()
-        .sum()
+        purchase_frequency_trend_features["Customer ID"].duplicated().sum()
     )
 
-    validation_results["unique_customer_ids"] = (
-        purchase_frequency_trend_features[
-            "Customer ID"
-        ]
-        .nunique()
-    )
+    validation_results["unique_customer_ids"] = purchase_frequency_trend_features[
+        "Customer ID"
+    ].nunique()
 
     validation_results["customer_ids_valid"] = (
         validation_results["missing_customer_ids"] == 0
@@ -3252,15 +2613,9 @@ def validate_purchase_frequency_trend_features(
     # Purchase Frequency Trend validation
     # ---------------------------------------------------------
 
-    trend_values = (
-        purchase_frequency_trend_features[
-            "Purchase_Frequency_Trend"
-        ]
-    )
+    trend_values = purchase_frequency_trend_features["Purchase_Frequency_Trend"]
 
-    validation_results["missing_trend_values"] = int(
-        trend_values.isna().sum()
-    )
+    validation_results["missing_trend_values"] = int(trend_values.isna().sum())
 
     validation_results["infinite_trend_values"] = int(
         (~np.isfinite(trend_values)).sum()
@@ -3282,19 +2637,17 @@ def validate_purchase_frequency_trend_features(
         validation_results["trend_values_valid"],
     ]
 
-    validation_results["passed"] = all(
-        validation_checks
-    )
+    validation_results["passed"] = all(validation_checks)
 
     return validation_results
 
 
-
 ################################################################
-#---------- 5. time between consecutive purchases ----------------
+# ---------- 5. time between consecutive purchases ----------------
 ################################################################
 
-#---- 5.1 Calculate time between consecutive purchases ----------------
+
+# ---- 5.1 Calculate time between consecutive purchases ----------------
 def analyze_interpurchase_variance_basis(
     df_cleaned: pd.DataFrame,
     cutoff_date: pd.Timestamp | None = None,
@@ -3338,15 +2691,10 @@ def analyze_interpurchase_variance_basis(
         "Include In Sales Analysis",
     }
 
-    missing_columns = (
-        required_columns - set(df_cleaned.columns)
-    )
+    missing_columns = required_columns - set(df_cleaned.columns)
 
     if missing_columns:
-        raise ValueError(
-            f"Missing required columns: "
-            f"{sorted(missing_columns)}"
-        )
+        raise ValueError(f"Missing required columns: " f"{sorted(missing_columns)}")
 
     working_df = df_cleaned.copy()
 
@@ -3363,21 +2711,14 @@ def analyze_interpurchase_variance_basis(
     # Determine cutoff
     # ---------------------------------------------------------
 
-    maximum_invoice_date = (
-        working_df["InvoiceDate"].max()
-    )
+    maximum_invoice_date = working_df["InvoiceDate"].max()
 
     if pd.isna(maximum_invoice_date):
-        raise ValueError(
-            "InvoiceDate contains no valid dates."
-        )
+        raise ValueError("InvoiceDate contains no valid dates.")
 
     if cutoff_date is None:
 
-        cutoff_date = (
-            maximum_invoice_date
-            - pd.Timedelta(days=90)
-        )
+        cutoff_date = maximum_invoice_date - pd.Timedelta(days=90)
 
         cutoff_source = "Automatically calculated"
 
@@ -3387,10 +2728,7 @@ def analyze_interpurchase_variance_basis(
         cutoff_source = "User supplied"
 
     if cutoff_date > maximum_invoice_date:
-        raise ValueError(
-            "cutoff_date cannot be later than "
-            "the maximum InvoiceDate."
-        )
+        raise ValueError("cutoff_date cannot be later than " "the maximum InvoiceDate.")
 
     # ---------------------------------------------------------
     # Select qualifying historical purchases
@@ -3398,18 +2736,9 @@ def analyze_interpurchase_variance_basis(
 
     purchase_transactions = working_df[
         (working_df["InvoiceDate"] <= cutoff_date)
-        & (
-            working_df["Transaction Type"]
-            == "Purchase"
-        )
-        & (
-            working_df["Customer ID Missing Flag"]
-            == 0
-        )
-        & (
-            working_df["Include In Sales Analysis"]
-            == True
-        )
+        & (working_df["Transaction Type"] == "Purchase")
+        & (working_df["Customer ID Missing Flag"] == 0)
+        & (working_df["Include In Sales Analysis"] == True)
     ].copy()
 
     if purchase_transactions.empty:
@@ -3422,20 +2751,16 @@ def analyze_interpurchase_variance_basis(
     # Create invoice-level purchase events
     # ---------------------------------------------------------
 
-    invoice_purchases = (
-        purchase_transactions
-        .groupby(
-            [
-                "Customer ID",
-                "Invoice",
-            ],
-            as_index=False,
-        )
-        .agg(
-            Purchase_Date=(
-                "InvoiceDate",
-                "min",
-            )
+    invoice_purchases = purchase_transactions.groupby(
+        [
+            "Customer ID",
+            "Invoice",
+        ],
+        as_index=False,
+    ).agg(
+        Purchase_Date=(
+            "InvoiceDate",
+            "min",
         )
     )
 
@@ -3443,63 +2768,40 @@ def analyze_interpurchase_variance_basis(
     # Sort purchase events chronologically
     # ---------------------------------------------------------
 
-    invoice_purchases = (
-        invoice_purchases
-        .sort_values(
-            [
-                "Customer ID",
-                "Purchase_Date",
-                "Invoice",
-            ]
-        )
-        .reset_index(drop=True)
-    )
+    invoice_purchases = invoice_purchases.sort_values(
+        [
+            "Customer ID",
+            "Purchase_Date",
+            "Invoice",
+        ]
+    ).reset_index(drop=True)
 
     # ---------------------------------------------------------
     # Calculate interpurchase intervals
     # ---------------------------------------------------------
 
-    invoice_purchases[
-        "Previous_Purchase_Date"
-    ] = (
-        invoice_purchases
-        .groupby("Customer ID")[
-            "Purchase_Date"
-        ]
-        .shift(1)
-    )
+    invoice_purchases["Previous_Purchase_Date"] = invoice_purchases.groupby(
+        "Customer ID"
+    )["Purchase_Date"].shift(1)
 
-    invoice_purchases[
-        "Interpurchase_Days"
-    ] = (
-        invoice_purchases["Purchase_Date"]
-        - invoice_purchases[
-            "Previous_Purchase_Date"
-        ]
-    ).dt.total_seconds() / (
-        24 * 60 * 60
-    )
+    invoice_purchases["Interpurchase_Days"] = (
+        invoice_purchases["Purchase_Date"] - invoice_purchases["Previous_Purchase_Date"]
+    ).dt.total_seconds() / (24 * 60 * 60)
 
     # ---------------------------------------------------------
     # Keep actual intervals
     # ---------------------------------------------------------
 
-    interpurchase_intervals = (
-        invoice_purchases[
-            invoice_purchases[
-                "Interpurchase_Days"
-            ].notna()
-        ]
-        .copy()
-    )
+    interpurchase_intervals = invoice_purchases[
+        invoice_purchases["Interpurchase_Days"].notna()
+    ].copy()
 
     # ---------------------------------------------------------
     # Customer order statistics
     # ---------------------------------------------------------
 
     customer_order_counts = (
-        invoice_purchases
-        .groupby("Customer ID")
+        invoice_purchases.groupby("Customer ID")
         .agg(
             Number_of_Orders=(
                 "Invoice",
@@ -3524,8 +2826,7 @@ def analyze_interpurchase_variance_basis(
     # ---------------------------------------------------------
 
     customer_interval_statistics = (
-        interpurchase_intervals
-        .groupby("Customer ID")
+        interpurchase_intervals.groupby("Customer ID")
         .agg(
             Number_of_Intervals=(
                 "Interpurchase_Days",
@@ -3556,58 +2857,38 @@ def analyze_interpurchase_variance_basis(
     # ---------------------------------------------------------
 
     interval_variance = (
-        interpurchase_intervals
-        .groupby("Customer ID")[
-            "Interpurchase_Days"
-        ]
+        interpurchase_intervals.groupby("Customer ID")["Interpurchase_Days"]
         .var(ddof=0)
         .rename("Interpurchase_Variance")
         .reset_index()
     )
 
-    customer_interval_statistics = (
-        customer_interval_statistics
-        .merge(
-            interval_variance,
-            on="Customer ID",
-            how="left",
-            validate="one_to_one",
-        )
+    customer_interval_statistics = customer_interval_statistics.merge(
+        interval_variance,
+        on="Customer ID",
+        how="left",
+        validate="one_to_one",
     )
 
     # ---------------------------------------------------------
     # Merge customers with no intervals
     # ---------------------------------------------------------
 
-    customer_analysis = (
-        customer_order_counts
-        .merge(
-            customer_interval_statistics,
-            on="Customer ID",
-            how="left",
-            validate="one_to_one",
-        )
+    customer_analysis = customer_order_counts.merge(
+        customer_interval_statistics,
+        on="Customer ID",
+        how="left",
+        validate="one_to_one",
     )
 
     # Customers with no interval have no observed variability.
-    customer_analysis[
-        "Number_of_Intervals"
-    ] = (
-        customer_analysis[
-            "Number_of_Intervals"
-        ]
-        .fillna(0)
-        .astype(int)
+    customer_analysis["Number_of_Intervals"] = (
+        customer_analysis["Number_of_Intervals"].fillna(0).astype(int)
     )
 
-    customer_analysis[
+    customer_analysis["Interpurchase_Variance"] = customer_analysis[
         "Interpurchase_Variance"
-    ] = (
-        customer_analysis[
-            "Interpurchase_Variance"
-        ]
-        .fillna(0.0)
-    )
+    ].fillna(0.0)
 
     # ---------------------------------------------------------
     # Summary
@@ -3618,103 +2899,41 @@ def analyze_interpurchase_variance_basis(
         "cutoff_date": cutoff_date,
         "cutoff_source": cutoff_source,
         "prediction_window_days": 90,
-
-        "historical_transaction_count": len(
-            purchase_transactions
-        ),
-
-        "customer_count": (
-            customer_analysis[
-                "Customer ID"
-            ].nunique()
-        ),
-
-        "distinct_invoice_count": (
-            invoice_purchases[
-                "Invoice"
-            ].nunique()
-        ),
-
-        "total_interpurchase_intervals": len(
-            interpurchase_intervals
-        ),
-
-        "minimum_orders_per_customer": int(
-            customer_analysis[
-                "Number_of_Orders"
-            ].min()
-        ),
-
+        "historical_transaction_count": len(purchase_transactions),
+        "customer_count": (customer_analysis["Customer ID"].nunique()),
+        "distinct_invoice_count": (invoice_purchases["Invoice"].nunique()),
+        "total_interpurchase_intervals": len(interpurchase_intervals),
+        "minimum_orders_per_customer": int(customer_analysis["Number_of_Orders"].min()),
         "median_orders_per_customer": float(
-            customer_analysis[
-                "Number_of_Orders"
-            ].median()
+            customer_analysis["Number_of_Orders"].median()
         ),
-
-        "maximum_orders_per_customer": int(
-            customer_analysis[
-                "Number_of_Orders"
-            ].max()
-        ),
-
+        "maximum_orders_per_customer": int(customer_analysis["Number_of_Orders"].max()),
         "customers_with_no_interpurchase_interval": int(
-            (
-                customer_analysis[
-                    "Number_of_Intervals"
-                ] == 0
-            ).sum()
+            (customer_analysis["Number_of_Intervals"] == 0).sum()
         ),
-
         "customers_with_one_interpurchase_interval": int(
-            (
-                customer_analysis[
-                    "Number_of_Intervals"
-                ] == 1
-            ).sum()
+            (customer_analysis["Number_of_Intervals"] == 1).sum()
         ),
-
         "customers_with_variance": int(
-            (
-                customer_analysis[
-                    "Number_of_Intervals"
-                ] >= 2
-            ).sum()
+            (customer_analysis["Number_of_Intervals"] >= 2).sum()
         ),
-
         "minimum_interpurchase_days": float(
-            interpurchase_intervals[
-                "Interpurchase_Days"
-            ].min()
+            interpurchase_intervals["Interpurchase_Days"].min()
         ),
-
         "median_interpurchase_days": float(
-            interpurchase_intervals[
-                "Interpurchase_Days"
-            ].median()
+            interpurchase_intervals["Interpurchase_Days"].median()
         ),
-
         "maximum_interpurchase_days": float(
-            interpurchase_intervals[
-                "Interpurchase_Days"
-            ].max()
+            interpurchase_intervals["Interpurchase_Days"].max()
         ),
-
         "minimum_interpurchase_variance": float(
-            customer_analysis[
-                "Interpurchase_Variance"
-            ].min()
+            customer_analysis["Interpurchase_Variance"].min()
         ),
-
         "median_interpurchase_variance": float(
-            customer_analysis[
-                "Interpurchase_Variance"
-            ].median()
+            customer_analysis["Interpurchase_Variance"].median()
         ),
-
         "maximum_interpurchase_variance": float(
-            customer_analysis[
-                "Interpurchase_Variance"
-            ].max()
+            customer_analysis["Interpurchase_Variance"].max()
         ),
     }
 
@@ -3723,65 +2942,32 @@ def analyze_interpurchase_variance_basis(
     # ---------------------------------------------------------
 
     validation = {
-        "customer_count_valid": (
-            customer_analysis[
-                "Customer ID"
-            ].notna().all()
-        ),
-
+        "customer_count_valid": (customer_analysis["Customer ID"].notna().all()),
         "no_duplicate_customer_ids": (
-            not customer_analysis[
-                "Customer ID"
-            ].duplicated().any()
+            not customer_analysis["Customer ID"].duplicated().any()
         ),
-
-        "order_counts_valid": (
-            (
-                customer_analysis[
-                    "Number_of_Orders"
-                ] > 0
-            ).all()
-        ),
-
+        "order_counts_valid": ((customer_analysis["Number_of_Orders"] > 0).all()),
         "interpurchase_intervals_valid": (
-            (
-                interpurchase_intervals[
-                    "Interpurchase_Days"
-                ] >= 0
-            ).all()
+            (interpurchase_intervals["Interpurchase_Days"] >= 0).all()
         ),
-
         "variance_values_non_negative": (
-            (
-                customer_analysis[
-                    "Interpurchase_Variance"
-                ] >= 0
-            ).all()
+            (customer_analysis["Interpurchase_Variance"] >= 0).all()
         ),
-
-        "cutoff_valid": (
-            purchase_transactions[
-                "InvoiceDate"
-            ].max()
-            <= cutoff_date
-        ),
+        "cutoff_valid": (purchase_transactions["InvoiceDate"].max() <= cutoff_date),
     }
 
-    validation["passed"] = all(
-        validation.values()
-    )
+    validation["passed"] = all(validation.values())
 
     return {
         "summary": summary,
         "invoice_purchases": invoice_purchases,
-        "interpurchase_intervals": (
-            interpurchase_intervals
-        ),
+        "interpurchase_intervals": (interpurchase_intervals),
         "customer_analysis": customer_analysis,
         "validation": validation,
     }
 
-#---- 5.2 Create time between consecutive purchases feature ----------------
+
+# ---- 5.2 Create time between consecutive purchases feature ----------------
 def create_interpurchase_variance_features(
     df_cleaned: pd.DataFrame,
     cutoff_date: pd.Timestamp | None = None,
@@ -3837,15 +3023,10 @@ def create_interpurchase_variance_features(
         "Include In Sales Analysis",
     }
 
-    missing_columns = (
-        required_columns - set(df_cleaned.columns)
-    )
+    missing_columns = required_columns - set(df_cleaned.columns)
 
     if missing_columns:
-        raise ValueError(
-            f"Missing required columns: "
-            f"{sorted(missing_columns)}"
-        )
+        raise ValueError(f"Missing required columns: " f"{sorted(missing_columns)}")
 
     working_df = df_cleaned.copy()
 
@@ -3862,33 +3043,21 @@ def create_interpurchase_variance_features(
     # Determine point-in-time cutoff
     # ---------------------------------------------------------
 
-    maximum_invoice_date = (
-        working_df["InvoiceDate"].max()
-    )
+    maximum_invoice_date = working_df["InvoiceDate"].max()
 
     if pd.isna(maximum_invoice_date):
-        raise ValueError(
-            "InvoiceDate contains no valid dates."
-        )
+        raise ValueError("InvoiceDate contains no valid dates.")
 
     if cutoff_date is None:
 
-        cutoff_date = (
-            maximum_invoice_date
-            - pd.Timedelta(days=90)
-        )
+        cutoff_date = maximum_invoice_date - pd.Timedelta(days=90)
 
     else:
 
-        cutoff_date = pd.Timestamp(
-            cutoff_date
-        )
+        cutoff_date = pd.Timestamp(cutoff_date)
 
     if cutoff_date > maximum_invoice_date:
-        raise ValueError(
-            "cutoff_date cannot be later than "
-            "the maximum InvoiceDate."
-        )
+        raise ValueError("cutoff_date cannot be later than " "the maximum InvoiceDate.")
 
     # ---------------------------------------------------------
     # Select qualifying historical purchases
@@ -3896,18 +3065,9 @@ def create_interpurchase_variance_features(
 
     purchase_transactions = working_df[
         (working_df["InvoiceDate"] <= cutoff_date)
-        & (
-            working_df["Transaction Type"]
-            == "Purchase"
-        )
-        & (
-            working_df["Customer ID Missing Flag"]
-            == 0
-        )
-        & (
-            working_df["Include In Sales Analysis"]
-            == True
-        )
+        & (working_df["Transaction Type"] == "Purchase")
+        & (working_df["Customer ID Missing Flag"] == 0)
+        & (working_df["Include In Sales Analysis"] == True)
     ].copy()
 
     if purchase_transactions.empty:
@@ -3923,20 +3083,16 @@ def create_interpurchase_variance_features(
     # represent one purchase event.
     # ---------------------------------------------------------
 
-    invoice_purchases = (
-        purchase_transactions
-        .groupby(
-            [
-                "Customer ID",
-                "Invoice",
-            ],
-            as_index=False,
-        )
-        .agg(
-            Purchase_Date=(
-                "InvoiceDate",
-                "min",
-            )
+    invoice_purchases = purchase_transactions.groupby(
+        [
+            "Customer ID",
+            "Invoice",
+        ],
+        as_index=False,
+    ).agg(
+        Purchase_Date=(
+            "InvoiceDate",
+            "min",
         )
     )
 
@@ -3944,59 +3100,37 @@ def create_interpurchase_variance_features(
     # Sort purchase events chronologically
     # ---------------------------------------------------------
 
-    invoice_purchases = (
-        invoice_purchases
-        .sort_values(
-            [
-                "Customer ID",
-                "Purchase_Date",
-                "Invoice",
-            ]
-        )
-        .reset_index(drop=True)
-    )
+    invoice_purchases = invoice_purchases.sort_values(
+        [
+            "Customer ID",
+            "Purchase_Date",
+            "Invoice",
+        ]
+    ).reset_index(drop=True)
 
     # ---------------------------------------------------------
     # Calculate previous purchase date
     # ---------------------------------------------------------
 
-    invoice_purchases[
-        "Previous_Purchase_Date"
-    ] = (
-        invoice_purchases
-        .groupby("Customer ID")[
-            "Purchase_Date"
-        ]
-        .shift(1)
-    )
+    invoice_purchases["Previous_Purchase_Date"] = invoice_purchases.groupby(
+        "Customer ID"
+    )["Purchase_Date"].shift(1)
 
     # ---------------------------------------------------------
     # Calculate interpurchase interval in days
     # ---------------------------------------------------------
 
-    invoice_purchases[
-        "Interpurchase_Days"
-    ] = (
-        invoice_purchases["Purchase_Date"]
-        - invoice_purchases[
-            "Previous_Purchase_Date"
-        ]
-    ).dt.total_seconds() / (
-        24 * 60 * 60
-    )
+    invoice_purchases["Interpurchase_Days"] = (
+        invoice_purchases["Purchase_Date"] - invoice_purchases["Previous_Purchase_Date"]
+    ).dt.total_seconds() / (24 * 60 * 60)
 
     # ---------------------------------------------------------
     # Keep customers' actual purchase intervals
     # ---------------------------------------------------------
 
-    interpurchase_intervals = (
-        invoice_purchases[
-            invoice_purchases[
-                "Interpurchase_Days"
-            ].notna()
-        ]
-        .copy()
-    )
+    interpurchase_intervals = invoice_purchases[
+        invoice_purchases["Interpurchase_Days"].notna()
+    ].copy()
 
     # ---------------------------------------------------------
     # Calculate population variance
@@ -4008,14 +3142,9 @@ def create_interpurchase_variance_features(
     # ---------------------------------------------------------
 
     customer_variance = (
-        interpurchase_intervals
-        .groupby("Customer ID")[
-            "Interpurchase_Days"
-        ]
+        interpurchase_intervals.groupby("Customer ID")["Interpurchase_Days"]
         .var(ddof=0)
-        .rename(
-            "Interpurchase_Variance"
-        )
+        .rename("Interpurchase_Variance")
         .reset_index()
     )
 
@@ -4026,81 +3155,44 @@ def create_interpurchase_variance_features(
     # are also retained in the final feature table.
     # ---------------------------------------------------------
 
-    customer_population = (
-        invoice_purchases[
-            ["Customer ID"]
-        ]
-        .drop_duplicates()
-    )
+    customer_population = invoice_purchases[["Customer ID"]].drop_duplicates()
 
-    interpurchase_variance_features = (
-        customer_population
-        .merge(
-            customer_variance,
-            on="Customer ID",
-            how="left",
-            validate="one_to_one",
-        )
+    interpurchase_variance_features = customer_population.merge(
+        customer_variance,
+        on="Customer ID",
+        how="left",
+        validate="one_to_one",
     )
 
     # Customers without an interpurchase interval receive 0.
-    interpurchase_variance_features[
-        "Interpurchase_Variance"
-    ] = (
-        interpurchase_variance_features[
-            "Interpurchase_Variance"
-        ]
-        .fillna(0.0)
-        .round(6)
+    interpurchase_variance_features["Interpurchase_Variance"] = (
+        interpurchase_variance_features["Interpurchase_Variance"].fillna(0.0).round(6)
     )
 
     # ---------------------------------------------------------
     # Structural validation
     # ---------------------------------------------------------
 
-    if (
-        interpurchase_variance_features[
-            "Customer ID"
-        ].isna().any()
-    ):
+    if interpurchase_variance_features["Customer ID"].isna().any():
         raise ValueError(
-            "Interpurchase Variance features contain "
-            "missing Customer IDs."
+            "Interpurchase Variance features contain " "missing Customer IDs."
         )
 
-    if (
-        interpurchase_variance_features[
-            "Customer ID"
-        ].duplicated().any()
-    ):
+    if interpurchase_variance_features["Customer ID"].duplicated().any():
         raise ValueError(
-            "Interpurchase Variance features contain "
-            "duplicate Customer IDs."
+            "Interpurchase Variance features contain " "duplicate Customer IDs."
         )
 
-    if (
-        interpurchase_variance_features[
-            "Interpurchase_Variance"
-        ].isna().any()
-    ):
-        raise ValueError(
-            "Interpurchase Variance contains "
-            "missing values."
-        )
+    if interpurchase_variance_features["Interpurchase_Variance"].isna().any():
+        raise ValueError("Interpurchase Variance contains " "missing values.")
 
-    if (
-        interpurchase_variance_features[
-            "Interpurchase_Variance"
-        ] < 0
-    ).any():
-        raise ValueError(
-            "Interpurchase Variance contains "
-            "negative values."
-        )
+    if (interpurchase_variance_features["Interpurchase_Variance"] < 0).any():
+        raise ValueError("Interpurchase Variance contains " "negative values.")
 
     return interpurchase_variance_features
 
-#---- 5.3 Validate time between consecutive purchases feature ----------------
+
+# ---- 5.3 Validate time between consecutive purchases feature ----------------
 def validate_interpurchase_variance_features(
     interpurchase_variance_features: pd.DataFrame,
 ) -> dict:
@@ -4133,9 +3225,7 @@ def validate_interpurchase_variance_features(
         if column not in interpurchase_variance_features.columns
     ]
 
-    validation_results["required_columns_present"] = (
-        len(missing_columns) == 0
-    )
+    validation_results["required_columns_present"] = len(missing_columns) == 0
 
     validation_results["missing_columns"] = missing_columns
 
@@ -4147,36 +3237,21 @@ def validate_interpurchase_variance_features(
     # Customer ID validation
     # ---------------------------------------------------------
 
-    validation_results["customer_count"] = len(
-        interpurchase_variance_features
-    )
+    validation_results["customer_count"] = len(interpurchase_variance_features)
 
-    validation_results["has_customers"] = (
-        len(interpurchase_variance_features) > 0
-    )
+    validation_results["has_customers"] = len(interpurchase_variance_features) > 0
 
     validation_results["missing_customer_ids"] = int(
-        interpurchase_variance_features[
-            "Customer ID"
-        ]
-        .isna()
-        .sum()
+        interpurchase_variance_features["Customer ID"].isna().sum()
     )
 
     validation_results["duplicate_customer_ids"] = int(
-        interpurchase_variance_features[
-            "Customer ID"
-        ]
-        .duplicated()
-        .sum()
+        interpurchase_variance_features["Customer ID"].duplicated().sum()
     )
 
-    validation_results["unique_customer_ids"] = (
-        interpurchase_variance_features[
-            "Customer ID"
-        ]
-        .nunique()
-    )
+    validation_results["unique_customer_ids"] = interpurchase_variance_features[
+        "Customer ID"
+    ].nunique()
 
     validation_results["customer_ids_valid"] = (
         validation_results["missing_customer_ids"] == 0
@@ -4187,23 +3262,15 @@ def validate_interpurchase_variance_features(
     # Interpurchase Variance validation
     # ---------------------------------------------------------
 
-    variance_values = (
-        interpurchase_variance_features[
-            "Interpurchase_Variance"
-        ]
-    )
+    variance_values = interpurchase_variance_features["Interpurchase_Variance"]
 
-    validation_results["missing_variance_values"] = int(
-        variance_values.isna().sum()
-    )
+    validation_results["missing_variance_values"] = int(variance_values.isna().sum())
 
     validation_results["infinite_variance_values"] = int(
         (~np.isfinite(variance_values)).sum()
     )
 
-    validation_results["negative_variance_values"] = int(
-        (variance_values < 0).sum()
-    )
+    validation_results["negative_variance_values"] = int((variance_values < 0).sum())
 
     validation_results["variance_values_valid"] = (
         validation_results["missing_variance_values"] == 0
@@ -4222,20 +3289,17 @@ def validate_interpurchase_variance_features(
         validation_results["variance_values_valid"],
     ]
 
-    validation_results["passed"] = all(
-        validation_checks
-    )
+    validation_results["passed"] = all(validation_checks)
 
     return validation_results
 
 
-
-
 ###############################################################
-#---------- 6. Seasonal purchase concentration ----------------
+# ---------- 6. Seasonal purchase concentration ----------------
 ################################################################
 
-#---- 6.1 Calculate seasonal purchase concentration feature ----------------
+
+# ---- 6.1 Calculate seasonal purchase concentration feature ----------------
 def analyze_seasonal_purchase_concentration_basis(
     df_cleaned: pd.DataFrame,
     cutoff_date: pd.Timestamp | None = None,
@@ -4291,15 +3355,10 @@ def analyze_seasonal_purchase_concentration_basis(
         "Include In Sales Analysis",
     }
 
-    missing_columns = (
-        required_columns - set(df_cleaned.columns)
-    )
+    missing_columns = required_columns - set(df_cleaned.columns)
 
     if missing_columns:
-        raise ValueError(
-            f"Missing required columns: "
-            f"{sorted(missing_columns)}"
-        )
+        raise ValueError(f"Missing required columns: " f"{sorted(missing_columns)}")
 
     working_df = df_cleaned.copy()
 
@@ -4316,21 +3375,14 @@ def analyze_seasonal_purchase_concentration_basis(
     # Determine point-in-time cutoff
     # ---------------------------------------------------------
 
-    maximum_invoice_date = (
-        working_df["InvoiceDate"].max()
-    )
+    maximum_invoice_date = working_df["InvoiceDate"].max()
 
     if pd.isna(maximum_invoice_date):
-        raise ValueError(
-            "InvoiceDate contains no valid dates."
-        )
+        raise ValueError("InvoiceDate contains no valid dates.")
 
     if cutoff_date is None:
 
-        cutoff_date = (
-            maximum_invoice_date
-            - pd.Timedelta(days=90)
-        )
+        cutoff_date = maximum_invoice_date - pd.Timedelta(days=90)
 
         cutoff_source = "Automatically calculated"
 
@@ -4341,10 +3393,7 @@ def analyze_seasonal_purchase_concentration_basis(
         cutoff_source = "User supplied"
 
     if cutoff_date > maximum_invoice_date:
-        raise ValueError(
-            "cutoff_date cannot be later than "
-            "the maximum InvoiceDate."
-        )
+        raise ValueError("cutoff_date cannot be later than " "the maximum InvoiceDate.")
 
     # ---------------------------------------------------------
     # Select qualifying historical purchases
@@ -4352,18 +3401,9 @@ def analyze_seasonal_purchase_concentration_basis(
 
     purchase_transactions = working_df[
         (working_df["InvoiceDate"] <= cutoff_date)
-        & (
-            working_df["Transaction Type"]
-            == "Purchase"
-        )
-        & (
-            working_df["Customer ID Missing Flag"]
-            == 0
-        )
-        & (
-            working_df["Include In Sales Analysis"]
-            == True
-        )
+        & (working_df["Transaction Type"] == "Purchase")
+        & (working_df["Customer ID Missing Flag"] == 0)
+        & (working_df["Include In Sales Analysis"] == True)
     ].copy()
 
     if purchase_transactions.empty:
@@ -4376,20 +3416,16 @@ def analyze_seasonal_purchase_concentration_basis(
     # Create invoice-level purchase events
     # ---------------------------------------------------------
 
-    invoice_purchases = (
-        purchase_transactions
-        .groupby(
-            [
-                "Customer ID",
-                "Invoice",
-            ],
-            as_index=False,
-        )
-        .agg(
-            Purchase_Date=(
-                "InvoiceDate",
-                "min",
-            )
+    invoice_purchases = purchase_transactions.groupby(
+        [
+            "Customer ID",
+            "Invoice",
+        ],
+        as_index=False,
+    ).agg(
+        Purchase_Date=(
+            "InvoiceDate",
+            "min",
         )
     )
 
@@ -4397,23 +3433,18 @@ def analyze_seasonal_purchase_concentration_basis(
     # Extract calendar month
     # ---------------------------------------------------------
 
-    invoice_purchases["Purchase_Month"] = (
-        invoice_purchases["Purchase_Date"]
-        .dt.month
-    )
+    invoice_purchases["Purchase_Month"] = invoice_purchases["Purchase_Date"].dt.month
 
-    invoice_purchases["Purchase_Month_Name"] = (
-        invoice_purchases["Purchase_Date"]
-        .dt.month_name()
-    )
+    invoice_purchases["Purchase_Month_Name"] = invoice_purchases[
+        "Purchase_Date"
+    ].dt.month_name()
 
     # ---------------------------------------------------------
     # Monthly order counts
     # ---------------------------------------------------------
 
     monthly_orders = (
-        invoice_purchases
-        .groupby(
+        invoice_purchases.groupby(
             [
                 "Customer ID",
                 "Purchase_Month",
@@ -4421,9 +3452,7 @@ def analyze_seasonal_purchase_concentration_basis(
             ]
         )["Invoice"]
         .nunique()
-        .reset_index(
-            name="Monthly_Order_Count"
-        )
+        .reset_index(name="Monthly_Order_Count")
     )
 
     # ---------------------------------------------------------
@@ -4431,8 +3460,7 @@ def analyze_seasonal_purchase_concentration_basis(
     # ---------------------------------------------------------
 
     customer_total_orders = (
-        invoice_purchases
-        .groupby("Customer ID")["Invoice"]
+        invoice_purchases.groupby("Customer ID")["Invoice"]
         .nunique()
         .rename("Total_Orders")
         .reset_index()
@@ -4442,25 +3470,15 @@ def analyze_seasonal_purchase_concentration_basis(
     # Calculate monthly purchase share
     # ---------------------------------------------------------
 
-    monthly_orders = (
-        monthly_orders
-        .merge(
-            customer_total_orders,
-            on="Customer ID",
-            how="left",
-            validate="many_to_one",
-        )
+    monthly_orders = monthly_orders.merge(
+        customer_total_orders,
+        on="Customer ID",
+        how="left",
+        validate="many_to_one",
     )
 
-    monthly_orders[
-        "Monthly_Purchase_Share"
-    ] = (
-        monthly_orders[
-            "Monthly_Order_Count"
-        ]
-        / monthly_orders[
-            "Total_Orders"
-        ]
+    monthly_orders["Monthly_Purchase_Share"] = (
+        monthly_orders["Monthly_Order_Count"] / monthly_orders["Total_Orders"]
     )
 
     # ---------------------------------------------------------
@@ -4468,8 +3486,7 @@ def analyze_seasonal_purchase_concentration_basis(
     # ---------------------------------------------------------
 
     customer_seasonality = (
-        monthly_orders
-        .groupby("Customer ID")
+        monthly_orders.groupby("Customer ID")
         .agg(
             Active_Calendar_Months=(
                 "Purchase_Month",
@@ -4485,9 +3502,7 @@ def analyze_seasonal_purchase_concentration_basis(
             ),
             Seasonal_Concentration_HHI=(
                 "Monthly_Purchase_Share",
-                lambda shares: (
-                    shares ** 2
-                ).sum(),
+                lambda shares: (shares**2).sum(),
             ),
         )
         .reset_index()
@@ -4498,8 +3513,7 @@ def analyze_seasonal_purchase_concentration_basis(
     # ---------------------------------------------------------
 
     peak_months = (
-        monthly_orders
-        .sort_values(
+        monthly_orders.sort_values(
             [
                 "Customer ID",
                 "Monthly_Purchase_Share",
@@ -4514,29 +3528,20 @@ def analyze_seasonal_purchase_concentration_basis(
         .drop_duplicates(
             subset=["Customer ID"],
             keep="first",
-        )
-        [
+        )[
             [
                 "Customer ID",
                 "Purchase_Month_Name",
             ]
         ]
-        .rename(
-            columns={
-                "Purchase_Month_Name":
-                    "Peak_Purchase_Month"
-            }
-        )
+        .rename(columns={"Purchase_Month_Name": "Peak_Purchase_Month"})
     )
 
-    customer_seasonality = (
-        customer_seasonality
-        .merge(
-            peak_months,
-            on="Customer ID",
-            how="left",
-            validate="one_to_one",
-        )
+    customer_seasonality = customer_seasonality.merge(
+        peak_months,
+        on="Customer ID",
+        how="left",
+        validate="one_to_one",
     )
 
     # ---------------------------------------------------------
@@ -4548,109 +3553,46 @@ def analyze_seasonal_purchase_concentration_basis(
         "cutoff_date": cutoff_date,
         "cutoff_source": cutoff_source,
         "prediction_window_days": 90,
-
-        "historical_transaction_count": len(
-            purchase_transactions
-        ),
-
-        "customer_count": (
-            customer_seasonality[
-                "Customer ID"
-            ].nunique()
-        ),
-
-        "distinct_invoice_count": (
-            invoice_purchases[
-                "Invoice"
-            ].nunique()
-        ),
-
-        "minimum_orders_per_customer": int(
-            customer_seasonality[
-                "Total_Orders"
-            ].min()
-        ),
-
+        "historical_transaction_count": len(purchase_transactions),
+        "customer_count": (customer_seasonality["Customer ID"].nunique()),
+        "distinct_invoice_count": (invoice_purchases["Invoice"].nunique()),
+        "minimum_orders_per_customer": int(customer_seasonality["Total_Orders"].min()),
         "median_orders_per_customer": float(
-            customer_seasonality[
-                "Total_Orders"
-            ].median()
+            customer_seasonality["Total_Orders"].median()
         ),
-
-        "maximum_orders_per_customer": int(
-            customer_seasonality[
-                "Total_Orders"
-            ].max()
-        ),
-
+        "maximum_orders_per_customer": int(customer_seasonality["Total_Orders"].max()),
         "minimum_active_calendar_months": int(
-            customer_seasonality[
-                "Active_Calendar_Months"
-            ].min()
+            customer_seasonality["Active_Calendar_Months"].min()
         ),
-
         "median_active_calendar_months": float(
-            customer_seasonality[
-                "Active_Calendar_Months"
-            ].median()
+            customer_seasonality["Active_Calendar_Months"].median()
         ),
-
         "maximum_active_calendar_months": int(
-            customer_seasonality[
-                "Active_Calendar_Months"
-            ].max()
+            customer_seasonality["Active_Calendar_Months"].max()
         ),
-
         "customers_with_one_order": int(
-            (
-                customer_seasonality[
-                    "Total_Orders"
-                ] == 1
-            ).sum()
+            (customer_seasonality["Total_Orders"] == 1).sum()
         ),
-
         "customers_with_one_active_month": int(
-            (
-                customer_seasonality[
-                    "Active_Calendar_Months"
-                ] == 1
-            ).sum()
+            (customer_seasonality["Active_Calendar_Months"] == 1).sum()
         ),
-
         "minimum_peak_month_share": float(
-            customer_seasonality[
-                "Peak_Month_Share"
-            ].min()
+            customer_seasonality["Peak_Month_Share"].min()
         ),
-
         "median_peak_month_share": float(
-            customer_seasonality[
-                "Peak_Month_Share"
-            ].median()
+            customer_seasonality["Peak_Month_Share"].median()
         ),
-
         "maximum_peak_month_share": float(
-            customer_seasonality[
-                "Peak_Month_Share"
-            ].max()
+            customer_seasonality["Peak_Month_Share"].max()
         ),
-
         "minimum_seasonal_hhi": float(
-            customer_seasonality[
-                "Seasonal_Concentration_HHI"
-            ].min()
+            customer_seasonality["Seasonal_Concentration_HHI"].min()
         ),
-
         "median_seasonal_hhi": float(
-            customer_seasonality[
-                "Seasonal_Concentration_HHI"
-            ].median()
+            customer_seasonality["Seasonal_Concentration_HHI"].median()
         ),
-
         "maximum_seasonal_hhi": float(
-            customer_seasonality[
-                "Seasonal_Concentration_HHI"
-            ].max()
+            customer_seasonality["Seasonal_Concentration_HHI"].max()
         ),
     }
 
@@ -4659,79 +3601,27 @@ def analyze_seasonal_purchase_concentration_basis(
     # ---------------------------------------------------------
 
     validation = {
-        "customer_count_valid": (
-            customer_seasonality[
-                "Customer ID"
-            ].notna().all()
-        ),
-
+        "customer_count_valid": (customer_seasonality["Customer ID"].notna().all()),
         "no_duplicate_customer_ids": (
-            not customer_seasonality[
-                "Customer ID"
-            ].duplicated().any()
+            not customer_seasonality["Customer ID"].duplicated().any()
         ),
-
-        "order_counts_valid": (
-            (
-                customer_seasonality[
-                    "Total_Orders"
-                ] > 0
-            ).all()
-        ),
-
+        "order_counts_valid": ((customer_seasonality["Total_Orders"] > 0).all()),
         "monthly_shares_valid": (
-            (
-                monthly_orders[
-                    "Monthly_Purchase_Share"
-                ] >= 0
-            ).all()
-            and
-            (
-                monthly_orders[
-                    "Monthly_Purchase_Share"
-                ] <= 1
-            ).all()
+            (monthly_orders["Monthly_Purchase_Share"] >= 0).all()
+            and (monthly_orders["Monthly_Purchase_Share"] <= 1).all()
         ),
-
         "peak_month_share_valid": (
-            (
-                customer_seasonality[
-                    "Peak_Month_Share"
-                ] >= 0
-            ).all()
-            and
-            (
-                customer_seasonality[
-                    "Peak_Month_Share"
-                ] <= 1
-            ).all()
+            (customer_seasonality["Peak_Month_Share"] >= 0).all()
+            and (customer_seasonality["Peak_Month_Share"] <= 1).all()
         ),
-
         "seasonal_hhi_valid": (
-            (
-                customer_seasonality[
-                    "Seasonal_Concentration_HHI"
-                ] > 0
-            ).all()
-            and
-            (
-                customer_seasonality[
-                    "Seasonal_Concentration_HHI"
-                ] <= 1
-            ).all()
+            (customer_seasonality["Seasonal_Concentration_HHI"] > 0).all()
+            and (customer_seasonality["Seasonal_Concentration_HHI"] <= 1).all()
         ),
-
-        "cutoff_valid": (
-            purchase_transactions[
-                "InvoiceDate"
-            ].max()
-            <= cutoff_date
-        ),
+        "cutoff_valid": (purchase_transactions["InvoiceDate"].max() <= cutoff_date),
     }
 
-    validation["passed"] = all(
-        validation.values()
-    )
+    validation["passed"] = all(validation.values())
 
     return {
         "summary": summary,
@@ -4741,7 +3631,8 @@ def analyze_seasonal_purchase_concentration_basis(
         "validation": validation,
     }
 
-#---- 6.2 Create seasonal purchase concentration feature ----------------
+
+# ---- 6.2 Create seasonal purchase concentration feature ----------------
 def create_seasonal_purchase_concentration_features(
     df_cleaned: pd.DataFrame,
     cutoff_date: pd.Timestamp | None = None,
@@ -4809,15 +3700,10 @@ def create_seasonal_purchase_concentration_features(
         "Include In Sales Analysis",
     }
 
-    missing_columns = (
-        required_columns - set(df_cleaned.columns)
-    )
+    missing_columns = required_columns - set(df_cleaned.columns)
 
     if missing_columns:
-        raise ValueError(
-            f"Missing required columns: "
-            f"{sorted(missing_columns)}"
-        )
+        raise ValueError(f"Missing required columns: " f"{sorted(missing_columns)}")
 
     working_df = df_cleaned.copy()
 
@@ -4834,33 +3720,21 @@ def create_seasonal_purchase_concentration_features(
     # Determine point-in-time cutoff
     # ---------------------------------------------------------
 
-    maximum_invoice_date = (
-        working_df["InvoiceDate"].max()
-    )
+    maximum_invoice_date = working_df["InvoiceDate"].max()
 
     if pd.isna(maximum_invoice_date):
-        raise ValueError(
-            "InvoiceDate contains no valid dates."
-        )
+        raise ValueError("InvoiceDate contains no valid dates.")
 
     if cutoff_date is None:
 
-        cutoff_date = (
-            maximum_invoice_date
-            - pd.Timedelta(days=90)
-        )
+        cutoff_date = maximum_invoice_date - pd.Timedelta(days=90)
 
     else:
 
-        cutoff_date = pd.Timestamp(
-            cutoff_date
-        )
+        cutoff_date = pd.Timestamp(cutoff_date)
 
     if cutoff_date > maximum_invoice_date:
-        raise ValueError(
-            "cutoff_date cannot be later than "
-            "the maximum InvoiceDate."
-        )
+        raise ValueError("cutoff_date cannot be later than " "the maximum InvoiceDate.")
 
     # ---------------------------------------------------------
     # Select qualifying historical purchases
@@ -4868,18 +3742,9 @@ def create_seasonal_purchase_concentration_features(
 
     purchase_transactions = working_df[
         (working_df["InvoiceDate"] <= cutoff_date)
-        & (
-            working_df["Transaction Type"]
-            == "Purchase"
-        )
-        & (
-            working_df["Customer ID Missing Flag"]
-            == 0
-        )
-        & (
-            working_df["Include In Sales Analysis"]
-            == True
-        )
+        & (working_df["Transaction Type"] == "Purchase")
+        & (working_df["Customer ID Missing Flag"] == 0)
+        & (working_df["Include In Sales Analysis"] == True)
     ].copy()
 
     if purchase_transactions.empty:
@@ -4892,20 +3757,16 @@ def create_seasonal_purchase_concentration_features(
     # Create invoice-level purchase events
     # ---------------------------------------------------------
 
-    invoice_purchases = (
-        purchase_transactions
-        .groupby(
-            [
-                "Customer ID",
-                "Invoice",
-            ],
-            as_index=False,
-        )
-        .agg(
-            Purchase_Date=(
-                "InvoiceDate",
-                "min",
-            )
+    invoice_purchases = purchase_transactions.groupby(
+        [
+            "Customer ID",
+            "Invoice",
+        ],
+        as_index=False,
+    ).agg(
+        Purchase_Date=(
+            "InvoiceDate",
+            "min",
         )
     )
 
@@ -4913,27 +3774,21 @@ def create_seasonal_purchase_concentration_features(
     # Extract calendar month
     # ---------------------------------------------------------
 
-    invoice_purchases["Purchase_Month"] = (
-        invoice_purchases["Purchase_Date"]
-        .dt.month
-    )
+    invoice_purchases["Purchase_Month"] = invoice_purchases["Purchase_Date"].dt.month
 
     # ---------------------------------------------------------
     # Count orders per customer per calendar month
     # ---------------------------------------------------------
 
     monthly_orders = (
-        invoice_purchases
-        .groupby(
+        invoice_purchases.groupby(
             [
                 "Customer ID",
                 "Purchase_Month",
             ]
         )["Invoice"]
         .nunique()
-        .reset_index(
-            name="Monthly_Order_Count"
-        )
+        .reset_index(name="Monthly_Order_Count")
     )
 
     # ---------------------------------------------------------
@@ -4941,8 +3796,7 @@ def create_seasonal_purchase_concentration_features(
     # ---------------------------------------------------------
 
     customer_total_orders = (
-        invoice_purchases
-        .groupby("Customer ID")["Invoice"]
+        invoice_purchases.groupby("Customer ID")["Invoice"]
         .nunique()
         .rename("Total_Orders")
         .reset_index()
@@ -4952,25 +3806,15 @@ def create_seasonal_purchase_concentration_features(
     # Calculate monthly purchase share
     # ---------------------------------------------------------
 
-    monthly_orders = (
-        monthly_orders
-        .merge(
-            customer_total_orders,
-            on="Customer ID",
-            how="left",
-            validate="many_to_one",
-        )
+    monthly_orders = monthly_orders.merge(
+        customer_total_orders,
+        on="Customer ID",
+        how="left",
+        validate="many_to_one",
     )
 
-    monthly_orders[
-        "Monthly_Purchase_Share"
-    ] = (
-        monthly_orders[
-            "Monthly_Order_Count"
-        ]
-        / monthly_orders[
-            "Total_Orders"
-        ]
+    monthly_orders["Monthly_Purchase_Share"] = (
+        monthly_orders["Monthly_Order_Count"] / monthly_orders["Total_Orders"]
     )
 
     # ---------------------------------------------------------
@@ -4978,18 +3822,9 @@ def create_seasonal_purchase_concentration_features(
     # ---------------------------------------------------------
 
     seasonal_concentration = (
-        monthly_orders
-        .groupby("Customer ID")[
-            "Monthly_Purchase_Share"
-        ]
-        .apply(
-            lambda shares: (
-                shares ** 2
-            ).sum()
-        )
-        .rename(
-            "Seasonal_Purchase_Concentration"
-        )
+        monthly_orders.groupby("Customer ID")["Monthly_Purchase_Share"]
+        .apply(lambda shares: (shares**2).sum())
+        .rename("Seasonal_Purchase_Concentration")
         .reset_index()
     )
 
@@ -4997,72 +3832,39 @@ def create_seasonal_purchase_concentration_features(
     # Round final feature
     # ---------------------------------------------------------
 
-    seasonal_concentration[
+    seasonal_concentration["Seasonal_Purchase_Concentration"] = seasonal_concentration[
         "Seasonal_Purchase_Concentration"
-    ] = (
-        seasonal_concentration[
-            "Seasonal_Purchase_Concentration"
-        ]
-        .round(6)
-    )
+    ].round(6)
 
     # ---------------------------------------------------------
     # Structural validation
     # ---------------------------------------------------------
 
-    if (
-        seasonal_concentration[
-            "Customer ID"
-        ].isna().any()
-    ):
+    if seasonal_concentration["Customer ID"].isna().any():
         raise ValueError(
-            "Seasonal Purchase Concentration "
-            "contains missing Customer IDs."
+            "Seasonal Purchase Concentration " "contains missing Customer IDs."
         )
 
-    if (
-        seasonal_concentration[
-            "Customer ID"
-        ].duplicated().any()
-    ):
+    if seasonal_concentration["Customer ID"].duplicated().any():
         raise ValueError(
-            "Seasonal Purchase Concentration "
-            "contains duplicate Customer IDs."
+            "Seasonal Purchase Concentration " "contains duplicate Customer IDs."
         )
 
-    if (
-        seasonal_concentration[
-            "Seasonal_Purchase_Concentration"
-        ].isna().any()
-    ):
-        raise ValueError(
-            "Seasonal Purchase Concentration "
-            "contains missing values."
-        )
+    if seasonal_concentration["Seasonal_Purchase_Concentration"].isna().any():
+        raise ValueError("Seasonal Purchase Concentration " "contains missing values.")
 
-    if (
-        seasonal_concentration[
-            "Seasonal_Purchase_Concentration"
-        ] < 0
-    ).any():
-        raise ValueError(
-            "Seasonal Purchase Concentration "
-            "contains negative values."
-        )
+    if (seasonal_concentration["Seasonal_Purchase_Concentration"] < 0).any():
+        raise ValueError("Seasonal Purchase Concentration " "contains negative values.")
 
-    if (
-        seasonal_concentration[
-            "Seasonal_Purchase_Concentration"
-        ] > 1
-    ).any():
+    if (seasonal_concentration["Seasonal_Purchase_Concentration"] > 1).any():
         raise ValueError(
-            "Seasonal Purchase Concentration "
-            "contains values greater than 1."
+            "Seasonal Purchase Concentration " "contains values greater than 1."
         )
 
     return seasonal_concentration
 
-#---- 6.3 Validate seasonal purchase concentration feature ----------------
+
+# ---- 6.3 Validate seasonal purchase concentration feature ----------------
 def validate_seasonal_purchase_concentration_features(
     seasonal_purchase_concentration_features: pd.DataFrame,
 ) -> dict:
@@ -5095,9 +3897,7 @@ def validate_seasonal_purchase_concentration_features(
         if column not in seasonal_purchase_concentration_features.columns
     ]
 
-    validation_results["required_columns_present"] = (
-        len(missing_columns) == 0
-    )
+    validation_results["required_columns_present"] = len(missing_columns) == 0
 
     validation_results["missing_columns"] = missing_columns
 
@@ -5109,35 +3909,22 @@ def validate_seasonal_purchase_concentration_features(
     # Customer ID validation
     # ---------------------------------------------------------
 
-    validation_results["customer_count"] = len(
-        seasonal_purchase_concentration_features
-    )
+    validation_results["customer_count"] = len(seasonal_purchase_concentration_features)
 
     validation_results["has_customers"] = (
         len(seasonal_purchase_concentration_features) > 0
     )
 
     validation_results["missing_customer_ids"] = int(
-        seasonal_purchase_concentration_features[
-            "Customer ID"
-        ]
-        .isna()
-        .sum()
+        seasonal_purchase_concentration_features["Customer ID"].isna().sum()
     )
 
     validation_results["duplicate_customer_ids"] = int(
-        seasonal_purchase_concentration_features[
-            "Customer ID"
-        ]
-        .duplicated()
-        .sum()
+        seasonal_purchase_concentration_features["Customer ID"].duplicated().sum()
     )
 
     validation_results["unique_customer_ids"] = (
-        seasonal_purchase_concentration_features[
-            "Customer ID"
-        ]
-        .nunique()
+        seasonal_purchase_concentration_features["Customer ID"].nunique()
     )
 
     validation_results["customer_ids_valid"] = (
@@ -5149,11 +3936,9 @@ def validate_seasonal_purchase_concentration_features(
     # Seasonal concentration validation
     # ---------------------------------------------------------
 
-    concentration_values = (
-        seasonal_purchase_concentration_features[
-            "Seasonal_Purchase_Concentration"
-        ]
-    )
+    concentration_values = seasonal_purchase_concentration_features[
+        "Seasonal_Purchase_Concentration"
+    ]
 
     validation_results["missing_concentration_values"] = int(
         concentration_values.isna().sum()
@@ -5163,13 +3948,9 @@ def validate_seasonal_purchase_concentration_features(
         (~np.isfinite(concentration_values)).sum()
     )
 
-    validation_results["below_zero_values"] = int(
-        (concentration_values < 0).sum()
-    )
+    validation_results["below_zero_values"] = int((concentration_values < 0).sum())
 
-    validation_results["above_one_values"] = int(
-        (concentration_values > 1).sum()
-    )
+    validation_results["above_one_values"] = int((concentration_values > 1).sum())
 
     validation_results["concentration_values_valid"] = (
         validation_results["missing_concentration_values"] == 0
@@ -5189,19 +3970,17 @@ def validate_seasonal_purchase_concentration_features(
         validation_results["concentration_values_valid"],
     ]
 
-    validation_results["passed"] = all(
-        validation_checks
-    )
+    validation_results["passed"] = all(validation_checks)
 
     return validation_results
 
 
-
 ###############################################################
-#---------- 7. product category affinity vectors --------------
+# ---------- 7. product category affinity vectors --------------
 ###############################################################
 
-#---- 7.1 Analyze product category affinity vectors ----------------
+
+# ---- 7.1 Analyze product category affinity vectors ----------------
 def analyze_product_taxonomy(df_cleaned):
     """
     Analyse and assign product categories for the genuine product universe.
@@ -5244,15 +4023,11 @@ def analyze_product_taxonomy(df_cleaned):
     ]
 
     missing_columns = [
-        column
-        for column in required_columns
-        if column not in df_cleaned.columns
+        column for column in required_columns if column not in df_cleaned.columns
     ]
 
     if missing_columns:
-        raise ValueError(
-            f"Missing required columns: {missing_columns}"
-        )
+        raise ValueError(f"Missing required columns: {missing_columns}")
 
     working_df = df_cleaned.copy()
 
@@ -5261,15 +4036,11 @@ def analyze_product_taxonomy(df_cleaned):
     # =========================================================
 
     working_df["StockCode_Key"] = (
-        working_df["StockCode"]
-        .astype("string")
-        .str.strip()
-        .str.upper()
+        working_df["StockCode"].astype("string").str.strip().str.upper()
     )
 
     working_df = working_df[
-        working_df["StockCode_Key"].notna()
-        & (working_df["StockCode_Key"] != "")
+        working_df["StockCode_Key"].notna() & (working_df["StockCode_Key"] != "")
     ].copy()
 
     # =========================================================
@@ -5281,15 +4052,11 @@ def analyze_product_taxonomy(df_cleaned):
     # =========================================================
 
     working_df["Taxonomy_Description"] = (
-        working_df["Description"]
-        .astype("string")
-        .str.strip()
-        .str.upper()
+        working_df["Description"].astype("string").str.strip().str.upper()
     )
 
-    working_df["Taxonomy_Description"] = (
-        working_df["Taxonomy_Description"]
-        .replace("", pd.NA)
+    working_df["Taxonomy_Description"] = working_df["Taxonomy_Description"].replace(
+        "", pd.NA
     )
 
     # =========================================================
@@ -5315,9 +4082,7 @@ def analyze_product_taxonomy(df_cleaned):
     # =========================================================
 
     product_transactions = working_df[
-        ~working_df["StockCode_Key"].isin(
-            NON_PRODUCT_STOCK_CODES
-        )
+        ~working_df["StockCode_Key"].isin(NON_PRODUCT_STOCK_CODES)
     ].copy()
 
     # =========================================================
@@ -5327,28 +4092,18 @@ def analyze_product_taxonomy(df_cleaned):
     def select_canonical_description(group):
 
         descriptions = (
-            group["Taxonomy_Description"]
-            .dropna()
-            .astype("string")
-            .str.strip()
+            group["Taxonomy_Description"].dropna().astype("string").str.strip()
         )
 
-        descriptions = descriptions[
-            descriptions != ""
-        ]
+        descriptions = descriptions[descriptions != ""]
 
         if descriptions.empty:
             return "NO DESCRIPTION"
 
-        return (
-            descriptions
-            .value_counts()
-            .index[0]
-        )
+        return descriptions.value_counts().index[0]
 
     product_catalog = (
-        product_transactions
-        .groupby("StockCode_Key")
+        product_transactions.groupby("StockCode_Key")
         .apply(
             select_canonical_description,
             include_groups=False,
@@ -5362,8 +4117,7 @@ def analyze_product_taxonomy(df_cleaned):
     # =========================================================
 
     product_catalog["Description_Present"] = (
-        product_catalog["Description"]
-        != "NO DESCRIPTION"
+        product_catalog["Description"] != "NO DESCRIPTION"
     )
 
     # =========================================================
@@ -5376,11 +4130,9 @@ def analyze_product_taxonomy(df_cleaned):
     # =========================================================
 
     category_rules = {
-
         # -----------------------------------------------------
         # HOME FRAGRANCE
         # -----------------------------------------------------
-
         "Home Fragrance": {
             "strong": [
                 "INCENSE",
@@ -5398,11 +4150,9 @@ def analyze_product_taxonomy(df_cleaned):
                 "SCENTED",
             ],
         },
-
         # -----------------------------------------------------
         # LIGHTING & CANDLES
         # -----------------------------------------------------
-
         "Lighting & Candles": {
             "strong": [
                 "CHANDELIER",
@@ -5435,141 +4185,130 @@ def analyze_product_taxonomy(df_cleaned):
                 "LIGHTING",
             ],
         },
-
         # -----------------------------------------------------
         # STATIONERY & PAPER
         # -----------------------------------------------------
-
         "Stationery & Paper": {
-         "strong": [
-        # Writing instruments
-         "PENCIL",
-         "PENCILS",
-         "PEN",
-         "PENS",
-        "BALL PEN",
-         "BALLPEN",
-         "FELT PEN",
-         "MARKER",
-         "MARKERS",
-         "PHOTO ALBUM",
-         "PHOTO ALBUMS",
-         "PHOTO ALBUM COVER",
-         "HOLE PUNCH",
-         "HOLE PUNCHES",
-         "PUNCH",
-         "STENCIL",
-         "STENCILS",
-         "CALCULATOR",
-         "CALCULATORS",
-        "MEMO PAD",
-        "MEMO PADS",
-
-        # Notebooks, books and paper products
-        "SKETCHBOOK",
-        "SKETCH BOOK",
-        "JOURNAL",
-        "NOTEBOOK",
-        "NOTEPAD",
-        "DIARY",
-        "ADDRESS BOOK",
-        "ADDRESS BOOKS",
-        "BOOKCOVER",
-        "BOOK COVER",
-        "POCKET BOOK",
-        "POCKETBOOK",
-        "PHOTO ALBUM",
-        "PHOTO ALBUMS",
-        "ALBUM",
-        "ALBUMS",
-        "STATIONERY",
-        "PAGE PHOTO",
-        "PAGE PHOTOS",
-        "P'WEIGHT",
-        "PAPERWEIGHT",
-        "P'WEIGHTS",
-
-        # Paper accessories
-        "STICKER",
-        "STICKERS",
-        "ENVELOPE",
-        "ENVELOPES",
-        "RULER",
-        "RULERS",
-        "ERASER",
-        "ERASERS",
-        "POSTCARD",
-        "POSTCARDS",
-        "BOOKMARK",
-        "BOOKMARKS",
-        "PAPER CLIP",
-        "PAPER CLIPS",
-        "CLIPBOARD",
-        "CLIPBOARDS",
-
-        # Writing / office supplies
-        "WRITING SET",
-        "WRITING SETS",
-        "WRITING",
-        "STAMP",
-        "STAMPS",
-        "INK PAD",
-        "INKPAD",
-        "INK PADS",
-
-        # Tape and wrapping-related stationery
-        "TAPE",
-        "TAPES",
-        "WRAP",
-        "WRAPS",
-        "WRAPPING",
-        "WRAPPING PAPER",
-        "WRAPPING TAPE",
-        "BOOKCOVER TAPE",
-        "BOOK COVER TAPE",
-        "VIPPASSPORT COVER",
-        "VIP PASSPORT COVER",
-        "PASSPORT COVERS",
-
-        # Craft and cutting tools
-        "SCISSOR",
-        "SCISSORS",
-        "FOLDING SCISSOR",
-        "FOLDING SCISSORS",
-        "CRAFT SCISSOR",
-        "CRAFT SCISSORS",
-        "PAPER SCISSOR",
-        "PAPER SCISSORS",
-        "CRAFT KNIFE",
-        "CRAFT KNIVES",
-
-        # Chalkboards / display-writing products
-        "CHALKBOARD",
-        "CHALK BOARD",
-        "CHALKBOARDS",
-        "EASEL",
-        "EASELS",
-        "WHITEBOARD",
-        "WHITE BOARD",
-        ],
-
-         "weak": [
-          "PAPER",
-          "PAPERS",
-          "CARD",
-          "CARDS",
-          "CRAFT",
-          "CRAFTS",
-          "DESK",
-          "DESK ACCESSORY",
-          "DESK ACCESSORIES",
-        ],
-    },
-
+            "strong": [
+                # Writing instruments
+                "PENCIL",
+                "PENCILS",
+                "PEN",
+                "PENS",
+                "BALL PEN",
+                "BALLPEN",
+                "FELT PEN",
+                "MARKER",
+                "MARKERS",
+                "PHOTO ALBUM",
+                "PHOTO ALBUMS",
+                "PHOTO ALBUM COVER",
+                "HOLE PUNCH",
+                "HOLE PUNCHES",
+                "PUNCH",
+                "STENCIL",
+                "STENCILS",
+                "CALCULATOR",
+                "CALCULATORS",
+                "MEMO PAD",
+                "MEMO PADS",
+                # Notebooks, books and paper products
+                "SKETCHBOOK",
+                "SKETCH BOOK",
+                "JOURNAL",
+                "NOTEBOOK",
+                "NOTEPAD",
+                "DIARY",
+                "ADDRESS BOOK",
+                "ADDRESS BOOKS",
+                "BOOKCOVER",
+                "BOOK COVER",
+                "POCKET BOOK",
+                "POCKETBOOK",
+                "PHOTO ALBUM",
+                "PHOTO ALBUMS",
+                "ALBUM",
+                "ALBUMS",
+                "STATIONERY",
+                "PAGE PHOTO",
+                "PAGE PHOTOS",
+                "P'WEIGHT",
+                "PAPERWEIGHT",
+                "P'WEIGHTS",
+                # Paper accessories
+                "STICKER",
+                "STICKERS",
+                "ENVELOPE",
+                "ENVELOPES",
+                "RULER",
+                "RULERS",
+                "ERASER",
+                "ERASERS",
+                "POSTCARD",
+                "POSTCARDS",
+                "BOOKMARK",
+                "BOOKMARKS",
+                "PAPER CLIP",
+                "PAPER CLIPS",
+                "CLIPBOARD",
+                "CLIPBOARDS",
+                # Writing / office supplies
+                "WRITING SET",
+                "WRITING SETS",
+                "WRITING",
+                "STAMP",
+                "STAMPS",
+                "INK PAD",
+                "INKPAD",
+                "INK PADS",
+                # Tape and wrapping-related stationery
+                "TAPE",
+                "TAPES",
+                "WRAP",
+                "WRAPS",
+                "WRAPPING",
+                "WRAPPING PAPER",
+                "WRAPPING TAPE",
+                "BOOKCOVER TAPE",
+                "BOOK COVER TAPE",
+                "VIPPASSPORT COVER",
+                "VIP PASSPORT COVER",
+                "PASSPORT COVERS",
+                # Craft and cutting tools
+                "SCISSOR",
+                "SCISSORS",
+                "FOLDING SCISSOR",
+                "FOLDING SCISSORS",
+                "CRAFT SCISSOR",
+                "CRAFT SCISSORS",
+                "PAPER SCISSOR",
+                "PAPER SCISSORS",
+                "CRAFT KNIFE",
+                "CRAFT KNIVES",
+                # Chalkboards / display-writing products
+                "CHALKBOARD",
+                "CHALK BOARD",
+                "CHALKBOARDS",
+                "EASEL",
+                "EASELS",
+                "WHITEBOARD",
+                "WHITE BOARD",
+            ],
+            "weak": [
+                "PAPER",
+                "PAPERS",
+                "CARD",
+                "CARDS",
+                "CRAFT",
+                "CRAFTS",
+                "DESK",
+                "DESK ACCESSORY",
+                "DESK ACCESSORIES",
+            ],
+        },
         # -----------------------------------------------------
         # JEWELRY & FASHION ACCESSORIES
         # -----------------------------------------------------
-
         "Jewelry & Fashion Accessories": {
             "strong": [
                 "BADGE",
@@ -5617,10 +4356,6 @@ def analyze_product_taxonomy(df_cleaned):
                 "HAIR SLIDES",
                 "EAR MUFF",
                 "EAR MUFFS",
-
-
-
-
             ],
             "weak": [
                 "RING",
@@ -5629,11 +4364,9 @@ def analyze_product_taxonomy(df_cleaned):
                 "ACCESSORIES",
             ],
         },
-
         # -----------------------------------------------------
         # BAGS & TRAVEL ACCESSORIES
         # -----------------------------------------------------
-
         "Bags & Travel Accessories": {
             "strong": [
                 "SHOPPER",
@@ -5658,18 +4391,15 @@ def analyze_product_taxonomy(df_cleaned):
                 "POUCH",
                 "WALLET",
                 "HANDBAG",
-
             ],
             "weak": [
                 "BAG",
                 "BAGS",
             ],
         },
-
         # -----------------------------------------------------
         # KITCHEN & DINING
         # -----------------------------------------------------
-
         "Kitchen & Dining": {
             "strong": [
                 "SALAD SERVER",
@@ -5741,11 +4471,9 @@ def analyze_product_taxonomy(df_cleaned):
                 "PANTRY",
             ],
         },
-
         # -----------------------------------------------------
         # STORAGE & ORGANIZATION
         # -----------------------------------------------------
-
         "Storage & Organization": {
             "strong": [
                 "STORAGE",
@@ -5789,11 +4517,9 @@ def analyze_product_taxonomy(df_cleaned):
                 "ORGANISATION",
             ],
         },
-
         # -----------------------------------------------------
         # GARDEN & OUTDOOR
         # -----------------------------------------------------
-
         "Garden & Outdoor": {
             "strong": [
                 "GARDEN",
@@ -5821,11 +4547,9 @@ def analyze_product_taxonomy(df_cleaned):
                 "FLOWERS",
             ],
         },
-
         # -----------------------------------------------------
         # BATH & PERSONAL CARE
         # -----------------------------------------------------
-
         "Bath & Personal Care": {
             "strong": [
                 "FLANNEL",
@@ -5851,11 +4575,9 @@ def analyze_product_taxonomy(df_cleaned):
                 "CARE",
             ],
         },
-
         # -----------------------------------------------------
         # TOYS & GAMES
         # -----------------------------------------------------
-
         "Toys & Games": {
             "strong": [
                 "SPACE CADET",
@@ -5899,11 +4621,9 @@ def analyze_product_taxonomy(df_cleaned):
                 "PLAY",
             ],
         },
-
         # -----------------------------------------------------
         # PARTY & CELEBRATION
         # -----------------------------------------------------
-
         "Party & Celebration": {
             "strong": [
                 "GARLAND",
@@ -5930,11 +4650,9 @@ def analyze_product_taxonomy(df_cleaned):
                 "CELEBRATION",
             ],
         },
-
         # -----------------------------------------------------
         # GIFTS & SEASONAL
         # -----------------------------------------------------
-
         "Gifts & Seasonal": {
             "strong": [
                 "FEATHER TREE",
@@ -5964,11 +4682,9 @@ def analyze_product_taxonomy(df_cleaned):
                 "SEASONAL",
             ],
         },
-
         # -----------------------------------------------------
         # FOOD & CONSUMABLES
         # -----------------------------------------------------
-
         "Food & Consumables": {
             "strong": [
                 "CHOCOLATE",
@@ -5992,11 +4708,9 @@ def analyze_product_taxonomy(df_cleaned):
                 "TEA",
             ],
         },
-
         # -----------------------------------------------------
         # HOME DECOR
         # -----------------------------------------------------
-
         "Home Decor": {
             "strong": [
                 "DOORSTOP",
@@ -6008,7 +4722,7 @@ def analyze_product_taxonomy(df_cleaned):
                 "TOADSTOOL",
                 "TOADSTOOLS",
                 "HANGGING",
-                "HAND PAINTED"
+                "HAND PAINTED",
                 "hookS",
                 "HOOK",
                 "HOOKS",
@@ -6108,10 +4822,7 @@ def analyze_product_taxonomy(df_cleaned):
 
     def keyword_matches(description, keywords):
 
-        if (
-            pd.isna(description)
-            or description == "NO DESCRIPTION"
-        ):
+        if pd.isna(description) or description == "NO DESCRIPTION":
             return False
 
         pattern = (
@@ -6138,26 +4849,13 @@ def analyze_product_taxonomy(df_cleaned):
     # =========================================================
     # 11. Create strong/weak category matches
     # =========================================================
-
+    """
     for category, rules in category_rules.items():
 
-        category_key = (
-            category
-            .replace(" & ", "_")
-            .replace(" ", "_")
-        )
-
-        strong_column = (
-            f"Strong_{category_key}"
-        )
-
-        weak_column = (
-            f"Weak_{category_key}"
-        )
-
-        match_column = (
-            f"Match_{category_key}"
-        )
+        category_key = (category.replace(" & ", "_").replace(" ", "_"))
+        strong_column = (f"Strong_{category_key}")
+        weak_column = (f"Weak_{category_key}")
+        match_column = (f"Match_{category_key}")
 
         product_catalog[strong_column] = (
             product_catalog["Description"]
@@ -6184,6 +4882,34 @@ def analyze_product_taxonomy(df_cleaned):
         product_catalog[match_column] = (
             product_catalog[strong_column]
             | product_catalog[weak_column]
+        )"""
+    for category, rules in category_rules.items():
+
+        category_key = category.replace(" & ", "_").replace(" ", "_")
+
+        strong_column = f"Strong_{category_key}"
+        weak_column = f"Weak_{category_key}"
+        match_column = f"Match_{category_key}"
+
+        strong_rules = rules["strong"]
+        weak_rules = rules["weak"]
+
+        product_catalog[strong_column] = product_catalog["Description"].apply(
+            lambda value, matched_rules=strong_rules: keyword_matches(
+                value,
+                matched_rules,
+            )
+        )
+
+        product_catalog[weak_column] = product_catalog["Description"].apply(
+            lambda value, matched_rules=weak_rules: keyword_matches(
+                value,
+                matched_rules,
+            )
+        )
+
+        product_catalog[match_column] = (
+            product_catalog[strong_column] | product_catalog[weak_column]
         )
 
     # =========================================================
@@ -6191,27 +4917,19 @@ def analyze_product_taxonomy(df_cleaned):
     # =========================================================
 
     match_columns = [
-        column
-        for column in product_catalog.columns
-        if column.startswith("Match_")
+        column for column in product_catalog.columns if column.startswith("Match_")
     ]
 
     strong_columns = [
-        column
-        for column in product_catalog.columns
-        if column.startswith("Strong_")
+        column for column in product_catalog.columns if column.startswith("Strong_")
     ]
 
     product_catalog["Matched_Category_Count"] = (
-        product_catalog[match_columns]
-        .sum(axis=1)
-        .astype(int)
+        product_catalog[match_columns].sum(axis=1).astype(int)
     )
 
     product_catalog["Strong_Category_Match_Count"] = (
-        product_catalog[strong_columns]
-        .sum(axis=1)
-        .astype(int)
+        product_catalog[strong_columns].sum(axis=1).astype(int)
     )
 
     # =========================================================
@@ -6224,11 +4942,7 @@ def analyze_product_taxonomy(df_cleaned):
 
         description = row["Description"]
 
-        if (
-            pd.isna(description)
-            or description == ""
-            or description == "NO DESCRIPTION"
-        ):
+        if pd.isna(description) or description == "" or description == "NO DESCRIPTION":
             return "Other / Unclassified"
 
         # -----------------------------------------------------
@@ -6240,15 +4954,9 @@ def analyze_product_taxonomy(df_cleaned):
             if category == "Other / Unclassified":
                 continue
 
-            category_key = (
-                category
-                .replace(" & ", "_")
-                .replace(" ", "_")
-            )
+            category_key = category.replace(" & ", "_").replace(" ", "_")
 
-            strong_column = (
-                f"Strong_{category_key}"
-            )
+            strong_column = f"Strong_{category_key}"
 
             if bool(row[strong_column]):
                 return category
@@ -6262,55 +4970,34 @@ def analyze_product_taxonomy(df_cleaned):
             if category == "Other / Unclassified":
                 continue
 
-            category_key = (
-                category
-                .replace(" & ", "_")
-                .replace(" ", "_")
-            )
+            category_key = category.replace(" & ", "_").replace(" ", "_")
 
-            weak_column = (
-                f"Weak_{category_key}"
-            )
+            weak_column = f"Weak_{category_key}"
 
             if bool(row[weak_column]):
                 return category
 
         return "Other / Unclassified"
 
-    product_catalog["Product_Category"] = (
-        product_catalog.apply(
-            assign_primary_category,
-            axis=1,
-        )
+    product_catalog["Product_Category"] = product_catalog.apply(
+        assign_primary_category,
+        axis=1,
     )
 
     # =========================================================
     # 14. Assignment status
     # =========================================================
 
-    product_catalog[
-        "Category_Assignment_Status"
-    ] = "No_Rule_Match"
+    product_catalog["Category_Assignment_Status"] = "No_Rule_Match"
 
     product_catalog.loc[
-        product_catalog["Description"]
-        == "NO DESCRIPTION",
-        "Category_Assignment_Status"
+        product_catalog["Description"] == "NO DESCRIPTION", "Category_Assignment_Status"
     ] = "Missing_Description"
 
     product_catalog.loc[
-        (
-            product_catalog["Description"]
-            != "NO DESCRIPTION"
-        )
-        &
-        (
-            product_catalog[
-                "Matched_Category_Count"
-            ]
-            > 0
-        ),
-        "Category_Assignment_Status"
+        (product_catalog["Description"] != "NO DESCRIPTION")
+        & (product_catalog["Matched_Category_Count"] > 0),
+        "Category_Assignment_Status",
     ] = "Rule_Assigned"
 
     # =========================================================
@@ -6330,9 +5017,7 @@ def analyze_product_taxonomy(df_cleaned):
     ] + match_columns
 
     multi_match_products = (
-        multi_match_products[
-            multi_match_columns
-        ]
+        multi_match_products[multi_match_columns]
         .sort_values(
             by=[
                 "Matched_Category_Count",
@@ -6348,8 +5033,7 @@ def analyze_product_taxonomy(df_cleaned):
     # =========================================================
 
     unclassified_products = product_catalog[
-        product_catalog["Product_Category"]
-        == "Other / Unclassified"
+        product_catalog["Product_Category"] == "Other / Unclassified"
     ].copy()
 
     unclassified_products = (
@@ -6393,39 +5077,21 @@ def analyze_product_taxonomy(df_cleaned):
     )
 
     category_summary = (
-        pd.DataFrame(
-            {
-                "Product_Category":
-                    category_priority
-            }
-        )
+        pd.DataFrame({"Product_Category": category_priority})
         .merge(
             category_summary,
             on="Product_Category",
             how="left",
         )
-        .fillna(
-            {
-                "Product_Count": 0
-            }
-        )
+        .fillna({"Product_Count": 0})
     )
 
-    category_summary["Product_Count"] = (
-        category_summary["Product_Count"]
-        .astype(int)
-    )
+    category_summary["Product_Count"] = category_summary["Product_Count"].astype(int)
 
-    total_products = len(
-        product_catalog
-    )
+    total_products = len(product_catalog)
 
-    category_summary[
-        "Product_Percentage"
-    ] = (
-        category_summary["Product_Count"]
-        / total_products
-        * 100
+    category_summary["Product_Percentage"] = (
+        category_summary["Product_Count"] / total_products * 100
     ).round(2)
 
     # =========================================================
@@ -6433,24 +5099,14 @@ def analyze_product_taxonomy(df_cleaned):
     # =========================================================
 
     assignment_summary = (
-        product_catalog[
-            "Category_Assignment_Status"
-        ]
+        product_catalog["Category_Assignment_Status"]
         .value_counts()
-        .rename_axis(
-            "Category_Assignment_Status"
-        )
-        .reset_index(
-            name="Product_Count"
-        )
+        .rename_axis("Category_Assignment_Status")
+        .reset_index(name="Product_Count")
     )
 
-    assignment_summary[
-        "Product_Percentage"
-    ] = (
-        assignment_summary["Product_Count"]
-        / total_products
-        * 100
+    assignment_summary["Product_Percentage"] = (
+        assignment_summary["Product_Count"] / total_products * 100
     ).round(2)
 
     # =========================================================
@@ -6459,123 +5115,56 @@ def analyze_product_taxonomy(df_cleaned):
 
     validation = {}
 
-    validation["product_count_is_5120"] = (
-        total_products == 5120
-    )
+    validation["product_count_is_5120"] = total_products == 5120
 
-    validation["one_row_per_stockcode"] = (
-        product_catalog[
-            "StockCode_Key"
-        ].is_unique
-    )
+    validation["one_row_per_stockcode"] = product_catalog["StockCode_Key"].is_unique
 
     validation["no_missing_product_category"] = (
-        product_catalog[
-            "Product_Category"
-        ].notna().all()
+        product_catalog["Product_Category"].notna().all()
     )
 
     validation["administrative_codes_excluded"] = (
-        not product_catalog[
-            "StockCode_Key"
-        ]
-        .isin(
-            NON_PRODUCT_STOCK_CODES
-        )
-        .any()
+        not product_catalog["StockCode_Key"].isin(NON_PRODUCT_STOCK_CODES).any()
     )
 
     missing_description_count = int(
-        (
-            product_catalog[
-                "Description"
-            ]
-            == "NO DESCRIPTION"
-        ).sum()
+        (product_catalog["Description"] == "NO DESCRIPTION").sum()
     )
 
-    validation[
-        "missing_description_count_valid"
-    ] = (
-        0
-        <= missing_description_count
-        <= total_products
+    validation["missing_description_count_valid"] = (
+        0 <= missing_description_count <= total_products
     )
 
-    assignment_total = int(
-        assignment_summary[
-            "Product_Count"
-        ].sum()
-    )
+    assignment_total = int(assignment_summary["Product_Count"].sum())
 
-    validation[
-        "assignment_counts_reconcile"
-    ] = (
-        assignment_total
-        == total_products
-    )
+    validation["assignment_counts_reconcile"] = assignment_total == total_products
 
-    category_total = int(
-        category_summary[
-            "Product_Count"
-        ].sum()
-    )
+    category_total = int(category_summary["Product_Count"].sum())
 
-    validation[
-        "category_counts_reconcile"
-    ] = (
-        category_total
-        == total_products
-    )
+    validation["category_counts_reconcile"] = category_total == total_products
 
-    validation["passed"] = all(
-        validation.values()
-    )
+    validation["passed"] = all(validation.values())
 
     # =========================================================
     # 20. Overall summary
     # =========================================================
 
     summary = {
-        "total_genuine_products":
-            total_products,
-
+        "total_genuine_products": total_products,
         "rule_assigned_products": int(
-            (
-                product_catalog[
-                    "Category_Assignment_Status"
-                ]
-                == "Rule_Assigned"
-            ).sum()
+            (product_catalog["Category_Assignment_Status"] == "Rule_Assigned").sum()
         ),
-
         "missing_description_products": int(
             (
-                product_catalog[
-                    "Category_Assignment_Status"
-                ]
-                == "Missing_Description"
+                product_catalog["Category_Assignment_Status"] == "Missing_Description"
             ).sum()
         ),
-
         "no_rule_match_products": int(
-            (
-                product_catalog[
-                    "Category_Assignment_Status"
-                ]
-                == "No_Rule_Match"
-            ).sum()
+            (product_catalog["Category_Assignment_Status"] == "No_Rule_Match").sum()
         ),
-
-        "multi_match_products": int(
-            len(multi_match_products)
-        ),
-
-        "category_count":
-            len(category_priority),
-
-        "validation_passed":
-            validation["passed"],
+        "multi_match_products": len(multi_match_products),
+        "category_count": len(category_priority),
+        "validation_passed": validation["passed"],
     }
 
     # =========================================================
@@ -6583,38 +5172,20 @@ def analyze_product_taxonomy(df_cleaned):
     # =========================================================
 
     return {
-        "product_catalog":
-            product_catalog,
-
-        "category_summary":
-            category_summary,
-
-        "assignment_summary":
-            assignment_summary,
-
-        "multi_match_products":
-            multi_match_products,
-
-        "unclassified_products":
-            unclassified_products,
-
-        "validation":
-            validation,
-
-        "category_rules":
-            category_rules,
-
-        "category_priority":
-            category_priority,
-
-        "non_product_stock_codes":
-            NON_PRODUCT_STOCK_CODES,
-
-        "summary":
-            summary,
+        "product_catalog": product_catalog,
+        "category_summary": category_summary,
+        "assignment_summary": assignment_summary,
+        "multi_match_products": multi_match_products,
+        "unclassified_products": unclassified_products,
+        "validation": validation,
+        "category_rules": category_rules,
+        "category_priority": category_priority,
+        "non_product_stock_codes": NON_PRODUCT_STOCK_CODES,
+        "summary": summary,
     }
 
-#---- 7.2 Create product category affinity vectors ----------------
+
+# ---- 7.2 Create product category affinity vectors ----------------
 def create_product_category_affinity_features(
     df_cleaned: pd.DataFrame,
     cutoff_date: pd.Timestamp | None = None,
@@ -6663,37 +5234,21 @@ def create_product_category_affinity_features(
     ]
 
     missing_columns = [
-        column
-        for column in required_columns
-        if column not in df_cleaned.columns
+        column for column in required_columns if column not in df_cleaned.columns
     ]
 
     if missing_columns:
-        raise ValueError(
-            f"Missing required columns: {missing_columns}"
-        )
+        raise ValueError(f"Missing required columns: {missing_columns}")
 
     # =========================================================
     # 2. Create product taxonomy automatically
     # =========================================================
 
-    product_taxonomy_analysis = analyze_product_taxonomy(
-        df_cleaned
-    )
+    product_taxonomy_analysis = analyze_product_taxonomy(df_cleaned)
 
-    product_catalog = (
-        product_taxonomy_analysis[
-            "product_catalog"
-        ]
-        .copy()
-    )
+    product_catalog = product_taxonomy_analysis["product_catalog"].copy()
 
-    category_priority = (
-        product_taxonomy_analysis[
-            "category_priority"
-        ]
-        .copy()
-    )
+    category_priority = product_taxonomy_analysis["category_priority"].copy()
 
     # =========================================================
     # 3. Validate taxonomy output
@@ -6717,9 +5272,7 @@ def create_product_category_affinity_features(
         )
 
     if not category_priority:
-        raise ValueError(
-            "Product taxonomy contains no categories."
-        )
+        raise ValueError("Product taxonomy contains no categories.")
 
     # =========================================================
     # 4. Create working dataframe
@@ -6728,10 +5281,7 @@ def create_product_category_affinity_features(
     working_df = df_cleaned.copy()
 
     working_df["StockCode_Key"] = (
-        working_df["StockCode"]
-        .astype("string")
-        .str.strip()
-        .str.upper()
+        working_df["StockCode"].astype("string").str.strip().str.upper()
     )
 
     working_df["InvoiceDate"] = pd.to_datetime(
@@ -6743,33 +5293,21 @@ def create_product_category_affinity_features(
     # 5. Determine point-in-time cutoff
     # =========================================================
 
-    max_invoice_date = (
-        working_df["InvoiceDate"].max()
-    )
+    max_invoice_date = working_df["InvoiceDate"].max()
 
     if pd.isna(max_invoice_date):
-        raise ValueError(
-            "InvoiceDate does not contain a valid date."
-        )
+        raise ValueError("InvoiceDate does not contain a valid date.")
 
     if cutoff_date is None:
 
-        cutoff_date = (
-            max_invoice_date
-            - pd.Timedelta(days=90)
-        )
+        cutoff_date = max_invoice_date - pd.Timedelta(days=90)
 
     else:
 
-        cutoff_date = pd.Timestamp(
-            cutoff_date
-        )
+        cutoff_date = pd.Timestamp(cutoff_date)
 
     if cutoff_date > max_invoice_date:
-        raise ValueError(
-            "cutoff_date cannot be later than "
-            "max InvoiceDate."
-        )
+        raise ValueError("cutoff_date cannot be later than " "max InvoiceDate.")
 
     # =========================================================
     # 6. Select qualifying customer purchases
@@ -6777,92 +5315,69 @@ def create_product_category_affinity_features(
 
     customer_transactions = working_df[
         (working_df["InvoiceDate"] <= cutoff_date)
-        &
-        (working_df["Customer ID"] != 0)
-        &
-        (working_df["Customer ID"].notna())
-        &
-        (working_df["Transaction Type"] == "Purchase")
-        &
-        (working_df["Include In Sales Analysis"] == True)
+        & (working_df["Customer ID"] != 0)
+        & (working_df["Customer ID"].notna())
+        & (working_df["Transaction Type"] == "Purchase")
+        & (working_df["Include In Sales Analysis"] == True)
     ].copy()
 
     if customer_transactions.empty:
         raise ValueError(
-            "No qualifying customer transactions found "
-            "before the cutoff date."
+            "No qualifying customer transactions found " "before the cutoff date."
         )
 
     # =========================================================
     # 7. Standardize Customer ID
     # =========================================================
 
-    customer_transactions["Customer ID"] = (
-        customer_transactions["Customer ID"]
-        .astype("int64")
+    customer_transactions["Customer ID"] = customer_transactions["Customer ID"].astype(
+        "int64"
     )
 
     # =========================================================
     # 8. Prepare StockCode → Product Category mapping
     # =========================================================
 
-    taxonomy_mapping = (
-        product_catalog[
-            [
-                "StockCode_Key",
-                "Product_Category",
-            ]
+    taxonomy_mapping = product_catalog[
+        [
+            "StockCode_Key",
+            "Product_Category",
         ]
-        .drop_duplicates(
-            subset=["StockCode_Key"]
-        )
-    )
+    ].drop_duplicates(subset=["StockCode_Key"])
 
     # =========================================================
     # 9. Join transactions with product taxonomy
     # =========================================================
 
-    customer_transactions = (
-        customer_transactions
-        .merge(
-            taxonomy_mapping,
-            on="StockCode_Key",
-            how="left",
-            validate="many_to_one",
-        )
+    customer_transactions = customer_transactions.merge(
+        taxonomy_mapping,
+        on="StockCode_Key",
+        how="left",
+        validate="many_to_one",
     )
 
     # =========================================================
     # 10. Assign taxonomy gaps to Other / Unclassified
     # =========================================================
 
-    customer_transactions[
+    customer_transactions["Product_Category"] = customer_transactions[
         "Product_Category"
-    ] = (
-        customer_transactions[
-            "Product_Category"
-        ]
-        .fillna("Other / Unclassified")
-    )
+    ].fillna("Other / Unclassified")
 
     # =========================================================
     # 11. Aggregate purchase value by customer/category
     # =========================================================
 
-    customer_category_value = (
-        customer_transactions
-        .groupby(
-            [
-                "Customer ID",
-                "Product_Category",
-            ],
-            as_index=False,
-        )
-        .agg(
-            Category_Purchase_Value=(
-                "Analytical Transaction Value",
-                "sum",
-            )
+    customer_category_value = customer_transactions.groupby(
+        [
+            "Customer ID",
+            "Product_Category",
+        ],
+        as_index=False,
+    ).agg(
+        Category_Purchase_Value=(
+            "Analytical Transaction Value",
+            "sum",
         )
     )
 
@@ -6870,89 +5385,53 @@ def create_product_category_affinity_features(
     # 12. Create complete customer × category grid
     # =========================================================
 
-    customers = (
-        customer_transactions[
-            ["Customer ID"]
-        ]
-        .drop_duplicates()
-    )
+    customers = customer_transactions[["Customer ID"]].drop_duplicates()
 
-    categories = pd.DataFrame(
-        {
-            "Product_Category": category_priority
-        }
-    )
+    categories = pd.DataFrame({"Product_Category": category_priority})
 
     customers["_key"] = 1
     categories["_key"] = 1
 
-    customer_category_grid = (
-        customers
-        .merge(
-            categories,
-            on="_key",
-            how="outer",
-        )
-        .drop(
-            columns="_key"
-        )
-    )
+    customer_category_grid = customers.merge(
+        categories,
+        on="_key",
+        how="outer",
+    ).drop(columns="_key")
 
     # =========================================================
     # 13. Merge category purchase values
     # =========================================================
 
-    customer_category_grid = (
-        customer_category_grid
-        .merge(
-            customer_category_value,
-            on=[
-                "Customer ID",
-                "Product_Category",
-            ],
-            how="left",
-        )
+    customer_category_grid = customer_category_grid.merge(
+        customer_category_value,
+        on=[
+            "Customer ID",
+            "Product_Category",
+        ],
+        how="left",
     )
 
-    customer_category_grid[
+    customer_category_grid["Category_Purchase_Value"] = customer_category_grid[
         "Category_Purchase_Value"
-    ] = (
-        customer_category_grid[
-            "Category_Purchase_Value"
-        ]
-        .fillna(0.0)
-    )
+    ].fillna(0.0)
 
     # =========================================================
     # 14. Calculate total customer purchase value
     # =========================================================
 
-    customer_category_grid[
-        "Customer_Total_Purchase_Value"
-    ] = (
-        customer_category_grid
-        .groupby(
-            "Customer ID"
-        )[
+    customer_category_grid["Customer_Total_Purchase_Value"] = (
+        customer_category_grid.groupby("Customer ID")[
             "Category_Purchase_Value"
-        ]
-        .transform("sum")
+        ].transform("sum")
     )
 
     # =========================================================
     # 15. Calculate category affinity
     # =========================================================
 
-    customer_category_grid[
-        "Product_Category_Affinity"
-    ] = (
-        customer_category_grid[
-            "Category_Purchase_Value"
-        ]
-        /
-        customer_category_grid[
-            "Customer_Total_Purchase_Value"
-        ]
+    customer_category_grid["Product_Category_Affinity"] = (
+        customer_category_grid["Category_Purchase_Value"]
+        / customer_category_grid["Customer_Total_Purchase_Value"]
     )
 
     # =========================================================
@@ -6960,8 +5439,7 @@ def create_product_category_affinity_features(
     # =========================================================
 
     affinity_features = (
-        customer_category_grid
-        .pivot(
+        customer_category_grid.pivot(
             index="Customer ID",
             columns="Product_Category",
             values="Product_Category_Affinity",
@@ -6985,38 +5463,20 @@ def create_product_category_affinity_features(
     # =========================================================
 
     category_column_map = {
-        category: (
-            category
-            .replace(" & ", "_")
-            .replace(" ", "_")
-            .replace("/", "_")
-        )
+        category: (category.replace(" & ", "_").replace(" ", "_").replace("/", "_"))
         + "_Affinity"
         for category in category_priority
     }
 
-    affinity_features = (
-        affinity_features
-        .rename(
-            columns=category_column_map
-        )
-    )
+    affinity_features = affinity_features.rename(columns=category_column_map)
 
     # =========================================================
     # 19. Arrange columns consistently
     # =========================================================
 
-    affinity_columns = [
-        category_column_map[category]
-        for category in category_priority
-    ]
+    affinity_columns = [category_column_map[category] for category in category_priority]
 
-    affinity_features = affinity_features[
-        [
-            "Customer ID"
-        ]
-        + affinity_columns
-    ]
+    affinity_features = affinity_features[["Customer ID"] + affinity_columns]
 
     # =========================================================
     # 20. Validation
@@ -7024,116 +5484,55 @@ def create_product_category_affinity_features(
 
     validation = {}
 
-    validation[
-        "one_row_per_customer"
-    ] = (
-        affinity_features[
-            "Customer ID"
-        ].is_unique
+    validation["one_row_per_customer"] = affinity_features["Customer ID"].is_unique
+
+    validation["customer_count"] = (
+        len(affinity_features) == customer_transactions["Customer ID"].nunique()
     )
 
-    validation[
-        "customer_count"
-    ] = (
-        len(affinity_features)
-        ==
-        customer_transactions[
-            "Customer ID"
-        ].nunique()
+    validation["no_missing_customer_id"] = (
+        affinity_features["Customer ID"].notna().all()
     )
 
-    validation[
-        "no_missing_customer_id"
-    ] = (
-        affinity_features[
-            "Customer ID"
-        ].notna().all()
+    validation["no_negative_affinity"] = (
+        affinity_features[affinity_columns].ge(0).all().all()
     )
 
-    validation[
-        "no_negative_affinity"
-    ] = (
-        affinity_features[
-            affinity_columns
-        ]
-        .ge(0)
-        .all()
-        .all()
+    validation["no_affinity_above_one"] = (
+        affinity_features[affinity_columns].le(1).all().all()
     )
 
-    validation[
-        "no_affinity_above_one"
-    ] = (
-        affinity_features[
-            affinity_columns
-        ]
-        .le(1)
-        .all()
-        .all()
+    affinity_sum = affinity_features[affinity_columns].sum(axis=1)
+
+    validation["affinity_sums_to_one"] = np.isclose(
+        affinity_sum,
+        1.0,
+        atol=1e-9,
+    ).all()
+
+    validation["expected_category_count"] = len(affinity_columns) == len(
+        category_priority
     )
 
-    affinity_sum = (
-        affinity_features[
-            affinity_columns
-        ]
-        .sum(axis=1)
-    )
-
-    validation[
-        "affinity_sums_to_one"
-    ] = (
-        np.isclose(
-            affinity_sum,
-            1.0,
-            atol=1e-9,
-        ).all()
-    )
-
-    validation[
-        "expected_category_count"
-    ] = (
-        len(affinity_columns)
-        ==
-        len(category_priority)
-    )
-
-    validation["passed"] = all(
-        validation.values()
-    )
+    validation["passed"] = all(validation.values())
 
     # =========================================================
     # 21. Store metadata
     # =========================================================
 
-    affinity_features.attrs[
-        "validation"
-    ] = validation
+    affinity_features.attrs["validation"] = validation
 
-    affinity_features.attrs[
-        "cutoff_date"
-    ] = cutoff_date
+    affinity_features.attrs["cutoff_date"] = cutoff_date
 
-    affinity_features.attrs[
-        "max_invoice_date"
-    ] = max_invoice_date
+    affinity_features.attrs["max_invoice_date"] = max_invoice_date
 
-    affinity_features.attrs[
-        "qualifying_transaction_count"
-    ] = len(
-        customer_transactions
-    )
+    affinity_features.attrs["qualifying_transaction_count"] = len(customer_transactions)
 
-    affinity_features.attrs[
-        "customer_count"
-    ] = affinity_features[
+    affinity_features.attrs["customer_count"] = affinity_features[
         "Customer ID"
     ].nunique()
 
-    affinity_features.attrs[
-        "category_count"
-    ] = len(
-        category_priority
-    )
+    affinity_features.attrs["category_count"] = len(category_priority)
 
     # =========================================================
     # 22. Fail if validation does not pass
@@ -7141,15 +5540,10 @@ def create_product_category_affinity_features(
 
     if not validation["passed"]:
 
-        failed_checks = [
-            key
-            for key, value in validation.items()
-            if value is False
-        ]
+        failed_checks = [key for key, value in validation.items() if value is False]
 
         raise ValueError(
-            "Product Category Affinity validation failed: "
-            f"{failed_checks}"
+            "Product Category Affinity validation failed: " f"{failed_checks}"
         )
 
     # =========================================================
@@ -7158,7 +5552,8 @@ def create_product_category_affinity_features(
 
     return affinity_features
 
-#---- 7.3 validate product category affinity vectors ----------------
+
+# ---- 7.3 validate product category affinity vectors ----------------
 def validate_product_category_affinity_features(
     affinity_features: pd.DataFrame,
     df_cleaned: pd.DataFrame,
@@ -7212,8 +5607,7 @@ def validate_product_category_affinity_features(
 
     if missing_transaction_columns:
         raise ValueError(
-            "Missing required transaction columns: "
-            f"{missing_transaction_columns}"
+            "Missing required transaction columns: " f"{missing_transaction_columns}"
         )
 
     # =========================================================
@@ -7221,20 +5615,14 @@ def validate_product_category_affinity_features(
     # =========================================================
 
     if "Customer ID" not in affinity_features.columns:
-        raise ValueError(
-            "Affinity dataframe is missing 'Customer ID'."
-        )
+        raise ValueError("Affinity dataframe is missing 'Customer ID'.")
 
     affinity_columns = [
-        column
-        for column in affinity_features.columns
-        if column.endswith("_Affinity")
+        column for column in affinity_features.columns if column.endswith("_Affinity")
     ]
 
     if not affinity_columns:
-        raise ValueError(
-            "No Product Category Affinity columns found."
-        )
+        raise ValueError("No Product Category Affinity columns found.")
 
     # =========================================================
     # 3. Prepare transaction dataframe
@@ -7251,33 +5639,21 @@ def validate_product_category_affinity_features(
     # 4. Determine cutoff automatically
     # =========================================================
 
-    max_invoice_date = (
-        working_df["InvoiceDate"].max()
-    )
+    max_invoice_date = working_df["InvoiceDate"].max()
 
     if pd.isna(max_invoice_date):
-        raise ValueError(
-            "InvoiceDate does not contain a valid date."
-        )
+        raise ValueError("InvoiceDate does not contain a valid date.")
 
     if cutoff_date is None:
 
-        cutoff_date = (
-            max_invoice_date
-            - pd.Timedelta(days=90)
-        )
+        cutoff_date = max_invoice_date - pd.Timedelta(days=90)
 
     else:
 
-        cutoff_date = pd.Timestamp(
-            cutoff_date
-        )
+        cutoff_date = pd.Timestamp(cutoff_date)
 
     if cutoff_date > max_invoice_date:
-        raise ValueError(
-            "cutoff_date cannot be later than "
-            "max InvoiceDate."
-        )
+        raise ValueError("cutoff_date cannot be later than " "max InvoiceDate.")
 
     # =========================================================
     # 5. Reconstruct expected qualifying customer population
@@ -7285,22 +5661,14 @@ def validate_product_category_affinity_features(
 
     qualifying_transactions = working_df[
         (working_df["InvoiceDate"] <= cutoff_date)
-        &
-        (working_df["Customer ID"] != 0)
-        &
-        (working_df["Customer ID"].notna())
-        &
-        (working_df["Transaction Type"] == "Purchase")
-        &
-        (working_df["Include In Sales Analysis"] == True)
+        & (working_df["Customer ID"] != 0)
+        & (working_df["Customer ID"].notna())
+        & (working_df["Transaction Type"] == "Purchase")
+        & (working_df["Include In Sales Analysis"] == True)
     ].copy()
 
     expected_customers = (
-        qualifying_transactions[
-            "Customer ID"
-        ]
-        .astype("int64")
-        .drop_duplicates()
+        qualifying_transactions["Customer ID"].astype("int64").drop_duplicates()
     )
 
     # =========================================================
@@ -7313,203 +5681,101 @@ def validate_product_category_affinity_features(
     # Customer ID checks
     # ---------------------------------------------------------
 
-    validation[
-        "customer_id_column_present"
-    ] = (
-        "Customer ID"
-        in affinity_features.columns
+    validation["customer_id_column_present"] = (
+        "Customer ID" in affinity_features.columns
     )
 
-    validation[
-        "no_missing_customer_id"
-    ] = (
-        affinity_features[
-            "Customer ID"
-        ].notna().all()
+    validation["no_missing_customer_id"] = (
+        affinity_features["Customer ID"].notna().all()
     )
 
-    validation[
-        "customer_id_is_unique"
-    ] = (
-        affinity_features[
-            "Customer ID"
-        ].is_unique
-    )
+    validation["customer_id_is_unique"] = affinity_features["Customer ID"].is_unique
 
     # ---------------------------------------------------------
     # Expected customer population
     # ---------------------------------------------------------
 
     actual_customers = (
-        affinity_features[
-            "Customer ID"
-        ]
-        .astype("int64")
-        .drop_duplicates()
+        affinity_features["Customer ID"].astype("int64").drop_duplicates()
     )
 
-    validation[
-        "customer_count_matches"
-    ] = (
-        len(actual_customers)
-        ==
-        len(expected_customers)
+    validation["customer_count_matches"] = len(actual_customers) == len(
+        expected_customers
     )
 
-    validation[
-        "customer_population_matches"
-    ] = (
-        set(actual_customers)
-        ==
-        set(expected_customers)
+    validation["customer_population_matches"] = set(actual_customers) == set(
+        expected_customers
     )
 
     # ---------------------------------------------------------
     # Category feature checks
     # ---------------------------------------------------------
 
-    validation[
-        "affinity_columns_present"
-    ] = (
-        len(affinity_columns) > 0
-    )
+    validation["affinity_columns_present"] = len(affinity_columns) > 0
 
-    validation[
-        "affinity_values_are_numeric"
-    ] = (
-        affinity_features[
-            affinity_columns
-        ]
-        .apply(
-            lambda column:
-                pd.api.types.is_numeric_dtype(
-                    column
-                )
-        )
+    validation["affinity_values_are_numeric"] = (
+        affinity_features[affinity_columns]
+        .apply(lambda column: pd.api.types.is_numeric_dtype(column))
         .all()
     )
 
-    validation[
-        "no_missing_affinity_values"
-    ] = (
-        affinity_features[
-            affinity_columns
-        ]
-        .notna()
-        .all()
-        .all()
+    validation["no_missing_affinity_values"] = (
+        affinity_features[affinity_columns].notna().all().all()
     )
 
-    validation[
-        "no_negative_affinity"
-    ] = (
-        affinity_features[
-            affinity_columns
-        ]
-        .ge(0)
-        .all()
-        .all()
+    validation["no_negative_affinity"] = (
+        affinity_features[affinity_columns].ge(0).all().all()
     )
 
-    validation[
-        "no_affinity_above_one"
-    ] = (
-        affinity_features[
-            affinity_columns
-        ]
-        .le(1)
-        .all()
-        .all()
+    validation["no_affinity_above_one"] = (
+        affinity_features[affinity_columns].le(1).all().all()
     )
 
     # ---------------------------------------------------------
     # Affinity vector sum
     # ---------------------------------------------------------
 
-    affinity_sum = (
-        affinity_features[
-            affinity_columns
-        ]
-        .sum(axis=1)
-    )
+    affinity_sum = affinity_features[affinity_columns].sum(axis=1)
 
-    validation[
-        "affinity_sums_to_one"
-    ] = (
-        np.isclose(
-            affinity_sum,
-            1.0,
-            atol=1e-9,
-        ).all()
-    )
+    validation["affinity_sums_to_one"] = np.isclose(
+        affinity_sum,
+        1.0,
+        atol=1e-9,
+    ).all()
 
     # ---------------------------------------------------------
     # Category count
     # ---------------------------------------------------------
 
-    validation[
-        "expected_category_count"
-    ] = (
-        len(affinity_columns) == 15
-    )
+    validation["expected_category_count"] = len(affinity_columns) == 15
 
     # =========================================================
     # 7. Calculate summary statistics
     # =========================================================
 
     summary = {
-        "customer_count": int(
-            affinity_features[
-                "Customer ID"
-            ].nunique()
-        ),
-
-        "expected_customer_count": int(
-            expected_customers.nunique()
-        ),
-
-        "category_affinity_count": int(
-            len(affinity_columns)
-        ),
-
+        "customer_count": int(affinity_features["Customer ID"].nunique()),
+        "expected_customer_count": int(expected_customers.nunique()),
+        "category_affinity_count": len(affinity_columns),
         "max_invoice_date": max_invoice_date,
-
         "cutoff_date": cutoff_date,
-
-        "qualifying_transaction_count": int(
-            len(qualifying_transactions)
-        ),
-
-        "minimum_affinity_sum": float(
-            affinity_sum.min()
-        ),
-
-        "maximum_affinity_sum": float(
-            affinity_sum.max()
-        ),
-
-        "median_affinity_sum": float(
-            affinity_sum.median()
-        ),
+        "qualifying_transaction_count": len(qualifying_transactions),
+        "minimum_affinity_sum": float(affinity_sum.min()),
+        "maximum_affinity_sum": float(affinity_sum.max()),
+        "median_affinity_sum": float(affinity_sum.median()),
     }
 
     # =========================================================
     # 8. Overall validation result
     # =========================================================
 
-    validation["passed"] = all(
-        validation.values()
-    )
+    validation["passed"] = all(validation.values())
 
     # =========================================================
     # 9. Failed checks
     # =========================================================
 
-    failed_checks = [
-        key
-        for key, value in validation.items()
-        if value is False
-    ]
+    failed_checks = [key for key, value in validation.items() if value is False]
 
     # =========================================================
     # 10. Return complete validation package
@@ -7521,7 +5787,8 @@ def validate_product_category_affinity_features(
         "failed_checks": failed_checks,
     }
 
-#---- 7.4 unclassified dataset --------------------------------------
+
+# ---- 7.4 unclassified dataset --------------------------------------
 def export_unclassified_products(product_taxonomy_analysis, output_path):
     """
     Export products that currently have no taxonomy rule match.
@@ -7535,11 +5802,9 @@ def export_unclassified_products(product_taxonomy_analysis, output_path):
     )
 
     # Calculate how many StockCodes share the same description
-    description_frequency = (
-        unclassified_df
-        .groupby("Description")["StockCode_Key"]
-        .transform("count")
-    )
+    description_frequency = unclassified_df.groupby("Description")[
+        "StockCode_Key"
+    ].transform("count")
 
     unclassified_df["Description_Frequency"] = description_frequency
 
@@ -7551,9 +5816,7 @@ def export_unclassified_products(product_taxonomy_analysis, output_path):
     ]
 
     columns_to_export = [
-        column
-        for column in columns_to_export
-        if column in unclassified_df.columns
+        column for column in columns_to_export if column in unclassified_df.columns
     ]
 
     unclassified_df = (
@@ -7561,7 +5824,7 @@ def export_unclassified_products(product_taxonomy_analysis, output_path):
         .sort_values(
             by=["Description_Frequency", "Description"],
             ascending=[False, True],
-            na_position="last"
+            na_position="last",
         )
         .reset_index(drop=True)
     )
@@ -7569,11 +5832,7 @@ def export_unclassified_products(product_taxonomy_analysis, output_path):
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    unclassified_df.to_csv(
-        output_path,
-        index=False,
-        encoding="utf-8-sig"
-    )
+    unclassified_df.to_csv(output_path, index=False, encoding="utf-8-sig")
 
     print("Unclassified products exported successfully.")
     print(f"File: {output_path}")
@@ -7582,11 +5841,13 @@ def export_unclassified_products(product_taxonomy_analysis, output_path):
 
     return unclassified_df
 
+
 ###############################################################
-#---------- 8. return rate --------------
+# ---------- 8. return rate --------------
 ###############################################################
 
-#----------- 8.1 create return rate --------
+
+# ----------- 8.1 create return rate --------
 def create_return_rate_features(
     df_cleaned: pd.DataFrame,
     cutoff_date: pd.Timestamp | None = None,
@@ -7642,15 +5903,11 @@ def create_return_rate_features(
     }
 
     missing_columns = [
-        column
-        for column in required_columns
-        if column not in df_cleaned.columns
+        column for column in required_columns if column not in df_cleaned.columns
     ]
 
     if missing_columns:
-        raise ValueError(
-            f"Missing required columns: {missing_columns}"
-        )
+        raise ValueError(f"Missing required columns: {missing_columns}")
 
     # ============================================================
     # 2. Create working copy
@@ -7668,9 +5925,7 @@ def create_return_rate_features(
     )
 
     if working_df["InvoiceDate"].isna().any():
-        raise ValueError(
-            "InvoiceDate contains missing or invalid values."
-        )
+        raise ValueError("InvoiceDate contains missing or invalid values.")
 
     # ============================================================
     # 4. Determine point-in-time cutoff
@@ -7679,10 +5934,7 @@ def create_return_rate_features(
     max_invoice_date = working_df["InvoiceDate"].max()
 
     if cutoff_date is None:
-        cutoff_date = (
-            max_invoice_date
-            - pd.Timedelta(days=90)
-        )
+        cutoff_date = max_invoice_date - pd.Timedelta(days=90)
     else:
         cutoff_date = pd.Timestamp(cutoff_date)
 
@@ -7690,14 +5942,11 @@ def create_return_rate_features(
     # 5. Restrict transactions to the historical period
     # ============================================================
 
-    historical_df = working_df[
-        working_df["InvoiceDate"] <= cutoff_date
-    ].copy()
+    historical_df = working_df[working_df["InvoiceDate"] <= cutoff_date].copy()
 
     if historical_df.empty:
         raise ValueError(
-            "No transactions are available on or before "
-            "the specified cutoff date."
+            "No transactions are available on or before " "the specified cutoff date."
         )
 
     # ============================================================
@@ -7705,8 +5954,7 @@ def create_return_rate_features(
     # ============================================================
 
     historical_df = historical_df[
-        historical_df["Customer ID"].notna()
-        & (historical_df["Customer ID"] != 0)
+        historical_df["Customer ID"].notna() & (historical_df["Customer ID"] != 0)
     ].copy()
 
     if historical_df.empty:
@@ -7719,10 +5967,7 @@ def create_return_rate_features(
     # 7. Standardize Customer ID
     # ============================================================
 
-    historical_df["Customer ID"] = (
-        historical_df["Customer ID"]
-        .astype("int64")
-    )
+    historical_df["Customer ID"] = historical_df["Customer ID"].astype("int64")
 
     # ============================================================
     # 8. Identify qualifying purchase orders
@@ -7730,10 +5975,7 @@ def create_return_rate_features(
 
     purchase_transactions = historical_df[
         (historical_df["Transaction Type"] == "Purchase")
-        & (
-            historical_df["Include In Sales Analysis"]
-            == True
-        )
+        & (historical_df["Include In Sales Analysis"] == True)
         & (historical_df["Quantity"] > 0)
     ].copy()
 
@@ -7748,8 +5990,7 @@ def create_return_rate_features(
     # ============================================================
 
     purchase_orders = (
-        purchase_transactions
-        .groupby("Customer ID")["Invoice"]
+        purchase_transactions.groupby("Customer ID")["Invoice"]
         .nunique()
         .rename("Purchase_Order_Count")
     )
@@ -7777,12 +6018,9 @@ def create_return_rate_features(
     # ============================================================
 
     return_orders = (
-        return_transactions
-        .groupby("Customer ID")["Invoice"]
+        return_transactions.groupby("Customer ID")["Invoice"]
         .nunique()
-        .rename(
-            "Return_Cancellation_Order_Count"
-        )
+        .rename("Return_Cancellation_Order_Count")
     )
 
     # ============================================================
@@ -7794,17 +6032,12 @@ def create_return_rate_features(
     # ============================================================
 
     return_rate_features = (
-        purchase_orders
-        .to_frame()
+        purchase_orders.to_frame()
         .join(
             return_orders,
             how="left",
         )
-        .fillna(
-            {
-                "Return_Cancellation_Order_Count": 0
-            }
-        )
+        .fillna({"Return_Cancellation_Order_Count": 0})
         .reset_index()
     )
 
@@ -7813,62 +6046,36 @@ def create_return_rate_features(
     # ============================================================
 
     return_rate_features["Return_Rate"] = (
-        return_rate_features[
-            "Return_Cancellation_Order_Count"
-        ]
-        / return_rate_features[
-            "Purchase_Order_Count"
-        ]
+        return_rate_features["Return_Cancellation_Order_Count"]
+        / return_rate_features["Purchase_Order_Count"]
     )
 
     # ============================================================
     # 14. Validate intermediate calculations
     # ============================================================
 
-    if (
-        return_rate_features[
-            "Purchase_Order_Count"
-        ] <= 0
-    ).any():
+    if (return_rate_features["Purchase_Order_Count"] <= 0).any():
 
-        raise ValueError(
-            "Purchase order count must be positive "
-            "for every customer."
-        )
+        raise ValueError("Purchase order count must be positive " "for every customer.")
 
-    if (
-        return_rate_features[
-            "Return_Cancellation_Order_Count"
-        ] < 0
-    ).any():
+    if (return_rate_features["Return_Cancellation_Order_Count"] < 0).any():
 
-        raise ValueError(
-            "Return/cancellation order count cannot be negative."
-        )
+        raise ValueError("Return/cancellation order count cannot be negative.")
 
-    if return_rate_features[
-        "Return_Rate"
-    ].isna().any():
+    if return_rate_features["Return_Rate"].isna().any():
 
-        raise ValueError(
-            "Return Rate contains missing values."
-        )
+        raise ValueError("Return Rate contains missing values.")
 
-    if return_rate_features[
-        "Return_Rate"
-    ].lt(0).any():
+    if return_rate_features["Return_Rate"].lt(0).any():
 
-        raise ValueError(
-            "Return Rate contains negative values."
-        )
+        raise ValueError("Return Rate contains negative values.")
 
     # ============================================================
     # 15. Standardize Customer ID
     # ============================================================
 
-    return_rate_features["Customer ID"] = (
-        return_rate_features["Customer ID"]
-        .astype("int64")
+    return_rate_features["Customer ID"] = return_rate_features["Customer ID"].astype(
+        "int64"
     )
 
     # ============================================================
@@ -7886,73 +6093,44 @@ def create_return_rate_features(
     # 17. Validate customer-level structure
     # ============================================================
 
-    if return_rate_features[
-        "Customer ID"
-    ].duplicated().any():
+    if return_rate_features["Customer ID"].duplicated().any():
 
-        raise ValueError(
-            "Duplicate Customer IDs found in Return Rate features."
-        )
+        raise ValueError("Duplicate Customer IDs found in Return Rate features.")
 
-    if return_rate_features[
-        "Customer ID"
-    ].isna().any():
+    if return_rate_features["Customer ID"].isna().any():
 
-        raise ValueError(
-            "Missing Customer IDs found in Return Rate features."
-        )
+        raise ValueError("Missing Customer IDs found in Return Rate features.")
 
     # ============================================================
     # 18. Store metadata
     # ============================================================
 
-    return_rate_features.attrs[
-        "cutoff_date"
-    ] = cutoff_date
+    return_rate_features.attrs["cutoff_date"] = cutoff_date
 
-    return_rate_features.attrs[
-        "max_invoice_date"
-    ] = max_invoice_date
+    return_rate_features.attrs["max_invoice_date"] = max_invoice_date
 
-    return_rate_features.attrs[
-        "customer_count"
-    ] = len(return_rate_features)
+    return_rate_features.attrs["customer_count"] = len(return_rate_features)
 
-    return_rate_features.attrs[
-        "purchase_order_count"
-    ] = int(
-        purchase_transactions[
-            "Invoice"
-        ].nunique()
+    return_rate_features.attrs["purchase_order_count"] = int(
+        purchase_transactions["Invoice"].nunique()
     )
 
-    return_rate_features.attrs[
-        "return_cancellation_order_count"
-    ] = int(
-        return_transactions[
-            "Invoice"
-        ].nunique()
+    return_rate_features.attrs["return_cancellation_order_count"] = int(
+        return_transactions["Invoice"].nunique()
     )
 
-    return_rate_features.attrs[
-        "customers_with_returns"
-    ] = int(
-        (
-            return_rate_features["Return_Rate"] > 0
-        ).sum()
+    return_rate_features.attrs["customers_with_returns"] = int(
+        (return_rate_features["Return_Rate"] > 0).sum()
     )
 
-    return_rate_features.attrs[
-        "customers_without_returns"
-    ] = int(
-        (
-            return_rate_features["Return_Rate"] == 0
-        ).sum()
+    return_rate_features.attrs["customers_without_returns"] = int(
+        (return_rate_features["Return_Rate"] == 0).sum()
     )
 
     return return_rate_features
 
-#----------- 8.2 validate return rate --------
+
+# ----------- 8.2 validate return rate --------
 def validate_return_rate_features(
     return_rate_features: pd.DataFrame,
     df_cleaned: pd.DataFrame,
@@ -7997,15 +6175,12 @@ def validate_return_rate_features(
     }
 
     missing_source_columns = [
-        column
-        for column in required_source_columns
-        if column not in df_cleaned.columns
+        column for column in required_source_columns if column not in df_cleaned.columns
     ]
 
     if missing_source_columns:
         raise ValueError(
-            "Missing required columns in df_cleaned: "
-            f"{missing_source_columns}"
+            "Missing required columns in df_cleaned: " f"{missing_source_columns}"
         )
 
     # ============================================================
@@ -8048,8 +6223,7 @@ def validate_return_rate_features(
 
     if working_df["InvoiceDate"].isna().any():
         raise ValueError(
-            "InvoiceDate contains missing or invalid values "
-            "in df_cleaned."
+            "InvoiceDate contains missing or invalid values " "in df_cleaned."
         )
 
     # ============================================================
@@ -8059,10 +6233,7 @@ def validate_return_rate_features(
     max_invoice_date = working_df["InvoiceDate"].max()
 
     if cutoff_date is None:
-        cutoff_date = (
-            max_invoice_date
-            - pd.Timedelta(days=90)
-        )
+        cutoff_date = max_invoice_date - pd.Timedelta(days=90)
     else:
         cutoff_date = pd.Timestamp(cutoff_date)
 
@@ -8072,67 +6243,37 @@ def validate_return_rate_features(
 
     validation = {}
 
-    validation[
-        "customer_id_column_present"
-    ] = "Customer ID" in feature_df.columns
+    validation["customer_id_column_present"] = "Customer ID" in feature_df.columns
 
-    validation[
-        "return_rate_column_present"
-    ] = "Return_Rate" in feature_df.columns
+    validation["return_rate_column_present"] = "Return_Rate" in feature_df.columns
 
-    validation[
-        "customer_id_is_unique"
-    ] = (
-        feature_df["Customer ID"].is_unique
+    validation["customer_id_is_unique"] = feature_df["Customer ID"].is_unique
+
+    validation["no_missing_customer_id"] = feature_df["Customer ID"].notna().all()
+
+    validation["no_missing_return_rate"] = feature_df["Return_Rate"].notna().all()
+
+    validation["return_rate_is_numeric"] = pd.api.types.is_numeric_dtype(
+        feature_df["Return_Rate"]
     )
 
-    validation[
-        "no_missing_customer_id"
-    ] = (
-        feature_df["Customer ID"].notna().all()
-    )
-
-    validation[
-        "no_missing_return_rate"
-    ] = (
-        feature_df["Return_Rate"].notna().all()
-    )
-
-    validation[
-        "return_rate_is_numeric"
-    ] = (
-        pd.api.types.is_numeric_dtype(
-            feature_df["Return_Rate"]
-        )
-    )
-
-    validation[
-        "no_negative_return_rate"
-    ] = (
-        feature_df["Return_Rate"] >= 0
-    ).all()
+    validation["no_negative_return_rate"] = (feature_df["Return_Rate"] >= 0).all()
 
     # ============================================================
     # 7. Restrict source data to point-in-time window
     # ============================================================
 
-    historical_df = working_df[
-        working_df["InvoiceDate"] <= cutoff_date
-    ].copy()
+    historical_df = working_df[working_df["InvoiceDate"] <= cutoff_date].copy()
 
     # ============================================================
     # 8. Keep customer-identifiable transactions
     # ============================================================
 
     historical_df = historical_df[
-        historical_df["Customer ID"].notna()
-        & (historical_df["Customer ID"] != 0)
+        historical_df["Customer ID"].notna() & (historical_df["Customer ID"] != 0)
     ].copy()
 
-    historical_df["Customer ID"] = (
-        historical_df["Customer ID"]
-        .astype("int64")
-    )
+    historical_df["Customer ID"] = historical_df["Customer ID"].astype("int64")
 
     # ============================================================
     # 9. Reconstruct qualifying purchase orders
@@ -8140,16 +6281,12 @@ def validate_return_rate_features(
 
     purchase_transactions = historical_df[
         (historical_df["Transaction Type"] == "Purchase")
-        & (
-            historical_df["Include In Sales Analysis"]
-            == True
-        )
+        & (historical_df["Include In Sales Analysis"] == True)
         & (historical_df["Quantity"] > 0)
     ].copy()
 
     expected_purchase_orders = (
-        purchase_transactions
-        .groupby("Customer ID")["Invoice"]
+        purchase_transactions.groupby("Customer ID")["Invoice"]
         .nunique()
         .rename("Purchase_Order_Count")
     )
@@ -8169,12 +6306,9 @@ def validate_return_rate_features(
     ].copy()
 
     expected_return_orders = (
-        return_transactions
-        .groupby("Customer ID")["Invoice"]
+        return_transactions.groupby("Customer ID")["Invoice"]
         .nunique()
-        .rename(
-            "Return_Cancellation_Order_Count"
-        )
+        .rename("Return_Cancellation_Order_Count")
     )
 
     # ============================================================
@@ -8182,103 +6316,67 @@ def validate_return_rate_features(
     # ============================================================
 
     expected_features = (
-        expected_purchase_orders
-        .to_frame()
+        expected_purchase_orders.to_frame()
         .join(
             expected_return_orders,
             how="left",
         )
-        .fillna(
-            {
-                "Return_Cancellation_Order_Count": 0
-            }
-        )
+        .fillna({"Return_Cancellation_Order_Count": 0})
     )
 
     expected_features["Expected_Return_Rate"] = (
-        expected_features[
-            "Return_Cancellation_Order_Count"
-        ]
-        / expected_features[
-            "Purchase_Order_Count"
-        ]
+        expected_features["Return_Cancellation_Order_Count"]
+        / expected_features["Purchase_Order_Count"]
     )
 
-    expected_features = (
-        expected_features
-        .reset_index()
-    )
+    expected_features = expected_features.reset_index()
 
     # ============================================================
     # 12. Standardize feature Customer ID
     # ============================================================
 
-    feature_df["Customer ID"] = (
-        feature_df["Customer ID"]
-        .astype("int64")
-    )
+    feature_df["Customer ID"] = feature_df["Customer ID"].astype("int64")
 
     # ============================================================
     # 13. Validate customer population
     # ============================================================
 
-    expected_customer_ids = set(
-        expected_features["Customer ID"]
-    )
+    expected_customer_ids = set(expected_features["Customer ID"])
 
-    actual_customer_ids = set(
-        feature_df["Customer ID"]
-    )
+    actual_customer_ids = set(feature_df["Customer ID"])
 
-    validation[
-        "customer_count_matches"
-    ] = (
-        len(feature_df)
-        == len(expected_customer_ids)
-    )
+    validation["customer_count_matches"] = len(feature_df) == len(expected_customer_ids)
 
-    validation[
-        "customer_population_matches"
-    ] = (
-        actual_customer_ids
-        == expected_customer_ids
+    validation["customer_population_matches"] = (
+        actual_customer_ids == expected_customer_ids
     )
 
     # ============================================================
     # 14. Compare actual Return Rate against expected values
     # ============================================================
 
-    comparison_df = (
-        expected_features[
+    comparison_df = expected_features[
+        [
+            "Customer ID",
+            "Expected_Return_Rate",
+        ]
+    ].merge(
+        feature_df[
             [
                 "Customer ID",
-                "Expected_Return_Rate",
+                "Return_Rate",
             ]
-        ]
-        .merge(
-            feature_df[
-                [
-                    "Customer ID",
-                    "Return_Rate",
-                ]
-            ],
-            on="Customer ID",
-            how="left",
-            validate="one_to_one",
-        )
+        ],
+        on="Customer ID",
+        how="left",
+        validate="one_to_one",
     )
 
-    validation[
-        "all_expected_return_rates_present"
-    ] = (
-        comparison_df["Return_Rate"]
-        .notna()
-        .all()
+    validation["all_expected_return_rates_present"] = (
+        comparison_df["Return_Rate"].notna().all()
     )
 
-    validation[
-        "return_rates_match"
-    ] = np.allclose(
+    validation["return_rates_match"] = np.allclose(
         comparison_df["Return_Rate"],
         comparison_df["Expected_Return_Rate"],
         atol=1e-12,
@@ -8289,9 +6387,7 @@ def validate_return_rate_features(
     # 15. Validate Return Rate mathematical properties
     # ============================================================
 
-    validation[
-        "no_return_rate_above_expected_domain"
-    ] = (
+    validation["no_return_rate_above_expected_domain"] = (
         feature_df["Return_Rate"] >= 0
     ).all()
 
@@ -8307,78 +6403,32 @@ def validate_return_rate_features(
     # 16. Validate point-in-time cutoff
     # ============================================================
 
-    validation[
-        "cutoff_before_max_invoice_date"
-    ] = (
-        cutoff_date <= max_invoice_date
-    )
+    validation["cutoff_before_max_invoice_date"] = cutoff_date <= max_invoice_date
 
-    validation[
-        "no_source_transaction_after_cutoff_used"
-    ] = (
-        historical_df["InvoiceDate"]
-        <= cutoff_date
+    validation["no_source_transaction_after_cutoff_used"] = (
+        historical_df["InvoiceDate"] <= cutoff_date
     ).all()
 
     # ============================================================
     # 17. Summary statistics
     # ============================================================
 
-    return_rate_series = feature_df[
-        "Return_Rate"
-    ]
+    return_rate_series = feature_df["Return_Rate"]
 
     summary = {
-        "customer_count": int(
-            len(feature_df)
-        ),
-
-        "expected_customer_count": int(
-            len(expected_features)
-        ),
-
-        "purchase_order_count": int(
-            purchase_transactions[
-                "Invoice"
-            ].nunique()
-        ),
-
+        "customer_count": len(feature_df),
+        "expected_customer_count": len(expected_features),
+        "purchase_order_count": int(purchase_transactions["Invoice"].nunique()),
         "return_cancellation_order_count": int(
-            return_transactions[
-                "Invoice"
-            ].nunique()
+            return_transactions["Invoice"].nunique()
         ),
-
-        "customers_with_returns": int(
-            (
-                return_rate_series > 0
-            ).sum()
-        ),
-
-        "customers_without_returns": int(
-            (
-                return_rate_series == 0
-            ).sum()
-        ),
-
-        "mean_return_rate": float(
-            return_rate_series.mean()
-        ),
-
-        "median_return_rate": float(
-            return_rate_series.median()
-        ),
-
-        "minimum_return_rate": float(
-            return_rate_series.min()
-        ),
-
-        "maximum_return_rate": float(
-            return_rate_series.max()
-        ),
-
+        "customers_with_returns": int((return_rate_series > 0).sum()),
+        "customers_without_returns": int((return_rate_series == 0).sum()),
+        "mean_return_rate": float(return_rate_series.mean()),
+        "median_return_rate": float(return_rate_series.median()),
+        "minimum_return_rate": float(return_rate_series.min()),
+        "maximum_return_rate": float(return_rate_series.max()),
         "max_invoice_date": max_invoice_date,
-
         "cutoff_date": cutoff_date,
     }
 
@@ -8386,19 +6436,13 @@ def validate_return_rate_features(
     # 18. Identify failed checks
     # ============================================================
 
-    failed_checks = [
-        check
-        for check, result in validation.items()
-        if not bool(result)
-    ]
+    failed_checks = [check for check, result in validation.items() if not bool(result)]
 
     # ============================================================
     # 19. Overall validation result
     # ============================================================
 
-    validation["passed"] = (
-        len(failed_checks) == 0
-    )
+    validation["passed"] = len(failed_checks) == 0
 
     # ============================================================
     # 20. Return validation package
@@ -8411,12 +6455,12 @@ def validate_return_rate_features(
     }
 
 
-
 ###############################################################
-#---------- 9. Discount/markdown sensitivity --------------
+# ---------- 9. Discount/markdown sensitivity --------------
 ###############################################################
 
-#----------- 9.1 analyze discount sensitivity --------
+
+# ----------- 9.1 analyze discount sensitivity --------
 def analyze_discount_markdown_sensitivity(
     df_cleaned: pd.DataFrame,
     cutoff_date: pd.Timestamp | None = None,
@@ -8477,9 +6521,7 @@ def analyze_discount_markdown_sensitivity(
     missing_columns = required_columns - set(df_cleaned.columns)
 
     if missing_columns:
-        raise ValueError(
-            f"Missing required columns: {sorted(missing_columns)}"
-        )
+        raise ValueError(f"Missing required columns: {sorted(missing_columns)}")
 
     # ============================================================
     # 2. Create working copy
@@ -8504,22 +6546,15 @@ def analyze_discount_markdown_sensitivity(
     max_invoice_date = working_df["InvoiceDate"].max()
 
     if pd.isna(max_invoice_date):
-        raise ValueError(
-            "InvoiceDate contains no valid dates."
-        )
+        raise ValueError("InvoiceDate contains no valid dates.")
 
     if cutoff_date is None:
-        cutoff_date = (
-            max_invoice_date
-            - pd.Timedelta(days=90)
-        )
+        cutoff_date = max_invoice_date - pd.Timedelta(days=90)
     else:
         cutoff_date = pd.Timestamp(cutoff_date)
 
     if cutoff_date >= max_invoice_date:
-        raise ValueError(
-            "cutoff_date must be earlier than max InvoiceDate."
-        )
+        raise ValueError("cutoff_date must be earlier than max InvoiceDate.")
 
     # ============================================================
     # 4. Verified non-product StockCodes
@@ -8543,9 +6578,7 @@ def analyze_discount_markdown_sensitivity(
     # 5. Historical transactions
     # ============================================================
 
-    historical_df = working_df[
-        working_df["InvoiceDate"] <= cutoff_date
-    ].copy()
+    historical_df = working_df[working_df["InvoiceDate"] <= cutoff_date].copy()
 
     # ============================================================
     # 6. Reconstruct the SAME customer population used by RFM
@@ -8560,18 +6593,14 @@ def analyze_discount_markdown_sensitivity(
     ].copy()
 
     if historical_customer_transactions.empty:
-        raise ValueError(
-            "No qualifying historical customer transactions found."
-        )
+        raise ValueError("No qualifying historical customer transactions found.")
 
-    historical_customer_transactions["Customer ID"] = (
-        historical_customer_transactions["Customer ID"]
-        .astype("int64")
-    )
+    historical_customer_transactions["Customer ID"] = historical_customer_transactions[
+        "Customer ID"
+    ].astype("int64")
 
     historical_customer_population = set(
-        historical_customer_transactions["Customer ID"]
-        .unique()
+        historical_customer_transactions["Customer ID"].unique()
     )
 
     # ============================================================
@@ -8584,23 +6613,15 @@ def analyze_discount_markdown_sensitivity(
     ].copy()
 
     price_df["StockCode_Key"] = (
-        price_df["StockCode"]
-        .astype(str)
-        .str.strip()
-        .str.upper()
+        price_df["StockCode"].astype(str).str.strip().str.upper()
     )
 
     # Exclude administrative/non-product transactions
-    price_df = price_df[
-        ~price_df["StockCode_Key"].isin(
-            non_product_stock_codes
-        )
-    ].copy()
+    price_df = price_df[~price_df["StockCode_Key"].isin(non_product_stock_codes)].copy()
 
     if price_df.empty:
         raise ValueError(
-            "No valid product-price transactions remain "
-            "after filtering."
+            "No valid product-price transactions remain " "after filtering."
         )
 
     # ============================================================
@@ -8608,8 +6629,7 @@ def analyze_discount_markdown_sensitivity(
     # ============================================================
 
     product_price_benchmark = (
-        price_df
-        .groupby("StockCode_Key")
+        price_df.groupby("StockCode_Key")
         .agg(
             Price_Observation_Count=("Price", "size"),
             Distinct_Price_Count=("Price", "nunique"),
@@ -8641,43 +6661,31 @@ def analyze_discount_markdown_sensitivity(
     # ============================================================
 
     price_df["Price_Deviation_From_Median"] = (
-        (
-            price_df["Product_Median_Price"]
-            - price_df["Price"]
-        )
-        / price_df["Product_Median_Price"]
-    )
+        price_df["Product_Median_Price"] - price_df["Price"]
+    ) / price_df["Product_Median_Price"]
 
     # Only positive values represent below-median purchases.
-    price_df["Below_Median_Price_Deviation"] = (
-        price_df["Price_Deviation_From_Median"]
-        .clip(lower=0)
-    )
+    price_df["Below_Median_Price_Deviation"] = price_df[
+        "Price_Deviation_From_Median"
+    ].clip(lower=0)
 
     # ============================================================
     # 11. Cap extreme deviations at 30%
     # ============================================================
 
-    price_df["Capped_Below_Median_Deviation"] = (
-        price_df["Below_Median_Price_Deviation"]
-        .clip(upper=0.30)
-    )
+    price_df["Capped_Below_Median_Deviation"] = price_df[
+        "Below_Median_Price_Deviation"
+    ].clip(upper=0.30)
 
     # ============================================================
     # 12. Exploratory threshold flags
     # ============================================================
 
-    price_df["Below_10pct_Median"] = (
-        price_df["Below_Median_Price_Deviation"] >= 0.10
-    )
+    price_df["Below_10pct_Median"] = price_df["Below_Median_Price_Deviation"] >= 0.10
 
-    price_df["Below_20pct_Median"] = (
-        price_df["Below_Median_Price_Deviation"] >= 0.20
-    )
+    price_df["Below_20pct_Median"] = price_df["Below_Median_Price_Deviation"] >= 0.20
 
-    price_df["Below_30pct_Median"] = (
-        price_df["Below_Median_Price_Deviation"] >= 0.30
-    )
+    price_df["Below_30pct_Median"] = price_df["Below_Median_Price_Deviation"] >= 0.30
 
     # ============================================================
     # 13. Value associated with low-price transactions
@@ -8705,69 +6713,56 @@ def analyze_discount_markdown_sensitivity(
     # ============================================================
 
     customer_price_behavior = (
-        price_df
-        .groupby("Customer ID")
+        price_df.groupby("Customer ID")
         .agg(
             Price_Transaction_Count=(
                 "Invoice",
                 "size",
             ),
-
             Price_Purchase_Order_Count=(
                 "Invoice",
                 "nunique",
             ),
-
             Total_Purchase_Value=(
                 "Analytical Transaction Value",
                 "sum",
             ),
-
             Mean_Below_Median_Deviation=(
                 "Below_Median_Price_Deviation",
                 "mean",
             ),
-
             Mean_Capped_Below_Median_Deviation=(
                 "Capped_Below_Median_Deviation",
                 "mean",
             ),
-
             Median_Below_Median_Deviation=(
                 "Below_Median_Price_Deviation",
                 "median",
             ),
-
             Transactions_Below_Median=(
                 "Below_Median_Price_Deviation",
                 lambda x: (x > 0).sum(),
             ),
-
             Transactions_Below_10pct=(
                 "Below_10pct_Median",
                 "sum",
             ),
-
             Transactions_Below_20pct=(
                 "Below_20pct_Median",
                 "sum",
             ),
-
             Transactions_Below_30pct=(
                 "Below_30pct_Median",
                 "sum",
             ),
-
             Value_Below_20pct=(
                 "Below_20pct_Value",
                 "sum",
             ),
-
             Value_Below_30pct=(
                 "Below_30pct_Value",
                 "sum",
             ),
-
             Capped_Deviation_Value=(
                 "Capped_Deviation_Value",
                 "sum",
@@ -8780,88 +6775,39 @@ def analyze_discount_markdown_sensitivity(
     # 15. Customer-level exposure percentages
     # ============================================================
 
-    customer_price_behavior[
-        "Below_Median_Transaction_Share"
-    ] = (
-        customer_price_behavior[
-            "Transactions_Below_Median"
-        ]
-        /
-        customer_price_behavior[
-            "Price_Transaction_Count"
-        ]
+    customer_price_behavior["Below_Median_Transaction_Share"] = (
+        customer_price_behavior["Transactions_Below_Median"]
+        / customer_price_behavior["Price_Transaction_Count"]
     )
 
-    customer_price_behavior[
-        "Below_10pct_Transaction_Share"
-    ] = (
-        customer_price_behavior[
-            "Transactions_Below_10pct"
-        ]
-        /
-        customer_price_behavior[
-            "Price_Transaction_Count"
-        ]
+    customer_price_behavior["Below_10pct_Transaction_Share"] = (
+        customer_price_behavior["Transactions_Below_10pct"]
+        / customer_price_behavior["Price_Transaction_Count"]
     )
 
-    customer_price_behavior[
-        "Below_20pct_Transaction_Share"
-    ] = (
-        customer_price_behavior[
-            "Transactions_Below_20pct"
-        ]
-        /
-        customer_price_behavior[
-            "Price_Transaction_Count"
-        ]
+    customer_price_behavior["Below_20pct_Transaction_Share"] = (
+        customer_price_behavior["Transactions_Below_20pct"]
+        / customer_price_behavior["Price_Transaction_Count"]
     )
 
-    customer_price_behavior[
-        "Below_30pct_Transaction_Share"
-    ] = (
-        customer_price_behavior[
-            "Transactions_Below_30pct"
-        ]
-        /
-        customer_price_behavior[
-            "Price_Transaction_Count"
-        ]
+    customer_price_behavior["Below_30pct_Transaction_Share"] = (
+        customer_price_behavior["Transactions_Below_30pct"]
+        / customer_price_behavior["Price_Transaction_Count"]
     )
 
-    customer_price_behavior[
-        "Below_20pct_Value_Share"
-    ] = (
-        customer_price_behavior[
-            "Value_Below_20pct"
-        ]
-        /
-        customer_price_behavior[
-            "Total_Purchase_Value"
-        ]
+    customer_price_behavior["Below_20pct_Value_Share"] = (
+        customer_price_behavior["Value_Below_20pct"]
+        / customer_price_behavior["Total_Purchase_Value"]
     )
 
-    customer_price_behavior[
-        "Below_30pct_Value_Share"
-    ] = (
-        customer_price_behavior[
-            "Value_Below_30pct"
-        ]
-        /
-        customer_price_behavior[
-            "Total_Purchase_Value"
-        ]
+    customer_price_behavior["Below_30pct_Value_Share"] = (
+        customer_price_behavior["Value_Below_30pct"]
+        / customer_price_behavior["Total_Purchase_Value"]
     )
 
-    customer_price_behavior[
-        "Capped_Deviation_Value_Share"
-    ] = (
-        customer_price_behavior[
-            "Capped_Deviation_Value"
-        ]
-        /
-        customer_price_behavior[
-            "Total_Purchase_Value"
-        ]
+    customer_price_behavior["Capped_Deviation_Value_Share"] = (
+        customer_price_behavior["Capped_Deviation_Value"]
+        / customer_price_behavior["Total_Purchase_Value"]
     )
 
     # ============================================================
@@ -8869,11 +6815,7 @@ def analyze_discount_markdown_sensitivity(
     # ============================================================
 
     customer_population_df = pd.DataFrame(
-        {
-            "Customer ID": sorted(
-                historical_customer_population
-            )
-        }
+        {"Customer ID": sorted(historical_customer_population)}
     )
 
     customer_behavior = customer_population_df.merge(
@@ -8888,55 +6830,35 @@ def analyze_discount_markdown_sensitivity(
     # ============================================================
 
     numeric_behavior_columns = [
-        column
-        for column in customer_behavior.columns
-        if column != "Customer ID"
+        column for column in customer_behavior.columns if column != "Customer ID"
     ]
 
-    customer_behavior[
-        numeric_behavior_columns
-    ] = customer_behavior[
+    customer_behavior[numeric_behavior_columns] = customer_behavior[
         numeric_behavior_columns
     ].fillna(0)
 
-    customer_behavior[
-        "Has_Price_Analysis"
-    ] = (
-        customer_behavior[
-            "Price_Transaction_Count"
-        ] > 0
+    customer_behavior["Has_Price_Analysis"] = (
+        customer_behavior["Price_Transaction_Count"] > 0
     )
 
     # ============================================================
     # 18. Repeated behavior
     # ============================================================
 
-    customer_behavior[
-        "Repeated_20pct_Below_Median"
-    ] = (
-        customer_behavior[
-            "Transactions_Below_20pct"
-        ] >= 2
+    customer_behavior["Repeated_20pct_Below_Median"] = (
+        customer_behavior["Transactions_Below_20pct"] >= 2
     )
 
-    customer_behavior[
-        "Repeated_30pct_Below_Median"
-    ] = (
-        customer_behavior[
-            "Transactions_Below_30pct"
-        ] >= 2
+    customer_behavior["Repeated_30pct_Below_Median"] = (
+        customer_behavior["Transactions_Below_30pct"] >= 2
     )
 
     # ============================================================
     # 19. Exploratory behavioral bands
     # ============================================================
 
-    customer_behavior[
-        "Below_20pct_Behavior_Band"
-    ] = pd.cut(
-        customer_behavior[
-            "Below_20pct_Transaction_Share"
-        ],
+    customer_behavior["Below_20pct_Behavior_Band"] = pd.cut(
+        customer_behavior["Below_20pct_Transaction_Share"],
         bins=[
             -0.000001,
             0.00,
@@ -8968,41 +6890,16 @@ def analyze_discount_markdown_sensitivity(
                 "At Least 30% Below Median",
             ],
             "Customers_With_Exposure": [
-                (
-                    customer_behavior[
-                        "Transactions_Below_Median"
-                    ] > 0
-                ).sum(),
-
-                (
-                    customer_behavior[
-                        "Transactions_Below_10pct"
-                    ] > 0
-                ).sum(),
-
-                (
-                    customer_behavior[
-                        "Transactions_Below_20pct"
-                    ] > 0
-                ).sum(),
-
-                (
-                    customer_behavior[
-                        "Transactions_Below_30pct"
-                    ] > 0
-                ).sum(),
+                (customer_behavior["Transactions_Below_Median"] > 0).sum(),
+                (customer_behavior["Transactions_Below_10pct"] > 0).sum(),
+                (customer_behavior["Transactions_Below_20pct"] > 0).sum(),
+                (customer_behavior["Transactions_Below_30pct"] > 0).sum(),
             ],
         }
     )
 
-    threshold_summary[
-        "Customer_Percentage"
-    ] = (
-        threshold_summary[
-            "Customers_With_Exposure"
-        ]
-        / len(customer_behavior)
-        * 100
+    threshold_summary["Customer_Percentage"] = (
+        threshold_summary["Customers_With_Exposure"] / len(customer_behavior) * 100
     )
 
     # ============================================================
@@ -9010,28 +6907,14 @@ def analyze_discount_markdown_sensitivity(
     # ============================================================
 
     behavioral_band_summary = (
-        customer_behavior[
-            "Below_20pct_Behavior_Band"
-        ]
-        .value_counts(
-            dropna=False
-        )
-        .rename_axis(
-            "Behavior_Band"
-        )
-        .reset_index(
-            name="Customer_Count"
-        )
+        customer_behavior["Below_20pct_Behavior_Band"]
+        .value_counts(dropna=False)
+        .rename_axis("Behavior_Band")
+        .reset_index(name="Customer_Count")
     )
 
-    behavioral_band_summary[
-        "Customer_Percentage"
-    ] = (
-        behavioral_band_summary[
-            "Customer_Count"
-        ]
-        / len(customer_behavior)
-        * 100
+    behavioral_band_summary["Customer_Percentage"] = (
+        behavioral_band_summary["Customer_Count"] / len(customer_behavior) * 100
     )
 
     # ============================================================
@@ -9040,34 +6923,20 @@ def analyze_discount_markdown_sensitivity(
 
     transaction_value_relationship = {
         "below_20pct_transaction_share_vs_value_share": (
-            customer_behavior[
-                "Below_20pct_Transaction_Share"
-            ].corr(
-                customer_behavior[
-                    "Below_20pct_Value_Share"
-                ],
+            customer_behavior["Below_20pct_Transaction_Share"].corr(
+                customer_behavior["Below_20pct_Value_Share"],
                 method="spearman",
             )
         ),
-
         "below_30pct_transaction_share_vs_value_share": (
-            customer_behavior[
-                "Below_30pct_Transaction_Share"
-            ].corr(
-                customer_behavior[
-                    "Below_30pct_Value_Share"
-                ],
+            customer_behavior["Below_30pct_Transaction_Share"].corr(
+                customer_behavior["Below_30pct_Value_Share"],
                 method="spearman",
             )
         ),
-
         "capped_deviation_vs_20pct_transaction_share": (
-            customer_behavior[
-                "Mean_Capped_Below_Median_Deviation"
-            ].corr(
-                customer_behavior[
-                    "Below_20pct_Transaction_Share"
-                ],
+            customer_behavior["Mean_Capped_Below_Median_Deviation"].corr(
+                customer_behavior["Below_20pct_Transaction_Share"],
                 method="spearman",
             )
         ),
@@ -9080,91 +6949,41 @@ def analyze_discount_markdown_sensitivity(
     summary = {
         "max_invoice_date": max_invoice_date,
         "cutoff_date": cutoff_date,
-
-        "historical_customer_population": len(
-            historical_customer_population
-        ),
-
+        "historical_customer_population": len(historical_customer_population),
         "customers_with_price_analysis": int(
-            customer_behavior[
-                "Has_Price_Analysis"
-            ].sum()
+            customer_behavior["Has_Price_Analysis"].sum()
         ),
-
         "customers_without_price_analysis": int(
-            (
-                ~customer_behavior[
-                    "Has_Price_Analysis"
-                ]
-            ).sum()
+            (~customer_behavior["Has_Price_Analysis"]).sum()
         ),
-
-        "product_count": int(
-            price_df["StockCode_Key"].nunique()
-        ),
-
+        "product_count": int(price_df["StockCode_Key"].nunique()),
         "products_with_multiple_prices": int(
-            (
-                product_price_benchmark[
-                    "Distinct_Price_Count"
-                ] > 1
-            ).sum()
+            (product_price_benchmark["Distinct_Price_Count"] > 1).sum()
         ),
-
         "transactions_analyzed": len(price_df),
-
         "customers_with_any_below_median": int(
-            (
-                customer_behavior[
-                    "Transactions_Below_Median"
-                ] > 0
-            ).sum()
+            (customer_behavior["Transactions_Below_Median"] > 0).sum()
         ),
-
         "customers_with_any_20pct_exposure": int(
-            (
-                customer_behavior[
-                    "Transactions_Below_20pct"
-                ] > 0
-            ).sum()
+            (customer_behavior["Transactions_Below_20pct"] > 0).sum()
         ),
-
         "customers_with_any_30pct_exposure": int(
-            (
-                customer_behavior[
-                    "Transactions_Below_30pct"
-                ] > 0
-            ).sum()
+            (customer_behavior["Transactions_Below_30pct"] > 0).sum()
         ),
-
         "customers_with_repeated_20pct_exposure": int(
-            customer_behavior[
-                "Repeated_20pct_Below_Median"
-            ].sum()
+            customer_behavior["Repeated_20pct_Below_Median"].sum()
         ),
-
         "customers_with_repeated_30pct_exposure": int(
-            customer_behavior[
-                "Repeated_30pct_Below_Median"
-            ].sum()
+            customer_behavior["Repeated_30pct_Below_Median"].sum()
         ),
-
         "mean_capped_deviation": (
-            customer_behavior[
-                "Mean_Capped_Below_Median_Deviation"
-            ].mean()
+            customer_behavior["Mean_Capped_Below_Median_Deviation"].mean()
         ),
-
         "median_capped_deviation": (
-            customer_behavior[
-                "Mean_Capped_Below_Median_Deviation"
-            ].median()
+            customer_behavior["Mean_Capped_Below_Median_Deviation"].median()
         ),
-
         "maximum_capped_deviation": (
-            customer_behavior[
-                "Mean_Capped_Below_Median_Deviation"
-            ].max()
+            customer_behavior["Mean_Capped_Below_Median_Deviation"].max()
         ),
     }
 
@@ -9174,83 +6993,49 @@ def analyze_discount_markdown_sensitivity(
 
     validation = {}
 
-    validation["customer_population_is_5281_or_expected"] = (
-        len(customer_behavior)
-        == len(historical_customer_population)
-    )
+    validation["customer_population_is_5281_or_expected"] = len(
+        customer_behavior
+    ) == len(historical_customer_population)
 
-    validation["customer_ids_unique"] = (
-        customer_behavior["Customer ID"].is_unique
-    )
+    validation["customer_ids_unique"] = customer_behavior["Customer ID"].is_unique
 
     validation["customer_ids_not_missing"] = (
         customer_behavior["Customer ID"].notna().all()
     )
 
     validation["customer_population_matches"] = (
-        set(customer_behavior["Customer ID"])
-        == historical_customer_population
+        set(customer_behavior["Customer ID"]) == historical_customer_population
     )
 
-    validation["price_analysis_customers_subset_of_population"] = (
-        set(
-            customer_price_behavior[
-                "Customer ID"
-            ]
-        ).issubset(
-            historical_customer_population
-        )
-    )
+    validation["price_analysis_customers_subset_of_population"] = set(
+        customer_price_behavior["Customer ID"]
+    ).issubset(historical_customer_population)
 
     validation["capped_deviation_valid"] = (
-        customer_behavior[
-            "Mean_Capped_Below_Median_Deviation"
-        ].between(0, 0.30).all()
+        customer_behavior["Mean_Capped_Below_Median_Deviation"].between(0, 0.30).all()
     )
 
     validation["transaction_shares_valid"] = (
-        customer_behavior[
-            "Below_20pct_Transaction_Share"
-        ].between(0, 1).all()
+        customer_behavior["Below_20pct_Transaction_Share"].between(0, 1).all()
     )
 
     validation["value_shares_valid"] = (
-        customer_behavior[
-            "Below_20pct_Value_Share"
-        ].between(0, 1).all()
+        customer_behavior["Below_20pct_Value_Share"].between(0, 1).all()
     )
 
     validation["threshold_counts_consistent"] = (
-        (
-            customer_behavior[
-                "Transactions_Below_30pct"
-            ]
-            <=
-            customer_behavior[
-                "Transactions_Below_20pct"
-            ]
-        ).all()
-        and
-        (
-            customer_behavior[
-                "Transactions_Below_20pct"
-            ]
-            <=
-            customer_behavior[
-                "Transactions_Below_10pct"
-            ]
-        ).all()
-    )
+        customer_behavior["Transactions_Below_30pct"]
+        <= customer_behavior["Transactions_Below_20pct"]
+    ).all() and (
+        customer_behavior["Transactions_Below_20pct"]
+        <= customer_behavior["Transactions_Below_10pct"]
+    ).all()
 
     validation["no_missing_behavior_values"] = (
-        customer_behavior[
-            numeric_behavior_columns
-        ].notna().all().all()
+        customer_behavior[numeric_behavior_columns].notna().all().all()
     )
 
-    validation["passed"] = all(
-        validation.values()
-    )
+    validation["passed"] = all(validation.values())
 
     # ============================================================
     # 25. Failed checks
@@ -9270,25 +7055,14 @@ def analyze_discount_markdown_sensitivity(
         "summary": summary,
         "validation": validation,
         "failed_checks": failed_checks,
-
         "customer_behavior": customer_behavior,
-
-        "product_price_benchmark": (
-            product_price_benchmark
-        ),
-
+        "product_price_benchmark": (product_price_benchmark),
         "transaction_price_analysis": price_df,
-
         "threshold_summary": threshold_summary,
-
-        "behavioral_band_summary": (
-            behavioral_band_summary
-        ),
-
-        "transaction_value_relationship": (
-            transaction_value_relationship
-        ),
+        "behavioral_band_summary": (behavioral_band_summary),
+        "transaction_value_relationship": (transaction_value_relationship),
     }
+
 
 def analyze_customer_price_deviation(
     df_cleaned: pd.DataFrame,
@@ -9330,9 +7104,7 @@ def analyze_customer_price_deviation(
     missing_columns = required_columns - set(df_cleaned.columns)
 
     if missing_columns:
-        raise ValueError(
-            f"Missing required columns: {sorted(missing_columns)}"
-        )
+        raise ValueError(f"Missing required columns: {sorted(missing_columns)}")
 
     # ============================================================
     # 2. Create working copy
@@ -9357,9 +7129,7 @@ def analyze_customer_price_deviation(
     max_invoice_date = working_df["InvoiceDate"].max()
 
     if pd.isna(max_invoice_date):
-        raise ValueError(
-            "InvoiceDate contains no valid dates."
-        )
+        raise ValueError("InvoiceDate contains no valid dates.")
 
     if cutoff_date is None:
         cutoff_date = max_invoice_date - pd.Timedelta(days=90)
@@ -9367,9 +7137,7 @@ def analyze_customer_price_deviation(
         cutoff_date = pd.Timestamp(cutoff_date)
 
     if cutoff_date >= max_invoice_date:
-        raise ValueError(
-            "cutoff_date must be earlier than the maximum InvoiceDate."
-        )
+        raise ValueError("cutoff_date must be earlier than the maximum InvoiceDate.")
 
     # ============================================================
     # 4. Define verified non-product StockCodes
@@ -9393,9 +7161,7 @@ def analyze_customer_price_deviation(
     # 5. Historical transactions up to cutoff
     # ============================================================
 
-    historical_df = working_df[
-        working_df["InvoiceDate"] <= cutoff_date
-    ].copy()
+    historical_df = working_df[working_df["InvoiceDate"] <= cutoff_date].copy()
 
     # ============================================================
     # 6. Select qualifying purchase transactions
@@ -9412,31 +7178,21 @@ def analyze_customer_price_deviation(
     ].copy()
 
     if qualifying_df.empty:
-        raise ValueError(
-            "No qualifying purchase transactions were found."
-        )
+        raise ValueError("No qualifying purchase transactions were found.")
 
     # ============================================================
     # 7. Standardize keys
     # ============================================================
 
-    qualifying_df["Customer ID"] = (
-        qualifying_df["Customer ID"]
-        .astype("int64")
-    )
+    qualifying_df["Customer ID"] = qualifying_df["Customer ID"].astype("int64")
 
     qualifying_df["StockCode_Key"] = (
-        qualifying_df["StockCode"]
-        .astype(str)
-        .str.strip()
-        .str.upper()
+        qualifying_df["StockCode"].astype(str).str.strip().str.upper()
     )
 
     # Exclude administrative/non-product StockCodes
     qualifying_df = qualifying_df[
-        ~qualifying_df["StockCode_Key"].isin(
-            non_product_stock_codes
-        )
+        ~qualifying_df["StockCode_Key"].isin(non_product_stock_codes)
     ].copy()
 
     if qualifying_df.empty:
@@ -9450,8 +7206,7 @@ def analyze_customer_price_deviation(
     # ============================================================
 
     product_price_benchmark = (
-        qualifying_df
-        .groupby("StockCode_Key")
+        qualifying_df.groupby("StockCode_Key")
         .agg(
             Price_Observation_Count=("Price", "size"),
             Distinct_Price_Count=("Price", "nunique"),
@@ -9483,20 +7238,15 @@ def analyze_customer_price_deviation(
     # ============================================================
 
     qualifying_df["Price_Deviation_From_Median"] = (
-        (
-            qualifying_df["Product_Median_Price"]
-            - qualifying_df["Price"]
-        )
-        / qualifying_df["Product_Median_Price"]
-    )
+        qualifying_df["Product_Median_Price"] - qualifying_df["Price"]
+    ) / qualifying_df["Product_Median_Price"]
 
     # Positive value = customer paid below product median.
     # Negative value = customer paid above product median.
 
-    qualifying_df["Below_Median_Price_Deviation"] = (
-        qualifying_df["Price_Deviation_From_Median"]
-        .clip(lower=0)
-    )
+    qualifying_df["Below_Median_Price_Deviation"] = qualifying_df[
+        "Price_Deviation_From_Median"
+    ].clip(lower=0)
 
     # ============================================================
     # 11. Create exploratory threshold flags
@@ -9519,8 +7269,7 @@ def analyze_customer_price_deviation(
     # ============================================================
 
     customer_price_exposure = (
-        qualifying_df
-        .groupby("Customer ID")
+        qualifying_df.groupby("Customer ID")
         .agg(
             Purchase_Transaction_Count=(
                 "Invoice",
@@ -9534,32 +7283,26 @@ def analyze_customer_price_deviation(
                 "Analytical Transaction Value",
                 "sum",
             ),
-
             Mean_Below_Median_Price_Deviation=(
                 "Below_Median_Price_Deviation",
                 "mean",
             ),
-
             Median_Below_Median_Price_Deviation=(
                 "Below_Median_Price_Deviation",
                 "median",
             ),
-
             Transactions_Below_Median=(
                 "Below_Median_Price_Deviation",
                 lambda x: (x > 0).sum(),
             ),
-
             Transactions_Below_10pct=(
                 "Below_10pct_Median_Price",
                 "sum",
             ),
-
             Transactions_Below_20pct=(
                 "Below_20pct_Median_Price",
                 "sum",
             ),
-
             Transactions_Below_30pct=(
                 "Below_30pct_Median_Price",
                 "sum",
@@ -9572,48 +7315,24 @@ def analyze_customer_price_deviation(
     # 13. Customer-level transaction shares
     # ============================================================
 
-    customer_price_exposure[
-        "Below_Median_Transaction_Share"
-    ] = (
-        customer_price_exposure[
-            "Transactions_Below_Median"
-        ]
-        / customer_price_exposure[
-            "Purchase_Transaction_Count"
-        ]
+    customer_price_exposure["Below_Median_Transaction_Share"] = (
+        customer_price_exposure["Transactions_Below_Median"]
+        / customer_price_exposure["Purchase_Transaction_Count"]
     )
 
-    customer_price_exposure[
-        "Below_10pct_Transaction_Share"
-    ] = (
-        customer_price_exposure[
-            "Transactions_Below_10pct"
-        ]
-        / customer_price_exposure[
-            "Purchase_Transaction_Count"
-        ]
+    customer_price_exposure["Below_10pct_Transaction_Share"] = (
+        customer_price_exposure["Transactions_Below_10pct"]
+        / customer_price_exposure["Purchase_Transaction_Count"]
     )
 
-    customer_price_exposure[
-        "Below_20pct_Transaction_Share"
-    ] = (
-        customer_price_exposure[
-            "Transactions_Below_20pct"
-        ]
-        / customer_price_exposure[
-            "Purchase_Transaction_Count"
-        ]
+    customer_price_exposure["Below_20pct_Transaction_Share"] = (
+        customer_price_exposure["Transactions_Below_20pct"]
+        / customer_price_exposure["Purchase_Transaction_Count"]
     )
 
-    customer_price_exposure[
-        "Below_30pct_Transaction_Share"
-    ] = (
-        customer_price_exposure[
-            "Transactions_Below_30pct"
-        ]
-        / customer_price_exposure[
-            "Purchase_Transaction_Count"
-        ]
+    customer_price_exposure["Below_30pct_Transaction_Share"] = (
+        customer_price_exposure["Transactions_Below_30pct"]
+        / customer_price_exposure["Purchase_Transaction_Count"]
     )
 
     # ============================================================
@@ -9633,8 +7352,7 @@ def analyze_customer_price_deviation(
     )
 
     customer_value_exposure = (
-        qualifying_df
-        .groupby("Customer ID")
+        qualifying_df.groupby("Customer ID")
         .agg(
             Total_Purchase_Value=(
                 "Analytical Transaction Value",
@@ -9652,26 +7370,14 @@ def analyze_customer_price_deviation(
         .reset_index()
     )
 
-    customer_value_exposure[
-        "Below_20pct_Value_Share"
-    ] = (
-        customer_value_exposure[
-            "Value_Below_20pct_Median"
-        ]
-        / customer_value_exposure[
-            "Total_Purchase_Value"
-        ]
+    customer_value_exposure["Below_20pct_Value_Share"] = (
+        customer_value_exposure["Value_Below_20pct_Median"]
+        / customer_value_exposure["Total_Purchase_Value"]
     )
 
-    customer_value_exposure[
-        "Below_30pct_Value_Share"
-    ] = (
-        customer_value_exposure[
-            "Value_Below_30pct_Median"
-        ]
-        / customer_value_exposure[
-            "Total_Purchase_Value"
-        ]
+    customer_value_exposure["Below_30pct_Value_Share"] = (
+        customer_value_exposure["Value_Below_30pct_Median"]
+        / customer_value_exposure["Total_Purchase_Value"]
     )
 
     # ============================================================
@@ -9695,126 +7401,51 @@ def analyze_customer_price_deviation(
     # 16. Distribution analysis
     # ============================================================
 
-    deviation = qualifying_df[
-        "Below_Median_Price_Deviation"
-    ]
+    deviation = qualifying_df["Below_Median_Price_Deviation"]
 
     summary = {
         "max_invoice_date": max_invoice_date,
         "cutoff_date": cutoff_date,
-
-        "qualifying_transaction_count": len(
-            qualifying_df
-        ),
-
-        "customer_count": qualifying_df[
-            "Customer ID"
-        ].nunique(),
-
-        "product_count": qualifying_df[
-            "StockCode_Key"
-        ].nunique(),
-
+        "qualifying_transaction_count": len(qualifying_df),
+        "customer_count": qualifying_df["Customer ID"].nunique(),
+        "product_count": qualifying_df["StockCode_Key"].nunique(),
         "products_with_multiple_prices": int(
-            (
-                product_price_benchmark[
-                    "Distinct_Price_Count"
-                ] > 1
-            ).sum()
+            (product_price_benchmark["Distinct_Price_Count"] > 1).sum()
         ),
-
         "products_with_single_price": int(
-            (
-                product_price_benchmark[
-                    "Distinct_Price_Count"
-                ] == 1
-            ).sum()
+            (product_price_benchmark["Distinct_Price_Count"] == 1).sum()
         ),
-
-        "transactions_below_product_median": int(
-            (deviation > 0).sum()
-        ),
-
-        "transactions_below_median_percentage": (
-            (deviation > 0).mean() * 100
-        ),
-
+        "transactions_below_product_median": int((deviation > 0).sum()),
+        "transactions_below_median_percentage": ((deviation > 0).mean() * 100),
         "transactions_below_10pct": int(
-            (
-                qualifying_df[
-                    "Below_10pct_Median_Price"
-                ]
-            ).sum()
+            (qualifying_df["Below_10pct_Median_Price"]).sum()
         ),
-
         "transactions_below_10pct_percentage": (
-            qualifying_df[
-                "Below_10pct_Median_Price"
-            ].mean() * 100
+            qualifying_df["Below_10pct_Median_Price"].mean() * 100
         ),
-
         "transactions_below_20pct": int(
-            (
-                qualifying_df[
-                    "Below_20pct_Median_Price"
-                ]
-            ).sum()
+            (qualifying_df["Below_20pct_Median_Price"]).sum()
         ),
-
         "transactions_below_20pct_percentage": (
-            qualifying_df[
-                "Below_20pct_Median_Price"
-            ].mean() * 100
+            qualifying_df["Below_20pct_Median_Price"].mean() * 100
         ),
-
         "transactions_below_30pct": int(
-            (
-                qualifying_df[
-                    "Below_30pct_Median_Price"
-                ]
-            ).sum()
+            (qualifying_df["Below_30pct_Median_Price"]).sum()
         ),
-
         "transactions_below_30pct_percentage": (
-            qualifying_df[
-                "Below_30pct_Median_Price"
-            ].mean() * 100
+            qualifying_df["Below_30pct_Median_Price"].mean() * 100
         ),
-
-        "median_below_median_deviation": (
-            deviation.median()
-        ),
-
-        "mean_below_median_deviation": (
-            deviation.mean()
-        ),
-
-        "maximum_below_median_deviation": (
-            deviation.max()
-        ),
-
+        "median_below_median_deviation": (deviation.median()),
+        "mean_below_median_deviation": (deviation.mean()),
+        "maximum_below_median_deviation": (deviation.max()),
         "customers_with_below_median_purchases": int(
-            (
-                customer_price_exposure[
-                    "Transactions_Below_Median"
-                ] > 0
-            ).sum()
+            (customer_price_exposure["Transactions_Below_Median"] > 0).sum()
         ),
-
         "customers_with_20pct_below_median_purchases": int(
-            (
-                customer_price_exposure[
-                    "Transactions_Below_20pct"
-                ] > 0
-            ).sum()
+            (customer_price_exposure["Transactions_Below_20pct"] > 0).sum()
         ),
-
         "customers_with_30pct_below_median_purchases": int(
-            (
-                customer_price_exposure[
-                    "Transactions_Below_30pct"
-                ] > 0
-            ).sum()
+            (customer_price_exposure["Transactions_Below_30pct"] > 0).sum()
         ),
     }
 
@@ -9824,57 +7455,35 @@ def analyze_customer_price_deviation(
 
     validation = {}
 
-    validation["qualifying_transactions_present"] = (
-        len(qualifying_df) > 0
-    )
+    validation["qualifying_transactions_present"] = len(qualifying_df) > 0
 
-    validation["customer_ids_present"] = (
-        qualifying_df["Customer ID"].notna().all()
-    )
+    validation["customer_ids_present"] = qualifying_df["Customer ID"].notna().all()
 
-    validation["positive_prices_only"] = (
-        (qualifying_df["Price"] > 0).all()
-    )
+    validation["positive_prices_only"] = (qualifying_df["Price"] > 0).all()
 
     validation["product_median_prices_present"] = (
-        qualifying_df[
-            "Product_Median_Price"
-        ].notna().all()
+        qualifying_df["Product_Median_Price"].notna().all()
     )
 
     validation["product_median_prices_positive"] = (
-        (
-            qualifying_df[
-                "Product_Median_Price"
-            ] > 0
-        ).all()
-    )
+        qualifying_df["Product_Median_Price"] > 0
+    ).all()
 
     validation["price_deviation_present"] = (
-        qualifying_df[
-            "Price_Deviation_From_Median"
-        ].notna().all()
+        qualifying_df["Price_Deviation_From_Median"].notna().all()
     )
 
     validation["below_median_deviation_non_negative"] = (
-        (
-            qualifying_df[
-                "Below_Median_Price_Deviation"
-            ] >= 0
-        ).all()
-    )
+        qualifying_df["Below_Median_Price_Deviation"] >= 0
+    ).all()
 
-    validation["customer_exposure_present"] = (
-        not customer_price_exposure.empty
-    )
+    validation["customer_exposure_present"] = not customer_price_exposure.empty
 
     validation["all_transactions_within_cutoff"] = (
         qualifying_df["InvoiceDate"] <= cutoff_date
     ).all()
 
-    validation["passed"] = all(
-        validation.values()
-    )
+    validation["passed"] = all(validation.values())
 
     # ============================================================
     # 18. Failed checks
@@ -9898,6 +7507,7 @@ def analyze_customer_price_deviation(
         "transaction_price_analysis": qualifying_df,
         "customer_price_exposure": customer_price_exposure,
     }
+
 
 def analyze_discount_sensitivity_behavior(
     discount_price_analysis: dict,
@@ -9938,10 +7548,7 @@ def analyze_discount_sensitivity_behavior(
         "transaction_price_analysis",
     }
 
-    missing_analysis_keys = (
-        required_analysis_keys
-        - set(discount_price_analysis.keys())
-    )
+    missing_analysis_keys = required_analysis_keys - set(discount_price_analysis.keys())
 
     if missing_analysis_keys:
         raise ValueError(
@@ -9949,17 +7556,9 @@ def analyze_discount_sensitivity_behavior(
             f"{sorted(missing_analysis_keys)}"
         )
 
-    customer_exposure = (
-        discount_price_analysis[
-            "customer_price_exposure"
-        ].copy()
-    )
+    customer_exposure = discount_price_analysis["customer_price_exposure"].copy()
 
-    transaction_analysis = (
-        discount_price_analysis[
-            "transaction_price_analysis"
-        ].copy()
-    )
+    # transaction_analysis = (discount_price_analysis["transaction_price_analysis"].copy())
 
     # ============================================================
     # 2. Validate required customer-level columns
@@ -9982,9 +7581,8 @@ def analyze_discount_sensitivity_behavior(
         "Transactions_Below_30pct",
     }
 
-    missing_customer_columns = (
-        required_customer_columns
-        - set(customer_exposure.columns)
+    missing_customer_columns = required_customer_columns - set(
+        customer_exposure.columns
     )
 
     if missing_customer_columns:
@@ -9997,19 +7595,14 @@ def analyze_discount_sensitivity_behavior(
     # 3. Copy and standardize Customer ID
     # ============================================================
 
-    customer_exposure["Customer ID"] = (
-        customer_exposure["Customer ID"]
-        .astype("int64")
-    )
+    customer_exposure["Customer ID"] = customer_exposure["Customer ID"].astype("int64")
 
     # ============================================================
     # 4. Determine full historical customer population
     # ============================================================
 
     if "Customer ID" not in df_cleaned.columns:
-        raise ValueError(
-            "Missing required column: Customer ID"
-        )
+        raise ValueError("Missing required column: Customer ID")
 
     full_customer_population = (
         df_cleaned.loc[
@@ -10021,29 +7614,20 @@ def analyze_discount_sensitivity_behavior(
         .unique()
     )
 
-    full_customer_population = set(
-        full_customer_population
-    )
+    full_customer_population = set(full_customer_population)
 
-    analyzed_customer_population = set(
-        customer_exposure["Customer ID"]
-    )
+    analyzed_customer_population = set(customer_exposure["Customer ID"])
 
     customers_without_price_analysis = (
-        full_customer_population
-        - analyzed_customer_population
+        full_customer_population - analyzed_customer_population
     )
 
     # ============================================================
     # 5. Create exploratory behavioral bands
     # ============================================================
 
-    customer_exposure[
-        "Below_20pct_Behavior_Band"
-    ] = pd.cut(
-        customer_exposure[
-            "Below_20pct_Transaction_Share"
-        ],
+    customer_exposure["Below_20pct_Behavior_Band"] = pd.cut(
+        customer_exposure["Below_20pct_Transaction_Share"],
         bins=[
             -0.000001,
             0.00,
@@ -10062,12 +7646,8 @@ def analyze_discount_sensitivity_behavior(
         include_lowest=True,
     )
 
-    customer_exposure[
-        "Below_30pct_Behavior_Band"
-    ] = pd.cut(
-        customer_exposure[
-            "Below_30pct_Transaction_Share"
-        ],
+    customer_exposure["Below_30pct_Behavior_Band"] = pd.cut(
+        customer_exposure["Below_30pct_Transaction_Share"],
         bins=[
             -0.000001,
             0.00,
@@ -10091,28 +7671,14 @@ def analyze_discount_sensitivity_behavior(
     # ============================================================
 
     behavioral_band_summary = (
-        customer_exposure[
-            "Below_20pct_Behavior_Band"
-        ]
-        .value_counts(
-            dropna=False
-        )
-        .rename_axis(
-            "Behavior_Band"
-        )
-        .reset_index(
-            name="Customer_Count"
-        )
+        customer_exposure["Below_20pct_Behavior_Band"]
+        .value_counts(dropna=False)
+        .rename_axis("Behavior_Band")
+        .reset_index(name="Customer_Count")
     )
 
-    behavioral_band_summary[
-        "Customer_Percentage"
-    ] = (
-        behavioral_band_summary[
-            "Customer_Count"
-        ]
-        / len(customer_exposure)
-        * 100
+    behavioral_band_summary["Customer_Percentage"] = (
+        behavioral_band_summary["Customer_Count"] / len(customer_exposure) * 100
     )
 
     # ============================================================
@@ -10128,90 +7694,42 @@ def analyze_discount_sensitivity_behavior(
                 "At Least 30% Below Median",
             ],
             "Customers_With_Exposure": [
-                (
-                    customer_exposure[
-                        "Transactions_Below_Median"
-                    ] > 0
-                ).sum(),
-
-                (
-                    customer_exposure[
-                        "Transactions_Below_10pct"
-                    ] > 0
-                ).sum(),
-
-                (
-                    customer_exposure[
-                        "Transactions_Below_20pct"
-                    ] > 0
-                ).sum(),
-
-                (
-                    customer_exposure[
-                        "Transactions_Below_30pct"
-                    ] > 0
-                ).sum(),
+                (customer_exposure["Transactions_Below_Median"] > 0).sum(),
+                (customer_exposure["Transactions_Below_10pct"] > 0).sum(),
+                (customer_exposure["Transactions_Below_20pct"] > 0).sum(),
+                (customer_exposure["Transactions_Below_30pct"] > 0).sum(),
             ],
         }
     )
 
-    threshold_summary[
-        "Customer_Percentage"
-    ] = (
-        threshold_summary[
-            "Customers_With_Exposure"
-        ]
-        / len(customer_exposure)
-        * 100
+    threshold_summary["Customer_Percentage"] = (
+        threshold_summary["Customers_With_Exposure"] / len(customer_exposure) * 100
     )
 
     # ============================================================
     # 8. Repeated low-price behavior
     # ============================================================
 
-    customer_exposure[
-        "Repeated_20pct_Below_Median"
-    ] = (
-        customer_exposure[
-            "Transactions_Below_20pct"
-        ] >= 2
+    customer_exposure["Repeated_20pct_Below_Median"] = (
+        customer_exposure["Transactions_Below_20pct"] >= 2
     )
 
-    customer_exposure[
-        "Repeated_30pct_Below_Median"
-    ] = (
-        customer_exposure[
-            "Transactions_Below_30pct"
-        ] >= 2
+    customer_exposure["Repeated_30pct_Below_Median"] = (
+        customer_exposure["Transactions_Below_30pct"] >= 2
     )
 
     repeated_behavior_summary = {
         "customers_with_2plus_20pct_below_transactions": int(
-            customer_exposure[
-                "Repeated_20pct_Below_Median"
-            ].sum()
+            customer_exposure["Repeated_20pct_Below_Median"].sum()
         ),
-
         "customers_with_2plus_30pct_below_transactions": int(
-            customer_exposure[
-                "Repeated_30pct_Below_Median"
-            ].sum()
+            customer_exposure["Repeated_30pct_Below_Median"].sum()
         ),
-
         "customers_with_5plus_20pct_below_transactions": int(
-            (
-                customer_exposure[
-                    "Transactions_Below_20pct"
-                ] >= 5
-            ).sum()
+            (customer_exposure["Transactions_Below_20pct"] >= 5).sum()
         ),
-
         "customers_with_5plus_30pct_below_transactions": int(
-            (
-                customer_exposure[
-                    "Transactions_Below_30pct"
-                ] >= 5
-            ).sum()
+            (customer_exposure["Transactions_Below_30pct"] >= 5).sum()
         ),
     }
 
@@ -10221,23 +7739,14 @@ def analyze_discount_sensitivity_behavior(
 
     transaction_value_relationship = {
         "below_20pct_transaction_share_vs_value_share": (
-            customer_exposure[
-                "Below_20pct_Transaction_Share"
-            ].corr(
-                customer_exposure[
-                    "Below_20pct_Value_Share"
-                ],
+            customer_exposure["Below_20pct_Transaction_Share"].corr(
+                customer_exposure["Below_20pct_Value_Share"],
                 method="spearman",
             )
         ),
-
         "below_30pct_transaction_share_vs_value_share": (
-            customer_exposure[
-                "Below_30pct_Transaction_Share"
-            ].corr(
-                customer_exposure[
-                    "Below_30pct_Value_Share"
-                ],
+            customer_exposure["Below_30pct_Transaction_Share"].corr(
+                customer_exposure["Below_30pct_Value_Share"],
                 method="spearman",
             )
         ),
@@ -10248,13 +7757,7 @@ def analyze_discount_sensitivity_behavior(
     # ============================================================
 
     high_exposure_customers = (
-        customer_exposure[
-            (
-                customer_exposure[
-                    "Below_20pct_Transaction_Share"
-                ] > 0
-            )
-        ]
+        customer_exposure[(customer_exposure["Below_20pct_Transaction_Share"] > 0)]
         .sort_values(
             [
                 "Below_20pct_Transaction_Share",
@@ -10271,13 +7774,7 @@ def analyze_discount_sensitivity_behavior(
     # ============================================================
 
     repeated_low_price_customers = (
-        customer_exposure[
-            (
-                customer_exposure[
-                    "Transactions_Below_20pct"
-                ] >= 2
-            )
-        ]
+        customer_exposure[(customer_exposure["Transactions_Below_20pct"] >= 2)]
         .sort_values(
             [
                 "Transactions_Below_20pct",
@@ -10293,26 +7790,14 @@ def analyze_discount_sensitivity_behavior(
     # 12. Compare transaction-based and value-based behavior
     # ============================================================
 
-    customer_exposure[
-        "Transaction_Value_Exposure_Difference_20pct"
-    ] = (
-        customer_exposure[
-            "Below_20pct_Transaction_Share"
-        ]
-        - customer_exposure[
-            "Below_20pct_Value_Share"
-        ]
+    customer_exposure["Transaction_Value_Exposure_Difference_20pct"] = (
+        customer_exposure["Below_20pct_Transaction_Share"]
+        - customer_exposure["Below_20pct_Value_Share"]
     )
 
-    customer_exposure[
-        "Transaction_Value_Exposure_Difference_30pct"
-    ] = (
-        customer_exposure[
-            "Below_30pct_Transaction_Share"
-        ]
-        - customer_exposure[
-            "Below_30pct_Value_Share"
-        ]
+    customer_exposure["Transaction_Value_Exposure_Difference_30pct"] = (
+        customer_exposure["Below_30pct_Transaction_Share"]
+        - customer_exposure["Below_30pct_Value_Share"]
     )
 
     # ============================================================
@@ -10320,13 +7805,7 @@ def analyze_discount_sensitivity_behavior(
     # ============================================================
 
     high_value_exposure_customers = (
-        customer_exposure[
-            (
-                customer_exposure[
-                    "Below_20pct_Value_Share"
-                ] > 0
-            )
-        ]
+        customer_exposure[(customer_exposure["Below_20pct_Value_Share"] > 0)]
         .sort_values(
             [
                 "Below_20pct_Value_Share",
@@ -10343,80 +7822,38 @@ def analyze_discount_sensitivity_behavior(
     # ============================================================
 
     summary = {
-        "full_customer_population": len(
-            full_customer_population
-        ),
-
-        "customers_with_price_analysis": len(
-            analyzed_customer_population
-        ),
-
-        "customers_without_price_analysis": len(
-            customers_without_price_analysis
-        ),
-
+        "full_customer_population": len(full_customer_population),
+        "customers_with_price_analysis": len(analyzed_customer_population),
+        "customers_without_price_analysis": len(customers_without_price_analysis),
         "below_20pct_share_mean": (
-            customer_exposure[
-                "Below_20pct_Transaction_Share"
-            ].mean()
+            customer_exposure["Below_20pct_Transaction_Share"].mean()
         ),
-
         "below_20pct_share_median": (
-            customer_exposure[
-                "Below_20pct_Transaction_Share"
-            ].median()
+            customer_exposure["Below_20pct_Transaction_Share"].median()
         ),
-
         "below_20pct_share_max": (
-            customer_exposure[
-                "Below_20pct_Transaction_Share"
-            ].max()
+            customer_exposure["Below_20pct_Transaction_Share"].max()
         ),
-
         "below_30pct_share_mean": (
-            customer_exposure[
-                "Below_30pct_Transaction_Share"
-            ].mean()
+            customer_exposure["Below_30pct_Transaction_Share"].mean()
         ),
-
         "below_30pct_share_median": (
-            customer_exposure[
-                "Below_30pct_Transaction_Share"
-            ].median()
+            customer_exposure["Below_30pct_Transaction_Share"].median()
         ),
-
         "below_30pct_share_max": (
-            customer_exposure[
-                "Below_30pct_Transaction_Share"
-            ].max()
+            customer_exposure["Below_30pct_Transaction_Share"].max()
         ),
-
         "customers_with_any_20pct_exposure": int(
-            (
-                customer_exposure[
-                    "Transactions_Below_20pct"
-                ] > 0
-            ).sum()
+            (customer_exposure["Transactions_Below_20pct"] > 0).sum()
         ),
-
         "customers_with_any_30pct_exposure": int(
-            (
-                customer_exposure[
-                    "Transactions_Below_30pct"
-                ] > 0
-            ).sum()
+            (customer_exposure["Transactions_Below_30pct"] > 0).sum()
         ),
-
         "customers_with_repeated_20pct_exposure": (
-            repeated_behavior_summary[
-                "customers_with_2plus_20pct_below_transactions"
-            ]
+            repeated_behavior_summary["customers_with_2plus_20pct_below_transactions"]
         ),
-
         "customers_with_repeated_30pct_exposure": (
-            repeated_behavior_summary[
-                "customers_with_2plus_30pct_below_transactions"
-            ]
+            repeated_behavior_summary["customers_with_2plus_30pct_below_transactions"]
         ),
     }
 
@@ -10426,93 +7863,43 @@ def analyze_discount_sensitivity_behavior(
 
     validation = {}
 
-    validation["customer_exposure_not_empty"] = (
-        not customer_exposure.empty
-    )
+    validation["customer_exposure_not_empty"] = not customer_exposure.empty
 
-    validation["customer_ids_unique"] = (
-        customer_exposure["Customer ID"].is_unique
-    )
+    validation["customer_ids_unique"] = customer_exposure["Customer ID"].is_unique
 
     validation["customer_ids_not_missing"] = (
         customer_exposure["Customer ID"].notna().all()
     )
 
     validation["purchase_counts_positive"] = (
-        (
-            customer_exposure[
-                "Purchase_Transaction_Count"
-            ] > 0
-        ).all()
-    )
+        customer_exposure["Purchase_Transaction_Count"] > 0
+    ).all()
 
     validation["transaction_shares_valid"] = (
-        (
-            customer_exposure[
-                "Below_20pct_Transaction_Share"
-            ].between(0, 1)
-        ).all()
-        and
-        (
-            customer_exposure[
-                "Below_30pct_Transaction_Share"
-            ].between(0, 1)
-        ).all()
-    )
+        customer_exposure["Below_20pct_Transaction_Share"].between(0, 1)
+    ).all() and (customer_exposure["Below_30pct_Transaction_Share"].between(0, 1)).all()
 
     validation["value_shares_valid"] = (
-        (
-            customer_exposure[
-                "Below_20pct_Value_Share"
-            ].between(0, 1)
-        ).all()
-        and
-        (
-            customer_exposure[
-                "Below_30pct_Value_Share"
-            ].between(0, 1)
-        ).all()
-    )
+        customer_exposure["Below_20pct_Value_Share"].between(0, 1)
+    ).all() and (customer_exposure["Below_30pct_Value_Share"].between(0, 1)).all()
 
     validation["threshold_counts_consistent"] = (
-        (
-            customer_exposure[
-                "Transactions_Below_30pct"
-            ]
-            <=
-            customer_exposure[
-                "Transactions_Below_20pct"
-            ]
-        ).all()
-        and
-        (
-            customer_exposure[
-                "Transactions_Below_20pct"
-            ]
-            <=
-            customer_exposure[
-                "Transactions_Below_10pct"
-            ]
-        ).all()
-    )
+        customer_exposure["Transactions_Below_30pct"]
+        <= customer_exposure["Transactions_Below_20pct"]
+    ).all() and (
+        customer_exposure["Transactions_Below_20pct"]
+        <= customer_exposure["Transactions_Below_10pct"]
+    ).all()
 
-    validation["full_population_identified"] = (
-        len(
-            analyzed_customer_population
-            | customers_without_price_analysis
-        )
-        == len(full_customer_population)
-    )
+    validation["full_population_identified"] = len(
+        analyzed_customer_population | customers_without_price_analysis
+    ) == len(full_customer_population)
 
     validation["behavioral_bands_created"] = (
-        customer_exposure[
-            "Below_20pct_Behavior_Band"
-        ].notna().all()
+        customer_exposure["Below_20pct_Behavior_Band"].notna().all()
     )
 
-    validation["passed"] = all(
-        validation.values()
-    )
+    validation["passed"] = all(validation.values())
 
     # ============================================================
     # 16. Failed checks
@@ -10532,40 +7919,19 @@ def analyze_discount_sensitivity_behavior(
         "summary": summary,
         "validation": validation,
         "failed_checks": failed_checks,
-
         "customer_behavior": customer_exposure,
-
         "behavioral_band_summary": behavioral_band_summary,
-
         "threshold_summary": threshold_summary,
-
-        "repeated_behavior_summary": (
-            repeated_behavior_summary
-        ),
-
-        "transaction_value_relationship": (
-            transaction_value_relationship
-        ),
-
-        "high_exposure_customers": (
-            high_exposure_customers
-        ),
-
-        "repeated_low_price_customers": (
-            repeated_low_price_customers
-        ),
-
-        "high_value_exposure_customers": (
-            high_value_exposure_customers
-        ),
-
-        "customers_without_price_analysis": (
-            customers_without_price_analysis
-        ),
+        "repeated_behavior_summary": (repeated_behavior_summary),
+        "transaction_value_relationship": (transaction_value_relationship),
+        "high_exposure_customers": (high_exposure_customers),
+        "repeated_low_price_customers": (repeated_low_price_customers),
+        "high_value_exposure_customers": (high_value_exposure_customers),
+        "customers_without_price_analysis": (customers_without_price_analysis),
     }
 
 
-#----------- 9.2 create discount sensitivity---------
+# ----------- 9.2 create discount sensitivity---------
 def create_discount_markdown_sensitivity_features(
     df_cleaned: pd.DataFrame,
     cutoff_date: pd.Timestamp | None = None,
@@ -10629,9 +7995,7 @@ def create_discount_markdown_sensitivity_features(
     missing_columns = required_columns - set(df_cleaned.columns)
 
     if missing_columns:
-        raise ValueError(
-            f"Missing required columns: {sorted(missing_columns)}"
-        )
+        raise ValueError(f"Missing required columns: {sorted(missing_columns)}")
 
     # ============================================================
     # 2. Create working copy
@@ -10656,22 +8020,15 @@ def create_discount_markdown_sensitivity_features(
     max_invoice_date = working_df["InvoiceDate"].max()
 
     if pd.isna(max_invoice_date):
-        raise ValueError(
-            "InvoiceDate contains no valid dates."
-        )
+        raise ValueError("InvoiceDate contains no valid dates.")
 
     if cutoff_date is None:
-        cutoff_date = (
-            max_invoice_date
-            - pd.Timedelta(days=90)
-        )
+        cutoff_date = max_invoice_date - pd.Timedelta(days=90)
     else:
         cutoff_date = pd.Timestamp(cutoff_date)
 
     if cutoff_date >= max_invoice_date:
-        raise ValueError(
-            "cutoff_date must be earlier than max InvoiceDate."
-        )
+        raise ValueError("cutoff_date must be earlier than max InvoiceDate.")
 
     # ============================================================
     # 4. Verified non-product StockCodes
@@ -10695,9 +8052,7 @@ def create_discount_markdown_sensitivity_features(
     # 5. Historical qualifying customer transactions
     # ============================================================
 
-    historical_df = working_df[
-        working_df["InvoiceDate"] <= cutoff_date
-    ].copy()
+    historical_df = working_df[working_df["InvoiceDate"] <= cutoff_date].copy()
 
     historical_customer_transactions = historical_df[
         (historical_df["Customer ID"] != 0)
@@ -10708,23 +8063,18 @@ def create_discount_markdown_sensitivity_features(
     ].copy()
 
     if historical_customer_transactions.empty:
-        raise ValueError(
-            "No qualifying historical customer transactions found."
-        )
+        raise ValueError("No qualifying historical customer transactions found.")
 
-    historical_customer_transactions["Customer ID"] = (
-        historical_customer_transactions["Customer ID"]
-        .astype("int64")
-    )
+    historical_customer_transactions["Customer ID"] = historical_customer_transactions[
+        "Customer ID"
+    ].astype("int64")
 
     # ============================================================
     # 6. Establish complete point-in-time customer population
     # ============================================================
 
     customer_population = (
-        historical_customer_transactions[
-            "Customer ID"
-        ]
+        historical_customer_transactions["Customer ID"]
         .drop_duplicates()
         .sort_values()
         .to_frame()
@@ -10741,25 +8091,17 @@ def create_discount_markdown_sensitivity_features(
     ].copy()
 
     price_df["StockCode_Key"] = (
-        price_df["StockCode"]
-        .astype(str)
-        .str.strip()
-        .str.upper()
+        price_df["StockCode"].astype(str).str.strip().str.upper()
     )
 
-    price_df = price_df[
-        ~price_df["StockCode_Key"].isin(
-            non_product_stock_codes
-        )
-    ].copy()
+    price_df = price_df[~price_df["StockCode_Key"].isin(non_product_stock_codes)].copy()
 
     # ============================================================
     # 8. Product-level historical median price
     # ============================================================
 
     product_median_prices = (
-        price_df
-        .groupby("StockCode_Key")["Price"]
+        price_df.groupby("StockCode_Key")["Price"]
         .median()
         .rename("Product_Median_Price")
         .reset_index()
@@ -10781,29 +8123,21 @@ def create_discount_markdown_sensitivity_features(
     # ============================================================
 
     price_df["Price_Deviation"] = (
-        (
-            price_df["Product_Median_Price"]
-            - price_df["Price"]
-        )
-        / price_df["Product_Median_Price"]
-    )
+        price_df["Product_Median_Price"] - price_df["Price"]
+    ) / price_df["Product_Median_Price"]
 
     # ============================================================
     # 11. Retain only positive deviation
     # ============================================================
 
-    price_df["Positive_Price_Deviation"] = (
-        price_df["Price_Deviation"]
-        .clip(lower=0)
-    )
+    price_df["Positive_Price_Deviation"] = price_df["Price_Deviation"].clip(lower=0)
 
     # ============================================================
     # 12. Cap extreme deviations at 30%
     # ============================================================
 
-    price_df["Capped_Price_Deviation"] = (
-        price_df["Positive_Price_Deviation"]
-        .clip(upper=0.30)
+    price_df["Capped_Price_Deviation"] = price_df["Positive_Price_Deviation"].clip(
+        upper=0.30
     )
 
     # ============================================================
@@ -10811,14 +8145,9 @@ def create_discount_markdown_sensitivity_features(
     # ============================================================
 
     customer_features = (
-        price_df
-        .groupby("Customer ID")[
-            "Capped_Price_Deviation"
-        ]
+        price_df.groupby("Customer ID")["Capped_Price_Deviation"]
         .mean()
-        .rename(
-            "Discount_Markdown_Sensitivity"
-        )
+        .rename("Discount_Markdown_Sensitivity")
         .reset_index()
     )
 
@@ -10835,32 +8164,21 @@ def create_discount_markdown_sensitivity_features(
 
     # Customers with no eligible product-price observations
     # receive zero sensitivity.
-    customer_features[
+    customer_features["Discount_Markdown_Sensitivity"] = customer_features[
         "Discount_Markdown_Sensitivity"
-    ] = (
-        customer_features[
-            "Discount_Markdown_Sensitivity"
-        ]
-        .fillna(0.0)
-    )
+    ].fillna(0.0)
 
     # ============================================================
     # 15. Final ordering and type
     # ============================================================
 
-    customer_features = customer_features.sort_values(
-        "Customer ID"
-    ).reset_index(drop=True)
+    customer_features = customer_features.sort_values("Customer ID").reset_index(
+        drop=True
+    )
 
-    customer_features[
-        "Customer ID"
-    ] = customer_features[
-        "Customer ID"
-    ].astype("int64")
+    customer_features["Customer ID"] = customer_features["Customer ID"].astype("int64")
 
-    customer_features[
-        "Discount_Markdown_Sensitivity"
-    ] = customer_features[
+    customer_features["Discount_Markdown_Sensitivity"] = customer_features[
         "Discount_Markdown_Sensitivity"
     ].astype("float64")
 
@@ -10869,40 +8187,21 @@ def create_discount_markdown_sensitivity_features(
     # ============================================================
 
     if customer_features["Customer ID"].duplicated().any():
-        raise ValueError(
-            "Duplicate Customer ID detected."
-        )
+        raise ValueError("Duplicate Customer ID detected.")
 
-    if customer_features[
-        "Discount_Markdown_Sensitivity"
-    ].isna().any():
-        raise ValueError(
-            "Missing Discount_Markdown_Sensitivity detected."
-        )
+    if customer_features["Discount_Markdown_Sensitivity"].isna().any():
+        raise ValueError("Missing Discount_Markdown_Sensitivity detected.")
 
-    if (
-        customer_features[
-            "Discount_Markdown_Sensitivity"
-        ] < 0
-    ).any():
-        raise ValueError(
-            "Negative Discount_Markdown_Sensitivity detected."
-        )
+    if (customer_features["Discount_Markdown_Sensitivity"] < 0).any():
+        raise ValueError("Negative Discount_Markdown_Sensitivity detected.")
 
-    if (
-        customer_features[
-            "Discount_Markdown_Sensitivity"
-        ] > 0.30
-    ).any():
-        raise ValueError(
-            "Discount_Markdown_Sensitivity exceeds "
-            "the 0.30 cap."
-        )
+    if (customer_features["Discount_Markdown_Sensitivity"] > 0.30).any():
+        raise ValueError("Discount_Markdown_Sensitivity exceeds " "the 0.30 cap.")
 
     return customer_features
 
 
-#----------- 9.3 validate discount sensitivity --------
+# ----------- 9.3 validate discount sensitivity --------
 def validate_discount_markdown_sensitivity_features(
     discount_markdown_features: pd.DataFrame,
     df_cleaned: pd.DataFrame,
@@ -10965,10 +8264,7 @@ def validate_discount_markdown_sensitivity_features(
         "Include In Sales Analysis",
     }
 
-    missing_source_columns = (
-        required_source_columns
-        - set(df_cleaned.columns)
-    )
+    missing_source_columns = required_source_columns - set(df_cleaned.columns)
 
     if missing_source_columns:
         raise ValueError(
@@ -10985,22 +8281,18 @@ def validate_discount_markdown_sensitivity_features(
         "Discount_Markdown_Sensitivity",
     }
 
-    missing_feature_columns = (
-        required_feature_columns
-        - set(discount_markdown_features.columns)
+    missing_feature_columns = required_feature_columns - set(
+        discount_markdown_features.columns
     )
 
     validation = {}
 
-    validation[
-        "customer_id_column_present"
-    ] = "Customer ID" in discount_markdown_features.columns
+    validation["customer_id_column_present"] = (
+        "Customer ID" in discount_markdown_features.columns
+    )
 
-    validation[
-        "discount_markdown_sensitivity_column_present"
-    ] = (
-        "Discount_Markdown_Sensitivity"
-        in discount_markdown_features.columns
+    validation["discount_markdown_sensitivity_column_present"] = (
+        "Discount_Markdown_Sensitivity" in discount_markdown_features.columns
     )
 
     if missing_feature_columns:
@@ -11011,8 +8303,7 @@ def validate_discount_markdown_sensitivity_features(
             },
             "summary": {},
             "failed_checks": [
-                f"Missing output columns: "
-                f"{sorted(missing_feature_columns)}"
+                f"Missing output columns: {sorted(missing_feature_columns)}"
             ],
         }
 
@@ -11041,63 +8332,38 @@ def validate_discount_markdown_sensitivity_features(
     max_invoice_date = source_df["InvoiceDate"].max()
 
     if pd.isna(max_invoice_date):
-        raise ValueError(
-            "InvoiceDate contains no valid dates."
-        )
+        raise ValueError("InvoiceDate contains no valid dates.")
 
     if cutoff_date is None:
-        cutoff_date = (
-            max_invoice_date
-            - pd.Timedelta(days=90)
-        )
+        cutoff_date = max_invoice_date - pd.Timedelta(days=90)
     else:
         cutoff_date = pd.Timestamp(cutoff_date)
 
-    validation[
-        "cutoff_before_max_invoice_date"
-    ] = cutoff_date < max_invoice_date
+    validation["cutoff_before_max_invoice_date"] = cutoff_date < max_invoice_date
 
     # ============================================================
     # 5. Basic output validation
     # ============================================================
 
-    validation[
-        "feature_output_not_empty"
-    ] = not feature_df.empty
+    validation["feature_output_not_empty"] = not feature_df.empty
 
-    validation[
-        "customer_id_is_unique"
-    ] = feature_df[
-        "Customer ID"
-    ].is_unique
+    validation["customer_id_is_unique"] = feature_df["Customer ID"].is_unique
 
-    validation[
-        "no_missing_customer_id"
-    ] = feature_df[
-        "Customer ID"
-    ].notna().all()
+    validation["no_missing_customer_id"] = feature_df["Customer ID"].notna().all()
 
-    validation[
-        "no_missing_sensitivity"
-    ] = feature_df[
-        "Discount_Markdown_Sensitivity"
-    ].notna().all()
+    validation["no_missing_sensitivity"] = (
+        feature_df["Discount_Markdown_Sensitivity"].notna().all()
+    )
 
-    validation[
-        "sensitivity_is_numeric"
-    ] = pd.api.types.is_numeric_dtype(
-        feature_df[
-            "Discount_Markdown_Sensitivity"
-        ]
+    validation["sensitivity_is_numeric"] = pd.api.types.is_numeric_dtype(
+        feature_df["Discount_Markdown_Sensitivity"]
     )
 
     # ============================================================
     # 6. Establish point-in-time historical population
     # ============================================================
 
-    historical_df = source_df[
-        source_df["InvoiceDate"] <= cutoff_date
-    ].copy()
+    historical_df = source_df[source_df["InvoiceDate"] <= cutoff_date].copy()
 
     historical_customer_transactions = historical_df[
         (historical_df["Customer ID"] != 0)
@@ -11107,59 +8373,34 @@ def validate_discount_markdown_sensitivity_features(
         & (historical_df["Quantity"] > 0)
     ].copy()
 
-    historical_customer_transactions[
+    historical_customer_transactions["Customer ID"] = historical_customer_transactions[
         "Customer ID"
-    ] = (
-        historical_customer_transactions[
-            "Customer ID"
-        ].astype("int64")
-    )
+    ].astype("int64")
 
     expected_customer_ids = set(
-        historical_customer_transactions[
-            "Customer ID"
-        ].unique()
+        historical_customer_transactions["Customer ID"].unique()
     )
 
-    actual_customer_ids = set(
-        feature_df[
-            "Customer ID"
-        ].astype("int64")
-    )
+    actual_customer_ids = set(feature_df["Customer ID"].astype("int64"))
 
     # ============================================================
     # 7. Customer population validation
     # ============================================================
 
-    validation[
-        "customer_count_matches"
-    ] = (
-        len(feature_df)
-        == len(expected_customer_ids)
-    )
+    validation["customer_count_matches"] = len(feature_df) == len(expected_customer_ids)
 
-    validation[
-        "customer_population_matches"
-    ] = (
-        actual_customer_ids
-        == expected_customer_ids
+    validation["customer_population_matches"] = (
+        actual_customer_ids == expected_customer_ids
     )
 
     # ============================================================
     # 8. Verify no post-cutoff transactions are relevant
     # ============================================================
 
-    source_transactions_after_cutoff = (
-        source_df[
-            source_df["InvoiceDate"] > cutoff_date
-        ]
-    )
+    source_transactions_after_cutoff = source_df[source_df["InvoiceDate"] > cutoff_date]
 
-    validation[
-        "no_source_transaction_after_cutoff_used"
-    ] = (
-        len(source_transactions_after_cutoff)
-        >= 0
+    validation["no_source_transaction_after_cutoff_used"] = (
+        len(source_transactions_after_cutoff) >= 0
     )
 
     # This check is intentionally structural. The reconstructed
@@ -11194,44 +8435,28 @@ def validate_discount_markdown_sensitivity_features(
     ].copy()
 
     price_df["StockCode_Key"] = (
-        price_df["StockCode"]
-        .astype(str)
-        .str.strip()
-        .str.upper()
+        price_df["StockCode"].astype(str).str.strip().str.upper()
     )
 
-    price_df = price_df[
-        ~price_df["StockCode_Key"].isin(
-            non_product_stock_codes
-        )
-    ].copy()
+    price_df = price_df[~price_df["StockCode_Key"].isin(non_product_stock_codes)].copy()
 
-    validation[
-        "qualifying_price_transactions_present"
-    ] = not price_df.empty
+    validation["qualifying_price_transactions_present"] = not price_df.empty
 
     # ============================================================
     # 11. Product median price reconstruction
     # ============================================================
 
     product_median_prices = (
-        price_df
-        .groupby("StockCode_Key")["Price"]
+        price_df.groupby("StockCode_Key")["Price"]
         .median()
         .rename("Product_Median_Price")
         .reset_index()
     )
 
-    validation[
-        "product_median_prices_present"
-    ] = not product_median_prices.empty
+    validation["product_median_prices_present"] = not product_median_prices.empty
 
-    validation[
-        "product_median_prices_positive"
-    ] = (
-        product_median_prices[
-            "Product_Median_Price"
-        ] > 0
+    validation["product_median_prices_positive"] = (
+        product_median_prices["Product_Median_Price"] > 0
     ).all()
 
     # ============================================================
@@ -11249,47 +8474,26 @@ def validate_discount_markdown_sensitivity_features(
     # 13. Reconstruct price deviation
     # ============================================================
 
-    price_df[
-        "Expected_Price_Deviation"
-    ] = (
-        (
-            price_df["Product_Median_Price"]
-            - price_df["Price"]
-        )
-        / price_df["Product_Median_Price"]
+    price_df["Expected_Price_Deviation"] = (
+        price_df["Product_Median_Price"] - price_df["Price"]
+    ) / price_df["Product_Median_Price"]
+
+    price_df["Expected_Positive_Deviation"] = price_df["Expected_Price_Deviation"].clip(
+        lower=0
     )
 
-    price_df[
+    price_df["Expected_Capped_Deviation"] = price_df[
         "Expected_Positive_Deviation"
-    ] = (
-        price_df[
-            "Expected_Price_Deviation"
-        ]
-        .clip(lower=0)
-    )
-
-    price_df[
-        "Expected_Capped_Deviation"
-    ] = (
-        price_df[
-            "Expected_Positive_Deviation"
-        ]
-        .clip(upper=0.30)
-    )
+    ].clip(upper=0.30)
 
     # ============================================================
     # 14. Independently reconstruct customer feature
     # ============================================================
 
     expected_customer_features = (
-        price_df
-        .groupby("Customer ID")[
-            "Expected_Capped_Deviation"
-        ]
+        price_df.groupby("Customer ID")["Expected_Capped_Deviation"]
         .mean()
-        .rename(
-            "Expected_Discount_Markdown_Sensitivity"
-        )
+        .rename("Expected_Discount_Markdown_Sensitivity")
         .reset_index()
     )
 
@@ -11298,30 +8502,18 @@ def validate_discount_markdown_sensitivity_features(
     # ============================================================
 
     expected_population_df = pd.DataFrame(
-        {
-            "Customer ID": sorted(
-                expected_customer_ids
-            )
-        }
+        {"Customer ID": sorted(expected_customer_ids)}
     )
 
-    expected_customer_features = (
-        expected_population_df
-        .merge(
-            expected_customer_features,
-            on="Customer ID",
-            how="left",
-            validate="one_to_one",
-        )
+    expected_customer_features = expected_population_df.merge(
+        expected_customer_features,
+        on="Customer ID",
+        how="left",
+        validate="one_to_one",
     )
 
-    expected_customer_features[
-        "Expected_Discount_Markdown_Sensitivity"
-    ] = (
-        expected_customer_features[
-            "Expected_Discount_Markdown_Sensitivity"
-        ]
-        .fillna(0.0)
+    expected_customer_features["Expected_Discount_Markdown_Sensitivity"] = (
+        expected_customer_features["Expected_Discount_Markdown_Sensitivity"].fillna(0.0)
     )
 
     # ============================================================
@@ -11335,37 +8527,22 @@ def validate_discount_markdown_sensitivity_features(
         ]
     ].copy()
 
-    actual_comparison[
-        "Customer ID"
-    ] = actual_comparison[
-        "Customer ID"
-    ].astype("int64")
+    actual_comparison["Customer ID"] = actual_comparison["Customer ID"].astype("int64")
 
-    actual_comparison = actual_comparison.sort_values(
+    actual_comparison = actual_comparison.sort_values("Customer ID").reset_index(
+        drop=True
+    )
+
+    expected_customer_features = expected_customer_features.sort_values(
         "Customer ID"
     ).reset_index(drop=True)
-
-    expected_customer_features = (
-        expected_customer_features.sort_values(
-            "Customer ID"
-        )
-        .reset_index(drop=True)
-    )
 
     # ============================================================
     # 17. Verify Customer ID alignment
     # ============================================================
 
-    validation[
-        "customer_ids_aligned"
-    ] = (
-        actual_comparison[
-            "Customer ID"
-        ].equals(
-            expected_customer_features[
-                "Customer ID"
-            ]
-        )
+    validation["customer_ids_aligned"] = actual_comparison["Customer ID"].equals(
+        expected_customer_features["Customer ID"]
     )
 
     # ============================================================
@@ -11374,21 +8551,13 @@ def validate_discount_markdown_sensitivity_features(
 
     if validation["customer_ids_aligned"]:
 
-        actual_values = (
-            actual_comparison[
-                "Discount_Markdown_Sensitivity"
-            ].astype(float)
-        )
+        actual_values = actual_comparison["Discount_Markdown_Sensitivity"].astype(float)
 
-        expected_values = (
-            expected_customer_features[
-                "Expected_Discount_Markdown_Sensitivity"
-            ].astype(float)
-        )
+        expected_values = expected_customer_features[
+            "Expected_Discount_Markdown_Sensitivity"
+        ].astype(float)
 
-        validation[
-            "sensitivity_values_match"
-        ] = np.allclose(
+        validation["sensitivity_values_match"] = np.allclose(
             actual_values,
             expected_values,
             atol=1e-12,
@@ -11396,19 +8565,12 @@ def validate_discount_markdown_sensitivity_features(
         )
 
         maximum_absolute_difference = float(
-            np.max(
-                np.abs(
-                    actual_values
-                    - expected_values
-                )
-            )
+            np.max(np.abs(actual_values - expected_values))
         )
 
     else:
 
-        validation[
-            "sensitivity_values_match"
-        ] = False
+        validation["sensitivity_values_match"] = False
 
         maximum_absolute_difference = None
 
@@ -11416,84 +8578,51 @@ def validate_discount_markdown_sensitivity_features(
     # 19. Range validation
     # ============================================================
 
-    validation[
-        "no_negative_sensitivity"
-    ] = (
-        feature_df[
-            "Discount_Markdown_Sensitivity"
-        ] >= 0
+    validation["no_negative_sensitivity"] = (
+        feature_df["Discount_Markdown_Sensitivity"] >= 0
     ).all()
 
-    validation[
-        "sensitivity_within_30pct_cap"
-    ] = (
-        feature_df[
-            "Discount_Markdown_Sensitivity"
-        ] <= 0.30
+    validation["sensitivity_within_30pct_cap"] = (
+        feature_df["Discount_Markdown_Sensitivity"] <= 0.30
     ).all()
 
     # ============================================================
     # 20. Check customers without price observations
     # ============================================================
 
-    customers_with_price_analysis = set(
-        price_df[
-            "Customer ID"
-        ].unique()
-    )
+    customers_with_price_analysis = set(price_df["Customer ID"].unique())
 
     customers_without_price_analysis = (
-        expected_customer_ids
-        - customers_with_price_analysis
+        expected_customer_ids - customers_with_price_analysis
     )
 
     actual_zero_for_no_price_customers = True
 
     if customers_without_price_analysis:
 
-        no_price_customer_values = (
-            feature_df[
-                feature_df[
-                    "Customer ID"
-                ].isin(
-                    customers_without_price_analysis
-                )
-            ][
-                "Discount_Markdown_Sensitivity"
-            ]
-        )
+        no_price_customer_values = feature_df[
+            feature_df["Customer ID"].isin(customers_without_price_analysis)
+        ]["Discount_Markdown_Sensitivity"]
 
-        actual_zero_for_no_price_customers = (
-            no_price_customer_values
-            .eq(0.0)
-            .all()
-        )
+        actual_zero_for_no_price_customers = no_price_customer_values.eq(0.0).all()
 
-    validation[
-        "customers_without_price_analysis_are_zero"
-    ] = actual_zero_for_no_price_customers
+    validation["customers_without_price_analysis_are_zero"] = (
+        actual_zero_for_no_price_customers
+    )
 
     # ============================================================
     # 21. Verify expected customer count
     # ============================================================
 
-    validation[
-        "expected_customer_feature_count_matches"
-    ] = (
-        len(expected_customer_features)
-        == len(expected_customer_ids)
-    )
+    validation["expected_customer_feature_count_matches"] = len(
+        expected_customer_features
+    ) == len(expected_customer_ids)
 
     # ============================================================
     # 22. Overall validation
     # ============================================================
 
-    validation[
-        "passed"
-    ] = all(
-        bool(result)
-        for result in validation.values()
-    )
+    validation["passed"] = all(bool(result) for result in validation.values())
 
     # ============================================================
     # 23. Failed checks
@@ -11502,8 +8631,7 @@ def validate_discount_markdown_sensitivity_features(
     failed_checks = [
         check
         for check, result in validation.items()
-        if check != "passed"
-        and not bool(result)
+        if check != "passed" and not bool(result)
     ]
 
     # ============================================================
@@ -11512,62 +8640,20 @@ def validate_discount_markdown_sensitivity_features(
 
     summary = {
         "max_invoice_date": max_invoice_date,
-
         "cutoff_date": cutoff_date,
-
-        "customer_count": len(
-            feature_df
-        ),
-
-        "expected_customer_count": len(
-            expected_customer_ids
-        ),
-
-        "price_analysis_customer_count": len(
-            customers_with_price_analysis
-        ),
-
-        "customers_without_price_analysis": len(
-            customers_without_price_analysis
-        ),
-
-        "product_count": int(
-            product_median_prices[
-                "StockCode_Key"
-            ].nunique()
-        ),
-
-        "qualifying_price_transaction_count": len(
-            price_df
-        ),
-
-        "minimum_sensitivity": float(
-            feature_df[
-                "Discount_Markdown_Sensitivity"
-            ].min()
-        ),
-
+        "customer_count": len(feature_df),
+        "expected_customer_count": len(expected_customer_ids),
+        "price_analysis_customer_count": len(customers_with_price_analysis),
+        "customers_without_price_analysis": len(customers_without_price_analysis),
+        "product_count": int(product_median_prices["StockCode_Key"].nunique()),
+        "qualifying_price_transaction_count": len(price_df),
+        "minimum_sensitivity": float(feature_df["Discount_Markdown_Sensitivity"].min()),
         "median_sensitivity": float(
-            feature_df[
-                "Discount_Markdown_Sensitivity"
-            ].median()
+            feature_df["Discount_Markdown_Sensitivity"].median()
         ),
-
-        "mean_sensitivity": float(
-            feature_df[
-                "Discount_Markdown_Sensitivity"
-            ].mean()
-        ),
-
-        "maximum_sensitivity": float(
-            feature_df[
-                "Discount_Markdown_Sensitivity"
-            ].max()
-        ),
-
-        "maximum_absolute_difference": (
-            maximum_absolute_difference
-        ),
+        "mean_sensitivity": float(feature_df["Discount_Markdown_Sensitivity"].mean()),
+        "maximum_sensitivity": float(feature_df["Discount_Markdown_Sensitivity"].max()),
+        "maximum_absolute_difference": (maximum_absolute_difference),
     }
 
     # ============================================================
@@ -11582,11 +8668,11 @@ def validate_discount_markdown_sensitivity_features(
 
 
 ###############################################################
-#-------------------- 10. Engagement score --------------
+# -------------------- 10. Engagement score --------------
 ###############################################################
 
 
-#---- 10.1 analyze engagement score ----
+# ---- 10.1 analyze engagement score ----
 def analyze_engagement_score(
     df_cleaned: pd.DataFrame,
     cutoff_date: pd.Timestamp | None = None,
@@ -11641,16 +8727,10 @@ def analyze_engagement_score(
         "Analytical Transaction Value",
     }
 
-    missing_columns = (
-        required_columns
-        - set(df_cleaned.columns)
-    )
+    missing_columns = required_columns - set(df_cleaned.columns)
 
     if missing_columns:
-        raise ValueError(
-            "Missing required columns: "
-            f"{sorted(missing_columns)}"
-        )
+        raise ValueError("Missing required columns: " f"{sorted(missing_columns)}")
 
     # ============================================================
     # 2. Create working copy
@@ -11675,30 +8755,21 @@ def analyze_engagement_score(
     max_invoice_date = working_df["InvoiceDate"].max()
 
     if pd.isna(max_invoice_date):
-        raise ValueError(
-            "InvoiceDate contains no valid dates."
-        )
+        raise ValueError("InvoiceDate contains no valid dates.")
 
     if cutoff_date is None:
-        cutoff_date = (
-            max_invoice_date
-            - pd.Timedelta(days=90)
-        )
+        cutoff_date = max_invoice_date - pd.Timedelta(days=90)
     else:
         cutoff_date = pd.Timestamp(cutoff_date)
 
     if cutoff_date >= max_invoice_date:
-        raise ValueError(
-            "cutoff_date must be earlier than max InvoiceDate."
-        )
+        raise ValueError("cutoff_date must be earlier than max InvoiceDate.")
 
     # ============================================================
     # 4. Select qualifying historical purchases
     # ============================================================
 
-    historical_df = working_df[
-        working_df["InvoiceDate"] <= cutoff_date
-    ].copy()
+    historical_df = working_df[working_df["InvoiceDate"] <= cutoff_date].copy()
 
     qualifying_df = historical_df[
         (historical_df["Customer ID"] != 0)
@@ -11709,33 +8780,25 @@ def analyze_engagement_score(
     ].copy()
 
     if qualifying_df.empty:
-        raise ValueError(
-            "No qualifying historical purchase transactions found."
-        )
+        raise ValueError("No qualifying historical purchase transactions found.")
 
-    qualifying_df["Customer ID"] = (
-        qualifying_df["Customer ID"]
-        .astype("int64")
-    )
+    qualifying_df["Customer ID"] = qualifying_df["Customer ID"].astype("int64")
 
     # ============================================================
     # 5. Calculate customer-level RFM measures
     # ============================================================
 
     engagement_base = (
-        qualifying_df
-        .groupby("Customer ID")
+        qualifying_df.groupby("Customer ID")
         .agg(
             Last_Purchase_Date=(
                 "InvoiceDate",
                 "max",
             ),
-
             Frequency=(
                 "Invoice",
                 "nunique",
             ),
-
             Monetary=(
                 "Analytical Transaction Value",
                 "sum",
@@ -11749,8 +8812,7 @@ def analyze_engagement_score(
     # ============================================================
 
     engagement_base["Recency"] = (
-        cutoff_date
-        - engagement_base["Last_Purchase_Date"]
+        cutoff_date - engagement_base["Last_Purchase_Date"]
     ).dt.total_seconds() / 86400
 
     # ============================================================
@@ -11776,97 +8838,58 @@ def analyze_engagement_score(
     # Lower recency = better engagement
     # ------------------------------------------------------------
 
-    engagement_base[
-        "Recency_Percentile"
-    ] = (
-        engagement_base["Recency"]
-        .rank(
-            method="average",
-            pct=True,
-            ascending=True,
-        )
+    engagement_base["Recency_Percentile"] = engagement_base["Recency"].rank(
+        method="average",
+        pct=True,
+        ascending=True,
     )
 
-    engagement_base[
-        "Recency_Score"
-    ] = (
-        1
-        - engagement_base["Recency_Percentile"]
-    ) * 100
+    engagement_base["Recency_Score"] = (1 - engagement_base["Recency_Percentile"]) * 100
 
     # ------------------------------------------------------------
     # Frequency
     # Higher frequency = better engagement
     # ------------------------------------------------------------
 
-    engagement_base[
-        "Frequency_Percentile"
-    ] = (
-        engagement_base["Frequency"]
-        .rank(
-            method="average",
-            pct=True,
-            ascending=True,
-        )
+    engagement_base["Frequency_Percentile"] = engagement_base["Frequency"].rank(
+        method="average",
+        pct=True,
+        ascending=True,
     )
 
-    engagement_base[
-        "Frequency_Score"
-    ] = (
-        engagement_base["Frequency_Percentile"]
-        * 100
-    )
+    engagement_base["Frequency_Score"] = engagement_base["Frequency_Percentile"] * 100
 
     # ------------------------------------------------------------
     # Monetary
     # Higher monetary value = better engagement
     # ------------------------------------------------------------
 
-    engagement_base[
-        "Monetary_Percentile"
-    ] = (
-        engagement_base["Monetary"]
-        .rank(
-            method="average",
-            pct=True,
-            ascending=True,
-        )
+    engagement_base["Monetary_Percentile"] = engagement_base["Monetary"].rank(
+        method="average",
+        pct=True,
+        ascending=True,
     )
 
-    engagement_base[
-        "Monetary_Score"
-    ] = (
-        engagement_base["Monetary_Percentile"]
-        * 100
-    )
+    engagement_base["Monetary_Score"] = engagement_base["Monetary_Percentile"] * 100
 
     # ============================================================
     # 9. Candidate equal-weight Engagement Score
     # ============================================================
 
-    engagement_base[
-        "Candidate_Engagement_Score"
-    ] = (
-        engagement_base[
-            [
-                "Recency_Score",
-                "Frequency_Score",
-                "Monetary_Score",
-            ]
+    engagement_base["Candidate_Engagement_Score"] = engagement_base[
+        [
+            "Recency_Score",
+            "Frequency_Score",
+            "Monetary_Score",
         ]
-        .mean(axis=1)
-    )
+    ].mean(axis=1)
 
     # ============================================================
     # 10. Exploratory engagement bands
     # ============================================================
 
-    engagement_base[
-        "Candidate_Engagement_Band"
-    ] = pd.cut(
-        engagement_base[
-            "Candidate_Engagement_Score"
-        ],
+    engagement_base["Candidate_Engagement_Band"] = pd.cut(
+        engagement_base["Candidate_Engagement_Score"],
         bins=[
             -0.000001,
             20,
@@ -11889,83 +8912,60 @@ def analyze_engagement_score(
     # 11. RFM distribution
     # ============================================================
 
-    rfm_distribution = (
-        engagement_base[
-            [
-                "Recency",
-                "Frequency",
-                "Monetary",
-            ]
+    rfm_distribution = engagement_base[
+        [
+            "Recency",
+            "Frequency",
+            "Monetary",
         ]
-        .describe()
-    )
+    ].describe()
 
     # ============================================================
     # 12. Component score distribution
     # ============================================================
 
-    score_distribution = (
-        engagement_base[
-            [
-                "Recency_Score",
-                "Frequency_Score",
-                "Monetary_Score",
-                "Candidate_Engagement_Score",
-            ]
+    score_distribution = engagement_base[
+        [
+            "Recency_Score",
+            "Frequency_Score",
+            "Monetary_Score",
+            "Candidate_Engagement_Score",
         ]
-        .describe()
-    )
+    ].describe()
 
     # ============================================================
     # 13. Engagement band summary
     # ============================================================
 
     engagement_band_summary = (
-        engagement_base[
-            "Candidate_Engagement_Band"
-        ]
+        engagement_base["Candidate_Engagement_Band"]
         .value_counts(
             sort=False,
             dropna=False,
         )
-        .rename_axis(
-            "Engagement_Band"
-        )
-        .reset_index(
-            name="Customer_Count"
-        )
+        .rename_axis("Engagement_Band")
+        .reset_index(name="Customer_Count")
     )
 
-    engagement_band_summary[
-        "Customer_Percentage"
-    ] = (
-        engagement_band_summary[
-            "Customer_Count"
-        ]
-        / len(engagement_base)
-        * 100
+    engagement_band_summary["Customer_Percentage"] = (
+        engagement_band_summary["Customer_Count"] / len(engagement_base) * 100
     )
 
     # ============================================================
     # 14. Component correlation
     # ============================================================
 
-    component_correlation = (
-        engagement_base[
-            [
-                "Recency",
-                "Frequency",
-                "Monetary",
-                "Recency_Score",
-                "Frequency_Score",
-                "Monetary_Score",
-                "Candidate_Engagement_Score",
-            ]
+    component_correlation = engagement_base[
+        [
+            "Recency",
+            "Frequency",
+            "Monetary",
+            "Recency_Score",
+            "Frequency_Score",
+            "Monetary_Score",
+            "Candidate_Engagement_Score",
         ]
-        .corr(
-            method="spearman"
-        )
-    )
+    ].corr(method="spearman")
 
     # ============================================================
     # 15. Component summary
@@ -11978,61 +8978,25 @@ def analyze_engagement_score(
                 "Frequency",
                 "Monetary",
             ],
-
             "Mean_Score": [
-                engagement_base[
-                    "Recency_Score"
-                ].mean(),
-
-                engagement_base[
-                    "Frequency_Score"
-                ].mean(),
-
-                engagement_base[
-                    "Monetary_Score"
-                ].mean(),
+                engagement_base["Recency_Score"].mean(),
+                engagement_base["Frequency_Score"].mean(),
+                engagement_base["Monetary_Score"].mean(),
             ],
-
             "Median_Score": [
-                engagement_base[
-                    "Recency_Score"
-                ].median(),
-
-                engagement_base[
-                    "Frequency_Score"
-                ].median(),
-
-                engagement_base[
-                    "Monetary_Score"
-                ].median(),
+                engagement_base["Recency_Score"].median(),
+                engagement_base["Frequency_Score"].median(),
+                engagement_base["Monetary_Score"].median(),
             ],
-
             "Minimum_Score": [
-                engagement_base[
-                    "Recency_Score"
-                ].min(),
-
-                engagement_base[
-                    "Frequency_Score"
-                ].min(),
-
-                engagement_base[
-                    "Monetary_Score"
-                ].min(),
+                engagement_base["Recency_Score"].min(),
+                engagement_base["Frequency_Score"].min(),
+                engagement_base["Monetary_Score"].min(),
             ],
-
             "Maximum_Score": [
-                engagement_base[
-                    "Recency_Score"
-                ].max(),
-
-                engagement_base[
-                    "Frequency_Score"
-                ].max(),
-
-                engagement_base[
-                    "Monetary_Score"
-                ].max(),
+                engagement_base["Recency_Score"].max(),
+                engagement_base["Frequency_Score"].max(),
+                engagement_base["Monetary_Score"].max(),
             ],
         }
     )
@@ -12042,8 +9006,7 @@ def analyze_engagement_score(
     # ============================================================
 
     highest_engagement_customers = (
-        engagement_base
-        .sort_values(
+        engagement_base.sort_values(
             "Candidate_Engagement_Score",
             ascending=False,
         )
@@ -12056,8 +9019,7 @@ def analyze_engagement_score(
     # ============================================================
 
     lowest_engagement_customers = (
-        engagement_base
-        .sort_values(
+        engagement_base.sort_values(
             "Candidate_Engagement_Score",
             ascending=True,
         )
@@ -12071,89 +9033,35 @@ def analyze_engagement_score(
 
     validation = {}
 
-    validation[
-        "qualifying_transactions_present"
-    ] = not qualifying_df.empty
+    validation["qualifying_transactions_present"] = not qualifying_df.empty
 
-    validation[
-        "customer_ids_present"
-    ] = qualifying_df[
-        "Customer ID"
-    ].notna().all()
+    validation["customer_ids_present"] = qualifying_df["Customer ID"].notna().all()
 
-    validation[
-        "customer_ids_unique"
-    ] = engagement_base[
-        "Customer ID"
-    ].is_unique
+    validation["customer_ids_unique"] = engagement_base["Customer ID"].is_unique
 
-    validation[
-        "recency_values_valid"
-    ] = (
-        engagement_base[
-            "Recency"
-        ] >= 0
-    ).all()
+    validation["recency_values_valid"] = (engagement_base["Recency"] >= 0).all()
 
-    validation[
-        "frequency_values_positive"
-    ] = (
-        engagement_base[
-            "Frequency"
-        ] > 0
-    ).all()
+    validation["frequency_values_positive"] = (engagement_base["Frequency"] > 0).all()
 
-    validation[
-        "monetary_values_positive"
-    ] = (
-        engagement_base[
-            "Monetary"
-        ] > 0
-    ).all()
+    validation["monetary_values_positive"] = (engagement_base["Monetary"] > 0).all()
 
-    validation[
-        "recency_scores_valid"
-    ] = (
-        engagement_base[
-            "Recency_Score"
-        ]
-        .between(0, 100)
-        .all()
+    validation["recency_scores_valid"] = (
+        engagement_base["Recency_Score"].between(0, 100).all()
     )
 
-    validation[
-        "frequency_scores_valid"
-    ] = (
-        engagement_base[
-            "Frequency_Score"
-        ]
-        .between(0, 100)
-        .all()
+    validation["frequency_scores_valid"] = (
+        engagement_base["Frequency_Score"].between(0, 100).all()
     )
 
-    validation[
-        "monetary_scores_valid"
-    ] = (
-        engagement_base[
-            "Monetary_Score"
-        ]
-        .between(0, 100)
-        .all()
+    validation["monetary_scores_valid"] = (
+        engagement_base["Monetary_Score"].between(0, 100).all()
     )
 
-    validation[
-        "candidate_engagement_scores_valid"
-    ] = (
-        engagement_base[
-            "Candidate_Engagement_Score"
-        ]
-        .between(0, 100)
-        .all()
+    validation["candidate_engagement_scores_valid"] = (
+        engagement_base["Candidate_Engagement_Score"].between(0, 100).all()
     )
 
-    validation[
-        "no_missing_component_scores"
-    ] = (
+    validation["no_missing_component_scores"] = (
         engagement_base[
             [
                 "Recency_Score",
@@ -12166,31 +9074,17 @@ def analyze_engagement_score(
         .all()
     )
 
-    validation[
-        "no_missing_candidate_scores"
-    ] = (
-        engagement_base[
-            "Candidate_Engagement_Score"
-        ]
-        .notna()
-        .all()
+    validation["no_missing_candidate_scores"] = (
+        engagement_base["Candidate_Engagement_Score"].notna().all()
     )
 
-    validation[
-        "all_transactions_within_cutoff"
-    ] = (
-        qualifying_df[
-            "InvoiceDate"
-        ] <= cutoff_date
+    validation["all_transactions_within_cutoff"] = (
+        qualifying_df["InvoiceDate"] <= cutoff_date
     ).all()
 
-    validation[
-        "cutoff_before_max_invoice_date"
-    ] = cutoff_date < max_invoice_date
+    validation["cutoff_before_max_invoice_date"] = cutoff_date < max_invoice_date
 
-    validation["passed"] = all(
-        validation.values()
-    )
+    validation["passed"] = all(validation.values())
 
     # ============================================================
     # 19. Failed checks
@@ -12199,8 +9093,7 @@ def analyze_engagement_score(
     failed_checks = [
         check
         for check, result in validation.items()
-        if check != "passed"
-        and not bool(result)
+        if check != "passed" and not bool(result)
     ]
 
     # ============================================================
@@ -12209,93 +9102,29 @@ def analyze_engagement_score(
 
     summary = {
         "max_invoice_date": max_invoice_date,
-
         "cutoff_date": cutoff_date,
-
-        "qualifying_transaction_count": len(
-            qualifying_df
-        ),
-
-        "customer_count": len(
-            engagement_base
-        ),
-
-        "minimum_recency_days": float(
-            engagement_base[
-                "Recency"
-            ].min()
-        ),
-
-        "median_recency_days": float(
-            engagement_base[
-                "Recency"
-            ].median()
-        ),
-
-        "maximum_recency_days": float(
-            engagement_base[
-                "Recency"
-            ].max()
-        ),
-
-        "minimum_frequency": int(
-            engagement_base[
-                "Frequency"
-            ].min()
-        ),
-
-        "median_frequency": float(
-            engagement_base[
-                "Frequency"
-            ].median()
-        ),
-
-        "maximum_frequency": int(
-            engagement_base[
-                "Frequency"
-            ].max()
-        ),
-
-        "minimum_monetary": float(
-            engagement_base[
-                "Monetary"
-            ].min()
-        ),
-
-        "median_monetary": float(
-            engagement_base[
-                "Monetary"
-            ].median()
-        ),
-
-        "maximum_monetary": float(
-            engagement_base[
-                "Monetary"
-            ].max()
-        ),
-
+        "qualifying_transaction_count": len(qualifying_df),
+        "customer_count": len(engagement_base),
+        "minimum_recency_days": float(engagement_base["Recency"].min()),
+        "median_recency_days": float(engagement_base["Recency"].median()),
+        "maximum_recency_days": float(engagement_base["Recency"].max()),
+        "minimum_frequency": int(engagement_base["Frequency"].min()),
+        "median_frequency": float(engagement_base["Frequency"].median()),
+        "maximum_frequency": int(engagement_base["Frequency"].max()),
+        "minimum_monetary": float(engagement_base["Monetary"].min()),
+        "median_monetary": float(engagement_base["Monetary"].median()),
+        "maximum_monetary": float(engagement_base["Monetary"].max()),
         "candidate_engagement_mean": float(
-            engagement_base[
-                "Candidate_Engagement_Score"
-            ].mean()
+            engagement_base["Candidate_Engagement_Score"].mean()
         ),
-
         "candidate_engagement_median": float(
-            engagement_base[
-                "Candidate_Engagement_Score"
-            ].median()
+            engagement_base["Candidate_Engagement_Score"].median()
         ),
-
         "candidate_engagement_minimum": float(
-            engagement_base[
-                "Candidate_Engagement_Score"
-            ].min()
+            engagement_base["Candidate_Engagement_Score"].min()
         ),
-
         "candidate_engagement_maximum": float(
-            engagement_base[
-                "Candidate_Engagement_Score"
-            ].max()
+            engagement_base["Candidate_Engagement_Score"].max()
         ),
     }
 
@@ -12305,39 +9134,20 @@ def analyze_engagement_score(
 
     return {
         "summary": summary,
-
         "validation": validation,
-
         "failed_checks": failed_checks,
-
         "engagement_base": engagement_base,
-
         "rfm_distribution": rfm_distribution,
-
         "score_distribution": score_distribution,
-
-        "engagement_band_summary": (
-            engagement_band_summary
-        ),
-
-        "component_correlation": (
-            component_correlation
-        ),
-
-        "component_summary": (
-            component_summary
-        ),
-
-        "highest_engagement_customers": (
-            highest_engagement_customers
-        ),
-
-        "lowest_engagement_customers": (
-            lowest_engagement_customers
-        ),
+        "engagement_band_summary": (engagement_band_summary),
+        "component_correlation": (component_correlation),
+        "component_summary": (component_summary),
+        "highest_engagement_customers": (highest_engagement_customers),
+        "lowest_engagement_customers": (lowest_engagement_customers),
     }
 
-#---- 10.2 create engagement score features ----
+
+# ---- 10.2 create engagement score features ----
 def create_engagement_score_features(
     rfm_features: pd.DataFrame,
 ) -> pd.DataFrame:
@@ -12387,15 +9197,11 @@ def create_engagement_score_features(
         "Total_Monetary_Value",
     }
 
-    missing_columns = (
-        required_columns
-        - set(rfm_features.columns)
-    )
+    missing_columns = required_columns - set(rfm_features.columns)
 
     if missing_columns:
         raise ValueError(
-            "rfm_features is missing required columns: "
-            f"{sorted(missing_columns)}"
+            "rfm_features is missing required columns: " f"{sorted(missing_columns)}"
         )
 
     # ============================================================
@@ -12416,103 +9222,79 @@ def create_engagement_score_features(
     # ============================================================
 
     if working_df.empty:
-        raise ValueError(
-            "rfm_features is empty."
-        )
+        raise ValueError("rfm_features is empty.")
 
     if working_df["Customer ID"].isna().any():
-        raise ValueError(
-            "rfm_features contains missing Customer ID values."
-        )
+        raise ValueError("rfm_features contains missing Customer ID values.")
 
     if working_df["Customer ID"].duplicated().any():
-        raise ValueError(
-            "rfm_features contains duplicate Customer IDs."
-        )
+        raise ValueError("rfm_features contains duplicate Customer IDs.")
 
-    if working_df[
-        [
-            "Recency",
-            "Frequency",
-            "Total_Monetary_Value",
+    if (
+        working_df[
+            [
+                "Recency",
+                "Frequency",
+                "Total_Monetary_Value",
+            ]
         ]
-    ].isna().any().any():
+        .isna()
+        .any()
+        .any()
+    ):
 
-        raise ValueError(
-            "RFM features contain missing values."
-        )
+        raise ValueError("RFM features contain missing values.")
 
     # ============================================================
     # 4. Recency score
     # Lower Recency = better engagement
     # ============================================================
 
-    working_df["Recency_Percentile"] = (
-        working_df["Recency"]
-        .rank(
-            method="average",
-            pct=True,
-            ascending=True,
-        )
+    working_df["Recency_Percentile"] = working_df["Recency"].rank(
+        method="average",
+        pct=True,
+        ascending=True,
     )
 
-    working_df["Recency_Score"] = (
-        1
-        - working_df["Recency_Percentile"]
-    ) * 100
+    working_df["Recency_Score"] = (1 - working_df["Recency_Percentile"]) * 100
 
     # ============================================================
     # 5. Frequency score
     # Higher Frequency = better engagement
     # ============================================================
 
-    working_df["Frequency_Percentile"] = (
-        working_df["Frequency"]
-        .rank(
-            method="average",
-            pct=True,
-            ascending=True,
-        )
+    working_df["Frequency_Percentile"] = working_df["Frequency"].rank(
+        method="average",
+        pct=True,
+        ascending=True,
     )
 
-    working_df["Frequency_Score"] = (
-        working_df["Frequency_Percentile"]
-        * 100
-    )
+    working_df["Frequency_Score"] = working_df["Frequency_Percentile"] * 100
 
     # ============================================================
     # 6. Monetary score
     # Higher monetary value = better engagement
     # ============================================================
 
-    working_df["Monetary_Percentile"] = (
-        working_df["Total_Monetary_Value"]
-        .rank(
-            method="average",
-            pct=True,
-            ascending=True,
-        )
+    working_df["Monetary_Percentile"] = working_df["Total_Monetary_Value"].rank(
+        method="average",
+        pct=True,
+        ascending=True,
     )
 
-    working_df["Monetary_Score"] = (
-        working_df["Monetary_Percentile"]
-        * 100
-    )
+    working_df["Monetary_Score"] = working_df["Monetary_Percentile"] * 100
 
     # ============================================================
     # 7. Final Engagement Score
     # ============================================================
 
-    working_df["Engagement_Score"] = (
-        working_df[
-            [
-                "Recency_Score",
-                "Frequency_Score",
-                "Monetary_Score",
-            ]
+    working_df["Engagement_Score"] = working_df[
+        [
+            "Recency_Score",
+            "Frequency_Score",
+            "Monetary_Score",
         ]
-        .mean(axis=1)
-    )
+    ].mean(axis=1)
 
     # ============================================================
     # 8. Dashboard-friendly Engagement Band
@@ -12554,45 +9336,26 @@ def create_engagement_score_features(
     # 10. Final checks
     # ============================================================
 
-    if engagement_features[
-        "Customer ID"
-    ].duplicated().any():
+    if engagement_features["Customer ID"].duplicated().any():
 
-        raise ValueError(
-            "Duplicate Customer ID detected."
-        )
+        raise ValueError("Duplicate Customer ID detected.")
 
-    if engagement_features[
-        "Engagement_Score"
-    ].isna().any():
+    if engagement_features["Engagement_Score"].isna().any():
 
-        raise ValueError(
-            "Missing Engagement Score detected."
-        )
+        raise ValueError("Missing Engagement Score detected.")
 
-    if (
-        engagement_features[
-            "Engagement_Score"
-        ] < 0
-    ).any():
+    if (engagement_features["Engagement_Score"] < 0).any():
 
-        raise ValueError(
-            "Negative Engagement Score detected."
-        )
+        raise ValueError("Negative Engagement Score detected.")
 
-    if (
-        engagement_features[
-            "Engagement_Score"
-        ] > 100
-    ).any():
+    if (engagement_features["Engagement_Score"] > 100).any():
 
-        raise ValueError(
-            "Engagement Score exceeds 100."
-        )
+        raise ValueError("Engagement Score exceeds 100.")
 
     return engagement_features
 
-#----- 10.3 validation of engagement score features ----
+
+# ----- 10.3 validation of engagement score features ----
 def validate_engagement_score_features(
     engagement_features: pd.DataFrame,
     rfm_features: pd.DataFrame,
@@ -12642,10 +9405,7 @@ def validate_engagement_score_features(
         "Total_Monetary_Value",
     }
 
-    missing_rfm_columns = (
-        required_rfm_columns
-        - set(rfm_features.columns)
-    )
+    missing_rfm_columns = required_rfm_columns - set(rfm_features.columns)
 
     if missing_rfm_columns:
         raise ValueError(
@@ -12663,32 +9423,22 @@ def validate_engagement_score_features(
         "Engagement_Band",
     }
 
-    missing_engagement_columns = (
-        required_engagement_columns
-        - set(engagement_features.columns)
+    missing_engagement_columns = required_engagement_columns - set(
+        engagement_features.columns
     )
 
     validation = {}
 
-    validation[
-        "customer_id_column_present"
-    ] = (
-        "Customer ID"
-        in engagement_features.columns
+    validation["customer_id_column_present"] = (
+        "Customer ID" in engagement_features.columns
     )
 
-    validation[
-        "engagement_score_column_present"
-    ] = (
-        "Engagement_Score"
-        in engagement_features.columns
+    validation["engagement_score_column_present"] = (
+        "Engagement_Score" in engagement_features.columns
     )
 
-    validation[
-        "engagement_band_column_present"
-    ] = (
-        "Engagement_Band"
-        in engagement_features.columns
+    validation["engagement_band_column_present"] = (
+        "Engagement_Band" in engagement_features.columns
     )
 
     # ============================================================
@@ -12697,8 +9447,7 @@ def validate_engagement_score_features(
 
     if missing_engagement_columns:
         failed_checks = [
-            "Missing output columns: "
-            f"{sorted(missing_engagement_columns)}"
+            f"Missing output columns: {sorted(missing_engagement_columns)}"
         ]
 
         validation["passed"] = False
@@ -12734,25 +9483,13 @@ def validate_engagement_score_features(
     # 5. Validate RFM input
     # ============================================================
 
-    validation[
-        "rfm_output_not_empty"
-    ] = not rfm_df.empty
+    validation["rfm_output_not_empty"] = not rfm_df.empty
 
-    validation[
-        "rfm_customer_ids_unique"
-    ] = rfm_df[
-        "Customer ID"
-    ].is_unique
+    validation["rfm_customer_ids_unique"] = rfm_df["Customer ID"].is_unique
 
-    validation[
-        "rfm_customer_ids_not_missing"
-    ] = rfm_df[
-        "Customer ID"
-    ].notna().all()
+    validation["rfm_customer_ids_not_missing"] = rfm_df["Customer ID"].notna().all()
 
-    validation[
-        "rfm_values_not_missing"
-    ] = (
+    validation["rfm_values_not_missing"] = (
         rfm_df[
             [
                 "Recency",
@@ -12769,199 +9506,98 @@ def validate_engagement_score_features(
     # 6. Validate Engagement output
     # ============================================================
 
-    validation[
-        "engagement_output_not_empty"
-    ] = not actual_df.empty
+    validation["engagement_output_not_empty"] = not actual_df.empty
 
-    validation[
-        "customer_ids_unique"
-    ] = actual_df[
-        "Customer ID"
-    ].is_unique
+    validation["customer_ids_unique"] = actual_df["Customer ID"].is_unique
 
-    validation[
-        "no_missing_customer_id"
-    ] = actual_df[
-        "Customer ID"
-    ].notna().all()
+    validation["no_missing_customer_id"] = actual_df["Customer ID"].notna().all()
 
-    validation[
-        "no_missing_engagement_score"
-    ] = actual_df[
-        "Engagement_Score"
-    ].notna().all()
+    validation["no_missing_engagement_score"] = (
+        actual_df["Engagement_Score"].notna().all()
+    )
 
-    validation[
-        "engagement_score_is_numeric"
-    ] = pd.api.types.is_numeric_dtype(
-        actual_df[
-            "Engagement_Score"
-        ]
+    validation["engagement_score_is_numeric"] = pd.api.types.is_numeric_dtype(
+        actual_df["Engagement_Score"]
     )
 
     # ============================================================
     # 7. Validate customer population
     # ============================================================
 
-    expected_customer_ids = set(
-        rfm_df[
-            "Customer ID"
-        ]
-    )
+    expected_customer_ids = set(rfm_df["Customer ID"])
 
-    actual_customer_ids = set(
-        actual_df[
-            "Customer ID"
-        ]
-    )
+    actual_customer_ids = set(actual_df["Customer ID"])
 
-    validation[
-        "customer_count_matches"
-    ] = (
-        len(actual_df)
-        == len(rfm_df)
-    )
+    validation["customer_count_matches"] = len(actual_df) == len(rfm_df)
 
-    validation[
-        "customer_population_matches"
-    ] = (
-        actual_customer_ids
-        == expected_customer_ids
+    validation["customer_population_matches"] = (
+        actual_customer_ids == expected_customer_ids
     )
 
     # ============================================================
     # 8. Validate RFM values
     # ============================================================
 
-    validation[
-        "recency_values_non_negative"
-    ] = (
-        rfm_df[
-            "Recency"
-        ] >= 0
-    ).all()
+    validation["recency_values_non_negative"] = (rfm_df["Recency"] >= 0).all()
 
-    validation[
-        "frequency_values_positive"
-    ] = (
-        rfm_df[
-            "Frequency"
-        ] > 0
-    ).all()
+    validation["frequency_values_positive"] = (rfm_df["Frequency"] > 0).all()
 
-    validation[
-        "monetary_values_positive"
-    ] = (
-        rfm_df[
-            "Total_Monetary_Value"
-        ] > 0
-    ).all()
+    validation["monetary_values_positive"] = (rfm_df["Total_Monetary_Value"] > 0).all()
 
     # ============================================================
     # 9. Independently calculate Recency Score
     # ============================================================
 
-    rfm_df[
-        "Expected_Recency_Percentile"
-    ] = (
-        rfm_df[
-            "Recency"
-        ]
-        .rank(
-            method="average",
-            pct=True,
-            ascending=True,
-        )
+    rfm_df["Expected_Recency_Percentile"] = rfm_df["Recency"].rank(
+        method="average",
+        pct=True,
+        ascending=True,
     )
 
-    rfm_df[
-        "Expected_Recency_Score"
-    ] = (
-        1
-        - rfm_df[
-            "Expected_Recency_Percentile"
-        ]
-    ) * 100
+    rfm_df["Expected_Recency_Score"] = (1 - rfm_df["Expected_Recency_Percentile"]) * 100
 
     # ============================================================
     # 10. Independently calculate Frequency Score
     # ============================================================
 
-    rfm_df[
-        "Expected_Frequency_Percentile"
-    ] = (
-        rfm_df[
-            "Frequency"
-        ]
-        .rank(
-            method="average",
-            pct=True,
-            ascending=True,
-        )
+    rfm_df["Expected_Frequency_Percentile"] = rfm_df["Frequency"].rank(
+        method="average",
+        pct=True,
+        ascending=True,
     )
 
-    rfm_df[
-        "Expected_Frequency_Score"
-    ] = (
-        rfm_df[
-            "Expected_Frequency_Percentile"
-        ]
-        * 100
-    )
+    rfm_df["Expected_Frequency_Score"] = rfm_df["Expected_Frequency_Percentile"] * 100
 
     # ============================================================
     # 11. Independently calculate Monetary Score
     # ============================================================
 
-    rfm_df[
-        "Expected_Monetary_Percentile"
-    ] = (
-        rfm_df[
-            "Total_Monetary_Value"
-        ]
-        .rank(
-            method="average",
-            pct=True,
-            ascending=True,
-        )
+    rfm_df["Expected_Monetary_Percentile"] = rfm_df["Total_Monetary_Value"].rank(
+        method="average",
+        pct=True,
+        ascending=True,
     )
 
-    rfm_df[
-        "Expected_Monetary_Score"
-    ] = (
-        rfm_df[
-            "Expected_Monetary_Percentile"
-        ]
-        * 100
-    )
+    rfm_df["Expected_Monetary_Score"] = rfm_df["Expected_Monetary_Percentile"] * 100
 
     # ============================================================
     # 12. Independently calculate Engagement Score
     # ============================================================
 
-    rfm_df[
-        "Expected_Engagement_Score"
-    ] = (
-        rfm_df[
-            [
-                "Expected_Recency_Score",
-                "Expected_Frequency_Score",
-                "Expected_Monetary_Score",
-            ]
+    rfm_df["Expected_Engagement_Score"] = rfm_df[
+        [
+            "Expected_Recency_Score",
+            "Expected_Frequency_Score",
+            "Expected_Monetary_Score",
         ]
-        .mean(axis=1)
-    )
+    ].mean(axis=1)
 
     # ============================================================
     # 13. Independently calculate Engagement Band
     # ============================================================
 
-    rfm_df[
-        "Expected_Engagement_Band"
-    ] = pd.cut(
-        rfm_df[
-            "Expected_Engagement_Score"
-        ],
+    rfm_df["Expected_Engagement_Band"] = pd.cut(
+        rfm_df["Expected_Engagement_Score"],
         bins=[
             -0.000001,
             20,
@@ -12984,58 +9620,28 @@ def validate_engagement_score_features(
     # 14. Validate component score ranges
     # ============================================================
 
-    validation[
-        "recency_scores_valid"
-    ] = (
-        rfm_df[
-            "Expected_Recency_Score"
-        ]
-        .between(0, 100)
-        .all()
+    validation["recency_scores_valid"] = (
+        rfm_df["Expected_Recency_Score"].between(0, 100).all()
     )
 
-    validation[
-        "frequency_scores_valid"
-    ] = (
-        rfm_df[
-            "Expected_Frequency_Score"
-        ]
-        .between(0, 100)
-        .all()
+    validation["frequency_scores_valid"] = (
+        rfm_df["Expected_Frequency_Score"].between(0, 100).all()
     )
 
-    validation[
-        "monetary_scores_valid"
-    ] = (
-        rfm_df[
-            "Expected_Monetary_Score"
-        ]
-        .between(0, 100)
-        .all()
+    validation["monetary_scores_valid"] = (
+        rfm_df["Expected_Monetary_Score"].between(0, 100).all()
     )
 
     # ============================================================
     # 15. Validate expected Engagement Score
     # ============================================================
 
-    validation[
-        "expected_engagement_score_valid"
-    ] = (
-        rfm_df[
-            "Expected_Engagement_Score"
-        ]
-        .between(0, 100)
-        .all()
+    validation["expected_engagement_score_valid"] = (
+        rfm_df["Expected_Engagement_Score"].between(0, 100).all()
     )
 
-    validation[
-        "actual_engagement_score_valid"
-    ] = (
-        actual_df[
-            "Engagement_Score"
-        ]
-        .between(0, 100)
-        .all()
+    validation["actual_engagement_score_valid"] = (
+        actual_df["Engagement_Score"].between(0, 100).all()
     )
 
     # ============================================================
@@ -13050,9 +9656,7 @@ def validate_engagement_score_features(
                 "Engagement_Band",
             ]
         ]
-        .sort_values(
-            "Customer ID"
-        )
+        .sort_values("Customer ID")
         .reset_index(drop=True)
     )
 
@@ -13064,49 +9668,25 @@ def validate_engagement_score_features(
                 "Expected_Engagement_Band",
             ]
         ]
-        .sort_values(
-            "Customer ID"
-        )
+        .sort_values("Customer ID")
         .reset_index(drop=True)
     )
 
-    validation[
-        "customer_ids_aligned"
-    ] = (
-        actual_comparison[
-            "Customer ID"
-        ].equals(
-            expected_comparison[
-                "Customer ID"
-            ]
-        )
+    validation["customer_ids_aligned"] = actual_comparison["Customer ID"].equals(
+        expected_comparison["Customer ID"]
     )
 
     # ============================================================
     # 17. Compare Engagement Score values
     # ============================================================
 
-    if validation[
-        "customer_ids_aligned"
-    ]:
+    if validation["customer_ids_aligned"]:
 
-        actual_scores = (
-            actual_comparison[
-                "Engagement_Score"
-            ]
-            .astype(float)
-        )
+        actual_scores = actual_comparison["Engagement_Score"].astype(float)
 
-        expected_scores = (
-            expected_comparison[
-                "Expected_Engagement_Score"
-            ]
-            .astype(float)
-        )
+        expected_scores = expected_comparison["Expected_Engagement_Score"].astype(float)
 
-        validation[
-            "engagement_scores_match"
-        ] = np.allclose(
+        validation["engagement_scores_match"] = np.allclose(
             actual_scores,
             expected_scores,
             atol=1e-12,
@@ -13114,19 +9694,12 @@ def validate_engagement_score_features(
         )
 
         maximum_absolute_difference = float(
-            np.max(
-                np.abs(
-                    actual_scores
-                    - expected_scores
-                )
-            )
+            np.max(np.abs(actual_scores - expected_scores))
         )
 
     else:
 
-        validation[
-            "engagement_scores_match"
-        ] = False
+        validation["engagement_scores_match"] = False
 
         maximum_absolute_difference = None
 
@@ -13134,37 +9707,23 @@ def validate_engagement_score_features(
     # 18. Compare Engagement Bands
     # ============================================================
 
-    if validation[
-        "customer_ids_aligned"
-    ]:
+    if validation["customer_ids_aligned"]:
 
         actual_bands = (
-            actual_comparison[
-                "Engagement_Band"
-            ]
-            .astype(str)
-            .reset_index(drop=True)
+            actual_comparison["Engagement_Band"].astype(str).reset_index(drop=True)
         )
 
         expected_bands = (
-            expected_comparison[
-                "Expected_Engagement_Band"
-            ]
+            expected_comparison["Expected_Engagement_Band"]
             .astype(str)
             .reset_index(drop=True)
         )
 
-        validation[
-            "engagement_bands_match"
-        ] = actual_bands.equals(
-            expected_bands
-        )
+        validation["engagement_bands_match"] = actual_bands.equals(expected_bands)
 
     else:
 
-        validation[
-            "engagement_bands_match"
-        ] = False
+        validation["engagement_bands_match"] = False
 
     # ============================================================
     # 19. Validate Engagement Band categories
@@ -13179,33 +9738,18 @@ def validate_engagement_score_features(
     }
 
     actual_band_categories = set(
-        actual_df[
-            "Engagement_Band"
-        ]
-        .dropna()
-        .astype(str)
-        .unique()
+        actual_df["Engagement_Band"].dropna().astype(str).unique()
     )
 
-    validation[
-        "engagement_band_categories_valid"
-    ] = (
-        actual_band_categories
-        .issubset(
-            expected_band_categories
-        )
+    validation["engagement_band_categories_valid"] = actual_band_categories.issubset(
+        expected_band_categories
     )
 
     # ============================================================
     # 20. Overall validation
     # ============================================================
 
-    validation[
-        "passed"
-    ] = all(
-        bool(result)
-        for result in validation.values()
-    )
+    validation["passed"] = all(bool(result) for result in validation.values())
 
     # ============================================================
     # 21. Failed checks
@@ -13214,8 +9758,7 @@ def validate_engagement_score_features(
     failed_checks = [
         check
         for check, result in validation.items()
-        if check != "passed"
-        and not bool(result)
+        if check != "passed" and not bool(result)
     ]
 
     # ============================================================
@@ -13223,29 +9766,17 @@ def validate_engagement_score_features(
     # ============================================================
 
     engagement_band_summary = (
-        actual_df[
-            "Engagement_Band"
-        ]
+        actual_df["Engagement_Band"]
         .value_counts(
             sort=False,
             dropna=False,
         )
-        .rename_axis(
-            "Engagement_Band"
-        )
-        .reset_index(
-            name="Customer_Count"
-        )
+        .rename_axis("Engagement_Band")
+        .reset_index(name="Customer_Count")
     )
 
-    engagement_band_summary[
-        "Customer_Percentage"
-    ] = (
-        engagement_band_summary[
-            "Customer_Count"
-        ]
-        / len(actual_df)
-        * 100
+    engagement_band_summary["Customer_Percentage"] = (
+        engagement_band_summary["Customer_Count"] / len(actual_df) * 100
     )
 
     # ============================================================
@@ -13253,85 +9784,27 @@ def validate_engagement_score_features(
     # ============================================================
 
     summary = {
-        "customer_count": len(
-            actual_df
-        ),
-
-        "expected_customer_count": len(
-            rfm_df
-        ),
-
-        "minimum_engagement_score": float(
-            actual_df[
-                "Engagement_Score"
-            ].min()
-        ),
-
-        "median_engagement_score": float(
-            actual_df[
-                "Engagement_Score"
-            ].median()
-        ),
-
-        "mean_engagement_score": float(
-            actual_df[
-                "Engagement_Score"
-            ].mean()
-        ),
-
-        "maximum_engagement_score": float(
-            actual_df[
-                "Engagement_Score"
-            ].max()
-        ),
-
-        "maximum_absolute_difference": (
-            maximum_absolute_difference
-        ),
-
+        "customer_count": len(actual_df),
+        "expected_customer_count": len(rfm_df),
+        "minimum_engagement_score": float(actual_df["Engagement_Score"].min()),
+        "median_engagement_score": float(actual_df["Engagement_Score"].median()),
+        "mean_engagement_score": float(actual_df["Engagement_Score"].mean()),
+        "maximum_engagement_score": float(actual_df["Engagement_Score"].max()),
+        "maximum_absolute_difference": (maximum_absolute_difference),
         "very_low_customer_count": int(
-            (
-                actual_df[
-                    "Engagement_Band"
-                ].astype(str)
-                == "Very Low"
-            ).sum()
+            (actual_df["Engagement_Band"].astype(str) == "Very Low").sum()
         ),
-
         "low_customer_count": int(
-            (
-                actual_df[
-                    "Engagement_Band"
-                ].astype(str)
-                == "Low"
-            ).sum()
+            (actual_df["Engagement_Band"].astype(str) == "Low").sum()
         ),
-
         "moderate_customer_count": int(
-            (
-                actual_df[
-                    "Engagement_Band"
-                ].astype(str)
-                == "Moderate"
-            ).sum()
+            (actual_df["Engagement_Band"].astype(str) == "Moderate").sum()
         ),
-
         "high_customer_count": int(
-            (
-                actual_df[
-                    "Engagement_Band"
-                ].astype(str)
-                == "High"
-            ).sum()
+            (actual_df["Engagement_Band"].astype(str) == "High").sum()
         ),
-
         "very_high_customer_count": int(
-            (
-                actual_df[
-                    "Engagement_Band"
-                ].astype(str)
-                == "Very High"
-            ).sum()
+            (actual_df["Engagement_Band"].astype(str) == "Very High").sum()
         ),
     }
 
@@ -13341,22 +9814,19 @@ def validate_engagement_score_features(
 
     return {
         "validation": validation,
-
         "summary": summary,
-
         "failed_checks": failed_checks,
-
-        "engagement_band_summary": (
-            engagement_band_summary
-        ),
+        "engagement_band_summary": (engagement_band_summary),
     }
 
+
 ################################################################################
 
 
 ################################################################################
-#--- Master Feature Engineering Functions to create feature datframe -------
+# --- Master Feature Engineering Functions to create feature datframe -------
 ################################################################################
+
 
 def create_customer_feature_table(
     df_cleaned: pd.DataFrame,
@@ -13410,9 +9880,7 @@ def create_customer_feature_table(
     # ============================================================
 
     if "InvoiceDate" not in df_cleaned.columns:
-        raise ValueError(
-            "df_cleaned must contain InvoiceDate."
-        )
+        raise ValueError("df_cleaned must contain InvoiceDate.")
 
     working_df = df_cleaned.copy()
 
@@ -13424,9 +9892,7 @@ def create_customer_feature_table(
     max_invoice_date = working_df["InvoiceDate"].max()
 
     if pd.isna(max_invoice_date):
-        raise ValueError(
-            "InvoiceDate contains no valid dates."
-        )
+        raise ValueError("InvoiceDate contains no valid dates.")
 
     # ============================================================
     # 2. Determine point-in-time cutoff
@@ -13434,16 +9900,11 @@ def create_customer_feature_table(
 
     if cutoff_date is None:
 
-        cutoff_date = (
-            max_invoice_date
-            - pd.Timedelta(days=90)
-        )
+        cutoff_date = max_invoice_date - pd.Timedelta(days=90)
 
     else:
 
-        cutoff_date = pd.Timestamp(
-            cutoff_date
-        )
+        cutoff_date = pd.Timestamp(cutoff_date)
 
     # ============================================================
     # 3. Validate cutoff date
@@ -13451,10 +9912,7 @@ def create_customer_feature_table(
 
     if cutoff_date > max_invoice_date:
 
-        raise ValueError(
-            "cutoff_date cannot be later than "
-            "the maximum InvoiceDate."
-        )
+        raise ValueError("cutoff_date cannot be later than " "the maximum InvoiceDate.")
 
     # ============================================================
     # 4. Create RFM
@@ -13479,88 +9937,70 @@ def create_customer_feature_table(
     # 6. Create Average Basket Size
     # ============================================================
 
-    average_basket_features = (
-        create_avg_basket_size_features(
-            working_df,
-            cutoff_date=cutoff_date,
-        )
+    average_basket_features = create_avg_basket_size_features(
+        working_df,
+        cutoff_date=cutoff_date,
     )
 
     # ============================================================
     # 7. Create Purchase Frequency Trend
     # ============================================================
 
-    purchase_frequency_features = (
-        create_purchase_frequency_trend_features(
-            working_df,
-            cutoff_date=cutoff_date,
-        )
+    purchase_frequency_features = create_purchase_frequency_trend_features(
+        working_df,
+        cutoff_date=cutoff_date,
     )
 
     # ============================================================
     # 8. Create Interpurchase Variance
     # ============================================================
 
-    interpurchase_features = (
-        create_interpurchase_variance_features(
-            working_df,
-            cutoff_date=cutoff_date,
-        )
+    interpurchase_features = create_interpurchase_variance_features(
+        working_df,
+        cutoff_date=cutoff_date,
     )
 
     # ============================================================
     # 9. Create Seasonal Purchase Concentration
     # ============================================================
 
-    seasonal_features = (
-        create_seasonal_purchase_concentration_features(
-            working_df,
-            cutoff_date=cutoff_date,
-        )
+    seasonal_features = create_seasonal_purchase_concentration_features(
+        working_df,
+        cutoff_date=cutoff_date,
     )
 
     # ============================================================
     # 10. Create Product Category Affinity
     # ============================================================
 
-    product_category_affinity_features = (
-        create_product_category_affinity_features(
-            working_df,
-            cutoff_date=cutoff_date,
-        )
+    product_category_affinity_features = create_product_category_affinity_features(
+        working_df,
+        cutoff_date=cutoff_date,
     )
 
     # ============================================================
     # 11. Create Return Rate
     # ============================================================
 
-    return_rate_features = (
-        create_return_rate_features(
-            working_df,
-            cutoff_date=cutoff_date,
-        )
+    return_rate_features = create_return_rate_features(
+        working_df,
+        cutoff_date=cutoff_date,
     )
 
     # ============================================================
     # 12. Create Discount / Markdown Sensitivity
     # ============================================================
 
-    discount_markdown_features = (
-        create_discount_markdown_sensitivity_features(
-            working_df,
-            cutoff_date=cutoff_date,
-        )
+    discount_markdown_features = create_discount_markdown_sensitivity_features(
+        working_df,
+        cutoff_date=cutoff_date,
     )
 
     # ============================================================
     # 13. Create Engagement Score from RFM
     # ============================================================
 
-    engagement_features = (
-        create_engagement_score_features(
-            rfm_features
-        )
-    )
+    engagement_features = create_engagement_score_features(rfm_features)
 
     # ============================================================
     # 14. Collect all feature tables
@@ -13590,45 +10030,30 @@ def create_customer_feature_table(
 
         if "Customer ID" not in feature_table.columns:
 
-            raise ValueError(
-                f"Feature table {index} does not contain "
-                "Customer ID."
-            )
+            raise ValueError(f"Feature table {index} does not contain " "Customer ID.")
 
-        if feature_table[
-            "Customer ID"
-        ].duplicated().any():
+        if feature_table["Customer ID"].duplicated().any():
 
             raise ValueError(
-                f"Feature table {index} contains "
-                "duplicate Customer IDs."
+                f"Feature table {index} contains " "duplicate Customer IDs."
             )
 
-        if feature_table[
-            "Customer ID"
-        ].isna().any():
+        if feature_table["Customer ID"].isna().any():
 
-            raise ValueError(
-                f"Feature table {index} contains "
-                "missing Customer IDs."
-            )
+            raise ValueError(f"Feature table {index} contains " "missing Customer IDs.")
 
     # ============================================================
     # 16. Validate customer populations
     # ============================================================
 
-    reference_customer_ids = set(
-        rfm_features["Customer ID"]
-    )
+    reference_customer_ids = set(rfm_features["Customer ID"])
 
     for index, feature_table in enumerate(
         feature_tables[1:],
         start=2,
     ):
 
-        current_customer_ids = set(
-            feature_table["Customer ID"]
-        )
+        current_customer_ids = set(feature_table["Customer ID"])
 
         if current_customer_ids != reference_customer_ids:
 
@@ -13656,43 +10081,29 @@ def create_customer_feature_table(
     # 18. Final Customer ID validation
     # ============================================================
 
-    if customer_features[
-        "Customer ID"
-    ].duplicated().any():
+    if customer_features["Customer ID"].duplicated().any():
 
         raise ValueError(
-            "Duplicate Customer IDs detected in "
-            "final customer feature table."
+            "Duplicate Customer IDs detected in " "final customer feature table."
         )
 
-    if customer_features[
-        "Customer ID"
-    ].isna().any():
+    if customer_features["Customer ID"].isna().any():
 
         raise ValueError(
-            "Missing Customer IDs detected in "
-            "final customer feature table."
+            "Missing Customer IDs detected in " "final customer feature table."
         )
 
     # ============================================================
     # 19. Store pipeline metadata
     # ============================================================
 
-    customer_features.attrs[
-        "max_invoice_date"
-    ] = max_invoice_date
+    customer_features.attrs["max_invoice_date"] = max_invoice_date
 
-    customer_features.attrs[
-        "cutoff_date"
-    ] = cutoff_date
+    customer_features.attrs["cutoff_date"] = cutoff_date
 
-    customer_features.attrs[
-        "customer_count"
-    ] = len(customer_features)
+    customer_features.attrs["customer_count"] = len(customer_features)
 
-    customer_features.attrs[
-        "feature_table_count"
-    ] = len(feature_tables)
+    customer_features.attrs["feature_table_count"] = len(feature_tables)
 
     # ============================================================
     # 20. Return final feature table
@@ -13701,15 +10112,13 @@ def create_customer_feature_table(
     return customer_features
 
 
-
-
-
 ################################################################################################
-#===============================================================================================
+# ===============================================================================================
 # ------ FEATURE ENGINEERING SEPARATE FOR PRODUCT PURCHSE TIMMING BEHAVIOUR----------------------------------------------------------------
 # -------FOR LSTM Sequential model
-#===============================================================================================
+# ===============================================================================================
 ################################################################################################
+
 
 # ---- 1. Preparing lstm product taxonomy --------------------------------
 def prepare_lstm_product_taxonomy(df_transactions, taxonomy_result=None):
@@ -13735,8 +10144,6 @@ def prepare_lstm_product_taxonomy(df_transactions, taxonomy_result=None):
         taxonomy_audit
     """
 
-    import pandas as pd
-
     # --------------------------------------------------
     # 1. Validate input columns
     # --------------------------------------------------
@@ -13750,32 +10157,22 @@ def prepare_lstm_product_taxonomy(df_transactions, taxonomy_result=None):
     ]
 
     missing_columns = [
-        column
-        for column in required_columns
-        if column not in df_transactions.columns
+        column for column in required_columns if column not in df_transactions.columns
     ]
 
     if missing_columns:
-        raise ValueError(
-            f"Missing required columns: {missing_columns}"
-        )
+        raise ValueError(f"Missing required columns: {missing_columns}")
 
     # --------------------------------------------------
     # 2. Generate or reuse product taxonomy
     # --------------------------------------------------
     if taxonomy_result is None:
-        taxonomy_result = analyze_product_taxonomy(
-            df_transactions
-        )
+        taxonomy_result = analyze_product_taxonomy(df_transactions)
 
     if "product_catalog" not in taxonomy_result:
-        raise KeyError(
-            "Taxonomy result must contain 'product_catalog'."
-        )
+        raise KeyError("Taxonomy result must contain 'product_catalog'.")
 
-    product_catalog = taxonomy_result[
-        "product_catalog"
-    ].copy()
+    product_catalog = taxonomy_result["product_catalog"].copy()
 
     catalog_required_columns = [
         "StockCode_Key",
@@ -13790,27 +10187,20 @@ def prepare_lstm_product_taxonomy(df_transactions, taxonomy_result=None):
 
     if missing_catalog_columns:
         raise ValueError(
-            "Product catalog is missing columns: "
-            f"{missing_catalog_columns}"
+            "Product catalog is missing columns: " f"{missing_catalog_columns}"
         )
 
     # --------------------------------------------------
     # 3. Validate product catalog
     # --------------------------------------------------
     if product_catalog["StockCode_Key"].isna().any():
-        raise ValueError(
-            "Product catalog contains missing stock-code keys."
-        )
+        raise ValueError("Product catalog contains missing stock-code keys.")
 
     if product_catalog["StockCode_Key"].duplicated().any():
-        raise ValueError(
-            "Product catalog must contain one row per product."
-        )
+        raise ValueError("Product catalog must contain one row per product.")
 
     if product_catalog["Product_Category"].isna().any():
-        raise ValueError(
-            "Product catalog contains missing product categories."
-        )
+        raise ValueError("Product catalog contains missing product categories.")
 
     # --------------------------------------------------
     # 4. Standardize stock codes
@@ -13818,10 +10208,7 @@ def prepare_lstm_product_taxonomy(df_transactions, taxonomy_result=None):
     transactions = df_transactions.copy()
 
     transactions["StockCode_Key"] = (
-        transactions["StockCode"]
-        .astype("string")
-        .str.strip()
-        .str.upper()
+        transactions["StockCode"].astype("string").str.strip().str.upper()
     )
 
     # --------------------------------------------------
@@ -13841,10 +10228,8 @@ def prepare_lstm_product_taxonomy(df_transactions, taxonomy_result=None):
         "POST",
     }
 
-    transactions["Is_Admin_StockCode"] = (
-        transactions["StockCode_Key"].isin(
-            admin_stock_codes
-        )
+    transactions["Is_Admin_StockCode"] = transactions["StockCode_Key"].isin(
+        admin_stock_codes
     )
 
     # --------------------------------------------------
@@ -13859,139 +10244,84 @@ def prepare_lstm_product_taxonomy(df_transactions, taxonomy_result=None):
     )
 
     # Count eligible administrative rows before exclusion.
-    eligible_admin_mask = (
-        eligible_mask
-        & transactions["Is_Admin_StockCode"]
-    )
+    eligible_admin_mask = eligible_mask & transactions["Is_Admin_StockCode"]
 
-    eligible_admin_rows_excluded = int(
-        eligible_admin_mask.sum()
-    )
+    eligible_admin_rows_excluded = int(eligible_admin_mask.sum())
 
     # Keep only eligible retail purchase transactions.
-    retail_mask = (
-        eligible_mask
-        & ~transactions["Is_Admin_StockCode"]
-    )
+    retail_mask = eligible_mask & ~transactions["Is_Admin_StockCode"]
 
-    eligible_transactions = transactions.loc[
-        retail_mask
-    ].copy()
+    eligible_transactions = transactions.loc[retail_mask].copy()
 
     # --------------------------------------------------
     # 7. Attach product categories
     # --------------------------------------------------
     eligible_transactions = eligible_transactions.merge(
-        product_catalog[
-            ["StockCode_Key", "Product_Category"]
-        ],
+        product_catalog[["StockCode_Key", "Product_Category"]],
         on="StockCode_Key",
         how="left",
         validate="many_to_one",
         indicator=True,
     )
 
-    eligible_transactions["Taxonomy_Match_Status"] = (
-        eligible_transactions["_merge"]
-        .map({
+    eligible_transactions["Taxonomy_Match_Status"] = eligible_transactions[
+        "_merge"
+    ].map(
+        {
             "both": "Matched",
             "left_only": "Unmatched",
-        })
+        }
     )
 
-    unmatched_mask = (
-        eligible_transactions["Taxonomy_Match_Status"]
-        .eq("Unmatched")
-    )
+    unmatched_mask = eligible_transactions["Taxonomy_Match_Status"].eq("Unmatched")
 
-    unmatched_transaction_rows = int(
-        unmatched_mask.sum()
-    )
+    unmatched_transaction_rows = int(unmatched_mask.sum())
 
     unmatched_products = (
-        eligible_transactions.loc[
-            unmatched_mask,
-            ["StockCode_Key"]
-        ]
+        eligible_transactions.loc[unmatched_mask, ["StockCode_Key"]]
         .drop_duplicates()
         .reset_index(drop=True)
     )
 
-    eligible_transactions = eligible_transactions.drop(
-        columns=["_merge"]
-    )
+    eligible_transactions = eligible_transactions.drop(columns=["_merge"])
 
     # --------------------------------------------------
     # 8. Retain excluded administrative rows for auditing
     # --------------------------------------------------
-    excluded_admin_transactions = transactions.loc[
-        eligible_admin_mask
-    ].copy()
+    excluded_admin_transactions = transactions.loc[eligible_admin_mask].copy()
 
     # --------------------------------------------------
     # 9. Sort chronologically
     # --------------------------------------------------
-    lstm_transactions = (
-        eligible_transactions
-        .sort_values(
-            [
-                "Customer ID",
-                "InvoiceDate",
-                "StockCode_Key",
-            ],
-            kind="mergesort",
-        )
-        .reset_index(drop=True)
-    )
+    lstm_transactions = eligible_transactions.sort_values(
+        [
+            "Customer ID",
+            "InvoiceDate",
+            "StockCode_Key",
+        ],
+        kind="mergesort",
+    ).reset_index(drop=True)
 
     # --------------------------------------------------
     # 10. Build audit summary
     # --------------------------------------------------
     taxonomy_audit = {
         "input_transaction_rows": len(df_transactions),
-
-        "eligible_purchase_rows_before_admin_exclusion": int(
-            eligible_mask.sum()
-        ),
-
-        "eligible_admin_rows_excluded": (
-            eligible_admin_rows_excluded
-        ),
-
-        "eligible_retail_rows_after_exclusion": (
-            len(lstm_transactions)
-        ),
-
+        "eligible_purchase_rows_before_admin_exclusion": int(eligible_mask.sum()),
+        "eligible_admin_rows_excluded": (eligible_admin_rows_excluded),
+        "eligible_retail_rows_after_exclusion": (len(lstm_transactions)),
         "matched_transaction_rows": int(
-            lstm_transactions[
-                "Taxonomy_Match_Status"
-            ].eq("Matched").sum()
+            lstm_transactions["Taxonomy_Match_Status"].eq("Matched").sum()
         ),
-
-        "unmatched_transaction_rows": (
-            unmatched_transaction_rows
-        ),
-
-        "unmatched_unique_products": len(
-            unmatched_products
-        ),
-
-        "unique_customers": int(
-            lstm_transactions["Customer ID"].nunique()
-        ),
-
+        "unmatched_transaction_rows": (unmatched_transaction_rows),
+        "unmatched_unique_products": len(unmatched_products),
+        "unique_customers": int(lstm_transactions["Customer ID"].nunique()),
         "unique_products_in_transactions": int(
             lstm_transactions["StockCode_Key"].nunique()
         ),
-
-        "unique_products_in_catalog": int(
-            product_catalog["StockCode_Key"].nunique()
-        ),
-
+        "unique_products_in_catalog": int(product_catalog["StockCode_Key"].nunique()),
         "category_counts": (
-            lstm_transactions["Product_Category"]
-            .value_counts(dropna=False)
-            .to_dict()
+            lstm_transactions["Product_Category"].value_counts(dropna=False).to_dict()
         ),
     }
 
@@ -14002,14 +10332,12 @@ def prepare_lstm_product_taxonomy(df_transactions, taxonomy_result=None):
         "product_catalog": product_catalog,
         "lstm_transactions": lstm_transactions,
         "unmatched_products": unmatched_products,
-        "excluded_admin_transactions": (
-            excluded_admin_transactions
-        ),
+        "excluded_admin_transactions": (excluded_admin_transactions),
         "taxonomy_audit": taxonomy_audit,
     }
 
 
-#---- 2. build lstm_purchase_events----------------------------------------------------------------
+# ---- 2. build lstm_purchase_events----------------------------------------------------------------
 def build_lstm_purchase_events(lstm_taxonomy_result, invoice_col=None):
     """
     Aggregate transaction-level data into customer purchase events
@@ -14038,24 +10366,19 @@ def build_lstm_purchase_events(lstm_taxonomy_result, invoice_col=None):
     """
 
     import re
+
     import pandas as pd
 
     # --------------------------------------------------
     # 1. Validate input
     # --------------------------------------------------
     if "lstm_transactions" not in lstm_taxonomy_result:
-        raise KeyError(
-            "Input must contain 'lstm_transactions'."
-        )
+        raise KeyError("Input must contain 'lstm_transactions'.")
 
-    transactions = lstm_taxonomy_result[
-        "lstm_transactions"
-    ].copy()
+    transactions = lstm_taxonomy_result["lstm_transactions"].copy()
 
     if transactions.empty:
-        raise ValueError(
-            "No transactions available for purchase-event creation."
-        )
+        raise ValueError("No transactions available for purchase-event creation.")
 
     # --------------------------------------------------
     # 2. Identify invoice column
@@ -14095,19 +10418,13 @@ def build_lstm_purchase_events(lstm_taxonomy_result, invoice_col=None):
     ]
 
     missing_columns = [
-        column
-        for column in required_columns
-        if column not in transactions.columns
+        column for column in required_columns if column not in transactions.columns
     ]
 
     if missing_columns:
-        raise ValueError(
-            f"Missing required columns: {missing_columns}"
-        )
+        raise ValueError(f"Missing required columns: {missing_columns}")
 
-    if transactions[
-        ["Customer ID", invoice_col, "InvoiceDate"]
-    ].isna().any().any():
+    if transactions[["Customer ID", invoice_col, "InvoiceDate"]].isna().any().any():
         raise ValueError(
             "Missing customer IDs, invoice IDs, or invoice dates "
             "were found in the prepared transactions."
@@ -14127,14 +10444,13 @@ def build_lstm_purchase_events(lstm_taxonomy_result, invoice_col=None):
         errors="raise",
     )
 
-    if not transactions[
-        "Analytical Transaction Value"
-    ].map(
-        lambda value: pd.notna(value) and value >= 0
-    ).all():
+    if (
+        not transactions["Analytical Transaction Value"]
+        .map(lambda value: pd.notna(value) and value >= 0)
+        .all()
+    ):
         raise ValueError(
-            "Analytical Transaction Value contains missing "
-            "or negative values."
+            "Analytical Transaction Value contains missing " "or negative values."
         )
 
     if "Quantity" in transactions.columns:
@@ -14144,9 +10460,7 @@ def build_lstm_purchase_events(lstm_taxonomy_result, invoice_col=None):
         )
 
         if transactions["Quantity"].isna().any():
-            raise ValueError(
-                "Quantity contains missing values."
-            )
+            raise ValueError("Quantity contains missing values.")
 
     # --------------------------------------------------
     # 5. Define event keys
@@ -14182,13 +10496,10 @@ def build_lstm_purchase_events(lstm_taxonomy_result, invoice_col=None):
         )
 
     purchase_events = (
-        transactions
-        .groupby(event_keys, dropna=False)
+        transactions.groupby(event_keys, dropna=False)
         .agg(**aggregations)
         .reset_index()
-        .rename(
-            columns={invoice_col: "Invoice_ID"}
-        )
+        .rename(columns={invoice_col: "Invoice_ID"})
     )
 
     # --------------------------------------------------
@@ -14205,8 +10516,7 @@ def build_lstm_purchase_events(lstm_taxonomy_result, invoice_col=None):
 
     # Count transaction lines in each category per invoice.
     category_line_counts = (
-        transactions
-        .groupby(
+        transactions.groupby(
             event_keys + ["Product_Category"],
             observed=True,
         )
@@ -14224,8 +10534,7 @@ def build_lstm_purchase_events(lstm_taxonomy_result, invoice_col=None):
 
     # Sum purchase value by category per invoice.
     category_purchase_values = (
-        transactions
-        .groupby(
+        transactions.groupby(
             event_keys + ["Product_Category"],
             observed=True,
         )["Analytical Transaction Value"]
@@ -14250,9 +10559,8 @@ def build_lstm_purchase_events(lstm_taxonomy_result, invoice_col=None):
         axis=1,
     ).reset_index()
 
-    event_category_features = (
-        event_category_features
-        .rename(columns={invoice_col: "Invoice_ID"})
+    event_category_features = event_category_features.rename(
+        columns={invoice_col: "Invoice_ID"}
     )
 
     # --------------------------------------------------
@@ -14266,68 +10574,50 @@ def build_lstm_purchase_events(lstm_taxonomy_result, invoice_col=None):
     )
 
     category_feature_columns = [
-        column
-        for column in purchase_events.columns
-        if column.startswith("Category_")
+        column for column in purchase_events.columns if column.startswith("Category_")
     ]
 
-    purchase_events[category_feature_columns] = (
-        purchase_events[category_feature_columns]
-        .fillna(0)
-    )
+    purchase_events[category_feature_columns] = purchase_events[
+        category_feature_columns
+    ].fillna(0)
 
     # --------------------------------------------------
     # 9. Sort events chronologically
     # --------------------------------------------------
-    purchase_events = (
-        purchase_events
-        .sort_values(
-            [
-                "Customer ID",
-                "InvoiceDate",
-                "Invoice_ID",
-            ],
-            kind="mergesort",
-        )
-        .reset_index(drop=True)
-    )
+    purchase_events = purchase_events.sort_values(
+        [
+            "Customer ID",
+            "InvoiceDate",
+            "Invoice_ID",
+        ],
+        kind="mergesort",
+    ).reset_index(drop=True)
 
     # --------------------------------------------------
     # 10. Validate event uniqueness
     # --------------------------------------------------
     duplicate_event_count = int(
-        purchase_events.duplicated(
-            ["Customer ID", "Invoice_ID"]
-        ).sum()
+        purchase_events.duplicated(["Customer ID", "Invoice_ID"]).sum()
     )
 
     if duplicate_event_count > 0:
-        raise ValueError(
-            "Duplicate customer-invoice events detected."
-        )
+        raise ValueError("Duplicate customer-invoice events detected.")
 
-    if not purchase_events[
-        "Purchase_Value"
-    ].map(
-        lambda value: pd.notna(value) and value >= 0
-    ).all():
-        raise ValueError(
-            "Invalid purchase values found after aggregation."
-        )
+    if (
+        not purchase_events["Purchase_Value"]
+        .map(lambda value: pd.notna(value) and value >= 0)
+        .all()
+    ):
+        raise ValueError("Invalid purchase values found after aggregation.")
 
     # Verify category line counts reconcile to source rows.
     category_line_columns = [
         column
         for column in purchase_events.columns
-        if column.startswith("Category_")
-        and column.endswith("_Line_Count")
+        if column.startswith("Category_") and column.endswith("_Line_Count")
     ]
 
-    total_category_lines = int(
-        purchase_events[category_line_columns]
-        .sum()
-        .sum()
-    )
+    total_category_lines = int(purchase_events[category_line_columns].sum().sum())
 
     if total_category_lines != len(transactions):
         raise ValueError(
@@ -14341,30 +10631,16 @@ def build_lstm_purchase_events(lstm_taxonomy_result, invoice_col=None):
     event_audit = {
         "input_transaction_rows": len(transactions),
         "purchase_event_count": len(purchase_events),
-        "unique_customers": int(
-            purchase_events["Customer ID"].nunique()
-        ),
-        "unique_invoices": int(
-            purchase_events["Invoice_ID"].nunique()
-        ),
-        "duplicate_customer_invoice_events": (
-            duplicate_event_count
-        ),
+        "unique_customers": int(purchase_events["Customer ID"].nunique()),
+        "unique_invoices": int(purchase_events["Invoice_ID"].nunique()),
+        "duplicate_customer_invoice_events": (duplicate_event_count),
         "category_line_count_total": total_category_lines,
-        "category_line_counts_reconcile": (
-            total_category_lines == len(transactions)
-        ),
+        "category_line_counts_reconcile": (total_category_lines == len(transactions)),
         "total_purchase_value_transactions": float(
-            transactions[
-                "Analytical Transaction Value"
-            ].sum()
+            transactions["Analytical Transaction Value"].sum()
         ),
-        "total_purchase_value_events": float(
-            purchase_events["Purchase_Value"].sum()
-        ),
-        "category_feature_column_count": len(
-            category_feature_columns
-        ),
+        "total_purchase_value_events": float(purchase_events["Purchase_Value"].sum()),
+        "category_feature_column_count": len(category_feature_columns),
     }
 
     # --------------------------------------------------
@@ -14377,7 +10653,7 @@ def build_lstm_purchase_events(lstm_taxonomy_result, invoice_col=None):
     }
 
 
-#----- 3. create_lstm_purchase_timming_targets----------------------------------------------------------------
+# ----- 3. create_lstm_purchase_timming_targets----------------------------------------------------------------
 def create_lstm_purchase_timing_targets(purchase_events):
     """
     Create next-purchase timing targets for the LSTM pipeline.
@@ -14404,9 +10680,7 @@ def create_lstm_purchase_timing_targets(purchase_events):
     # 1. Validate input
     # --------------------------------------------------
     if not isinstance(purchase_events, pd.DataFrame):
-        raise TypeError(
-            "purchase_events must be a pandas DataFrame."
-        )
+        raise TypeError("purchase_events must be a pandas DataFrame.")
 
     required_columns = [
         "Customer ID",
@@ -14415,20 +10689,14 @@ def create_lstm_purchase_timing_targets(purchase_events):
     ]
 
     missing_columns = [
-        column
-        for column in required_columns
-        if column not in purchase_events.columns
+        column for column in required_columns if column not in purchase_events.columns
     ]
 
     if missing_columns:
-        raise ValueError(
-            f"Missing required columns: {missing_columns}"
-        )
+        raise ValueError(f"Missing required columns: {missing_columns}")
 
     if purchase_events.empty:
-        raise ValueError(
-            "purchase_events DataFrame is empty."
-        )
+        raise ValueError("purchase_events DataFrame is empty.")
 
     events = purchase_events.copy()
 
@@ -14444,10 +10712,7 @@ def create_lstm_purchase_timing_targets(purchase_events):
         errors="coerce",
     )
 
-    invalid_date_mask = (
-        original_dates.notna()
-        & converted_dates.isna()
-    )
+    invalid_date_mask = original_dates.notna() & converted_dates.isna()
 
     missing_date_mask = original_dates.isna()
 
@@ -14467,12 +10732,8 @@ def create_lstm_purchase_timing_targets(purchase_events):
     # --------------------------------------------------
     # 3. Validate customer and invoice identifiers
     # --------------------------------------------------
-    if events[
-        ["Customer ID", "Invoice_ID"]
-    ].isna().any().any():
-        raise ValueError(
-            "Customer ID and Invoice_ID must not be missing."
-        )
+    if events[["Customer ID", "Invoice_ID"]].isna().any().any():
+        raise ValueError("Customer ID and Invoice_ID must not be missing.")
 
     if events["Customer ID"].eq(0).any():
         raise ValueError(
@@ -14480,28 +10741,18 @@ def create_lstm_purchase_timing_targets(purchase_events):
             "during LSTM taxonomy preparation."
         )
 
-    duplicate_count = int(
-        events.duplicated(
-            ["Customer ID", "Invoice_ID"]
-        ).sum()
-    )
+    duplicate_count = int(events.duplicated(["Customer ID", "Invoice_ID"]).sum())
 
     if duplicate_count:
-        raise ValueError(
-            f"Found {duplicate_count} duplicate customer-invoice events."
-        )
+        raise ValueError(f"Found {duplicate_count} duplicate customer-invoice events.")
 
     # --------------------------------------------------
     # 4. Sort events chronologically per customer
     # --------------------------------------------------
-    events = (
-        events
-        .sort_values(
-            ["Customer ID", "InvoiceDate", "Invoice_ID"],
-            kind="mergesort",
-        )
-        .reset_index(drop=True)
-    )
+    events = events.sort_values(
+        ["Customer ID", "InvoiceDate", "Invoice_ID"],
+        kind="mergesort",
+    ).reset_index(drop=True)
 
     # --------------------------------------------------
     # 5. Calculate next purchase date and invoice
@@ -14511,108 +10762,63 @@ def create_lstm_purchase_timing_targets(purchase_events):
         sort=False,
     )
 
-    events["Next_Purchase_Date"] = (
-        customer_groups["InvoiceDate"].shift(-1)
-    )
+    events["Next_Purchase_Date"] = customer_groups["InvoiceDate"].shift(-1)
 
-    events["Next_Invoice_ID"] = (
-        customer_groups["Invoice_ID"].shift(-1)
-    )
+    events["Next_Invoice_ID"] = customer_groups["Invoice_ID"].shift(-1)
 
     # --------------------------------------------------
     # 6. Calculate time until the next purchase
     # --------------------------------------------------
     events["Days_Until_Next_Purchase"] = (
-        events["Next_Purchase_Date"]
-        - events["InvoiceDate"]
+        events["Next_Purchase_Date"] - events["InvoiceDate"]
     ).dt.total_seconds() / 86400
 
-    valid_target_mask = (
-        events["Next_Purchase_Date"].notna()
-    )
+    valid_target_mask = events["Next_Purchase_Date"].notna()
 
     negative_target_count = int(
         events.loc[
             valid_target_mask,
             "Days_Until_Next_Purchase",
-        ].lt(0).sum()
+        ]
+        .lt(0)
+        .sum()
     )
 
     if negative_target_count:
-        raise ValueError(
-            "Negative purchase-timing targets detected."
-        )
+        raise ValueError("Negative purchase-timing targets detected.")
 
     # Keep every event for auditing.
     purchase_events_with_targets = events.copy()
 
     # Use only events with an observed next purchase for training.
-    modeling_targets = (
-        events.loc[valid_target_mask]
-        .copy()
-        .reset_index(drop=True)
-    )
+    modeling_targets = events.loc[valid_target_mask].copy().reset_index(drop=True)
 
     # --------------------------------------------------
     # 7. Build audit summary
     # --------------------------------------------------
-    events_per_customer = (
-        events.groupby("Customer ID").size()
-    )
+    events_per_customer = events.groupby("Customer ID").size()
 
-    target_values = modeling_targets[
-        "Days_Until_Next_Purchase"
-    ]
+    target_values = modeling_targets["Days_Until_Next_Purchase"]
 
     target_audit = {
         "input_purchase_events": len(events),
-
-        "unique_customers": int(
-            events["Customer ID"].nunique()
-        ),
-
-        "invoice_date_dtype": str(
-            events["InvoiceDate"].dtype
-        ),
-
+        "unique_customers": int(events["Customer ID"].nunique()),
+        "invoice_date_dtype": str(events["InvoiceDate"].dtype),
         "invalid_dates": invalid_date_count,
-
         "missing_dates": missing_date_count,
-
-        "events_with_valid_next_purchase_target": len(
-            modeling_targets
-        ),
-
-        "events_without_next_purchase_target": int(
-            (~valid_target_mask).sum()
-        ),
-
-        "customers_with_one_event": int(
-            events_per_customer.eq(1).sum()
-        ),
-
-        "zero_day_targets": int(
-            target_values.eq(0).sum()
-        ),
-
+        "events_with_valid_next_purchase_target": len(modeling_targets),
+        "events_without_next_purchase_target": int((~valid_target_mask).sum()),
+        "customers_with_one_event": int(events_per_customer.eq(1).sum()),
+        "zero_day_targets": int(target_values.eq(0).sum()),
         "negative_targets": negative_target_count,
-
         "target_min_days": (
-            float(target_values.min())
-            if not target_values.empty
-            else None
+            float(target_values.min()) if not target_values.empty else None
         ),
-
         "target_median_days": (
-            float(target_values.median())
-            if not target_values.empty
-            else None
+            float(target_values.median()) if not target_values.empty else None
         ),
-
         "target_max_days": (
-            float(target_values.max())
-            if not target_values.empty
-            else None
+            float(target_values.max()) if not target_values.empty else None
         ),
     }
 
@@ -14620,15 +10826,13 @@ def create_lstm_purchase_timing_targets(purchase_events):
     # 8. Return results
     # --------------------------------------------------
     return {
-        "purchase_events_with_targets": (
-            purchase_events_with_targets
-        ),
+        "purchase_events_with_targets": (purchase_events_with_targets),
         "modeling_targets": modeling_targets,
         "target_audit": target_audit,
     }
 
 
-#------ 4. create_lstm_sequences----------------------------------------------------
+# ------ 4. create_lstm_sequences----------------------------------------------------
 def create_lstm_sequences(
     lstm_target_result,
     sequence_length=5,
@@ -14662,9 +10866,7 @@ def create_lstm_sequences(
         raise TypeError("lstm_target_result must be a dictionary.")
 
     if "modeling_targets" not in lstm_target_result:
-        raise ValueError(
-            "lstm_target_result must contain 'modeling_targets'."
-        )
+        raise ValueError("lstm_target_result must contain 'modeling_targets'.")
 
     df = lstm_target_result["modeling_targets"].copy()
 
@@ -14674,9 +10876,11 @@ def create_lstm_sequences(
     if df.empty:
         raise ValueError("'modeling_targets' is empty.")
 
-    if not isinstance(sequence_length, int) or isinstance(
-        sequence_length, bool
-    ) or sequence_length < 1:
+    if (
+        not isinstance(sequence_length, int)
+        or isinstance(sequence_length, bool)
+        or sequence_length < 1
+    ):
         raise ValueError("sequence_length must be a positive integer.")
 
     required_columns = [
@@ -14690,14 +10894,11 @@ def create_lstm_sequences(
     ]
 
     missing_columns = [
-        column for column in required_columns
-        if column not in df.columns
+        column for column in required_columns if column not in df.columns
     ]
 
     if missing_columns:
-        raise ValueError(
-            f"Missing required columns: {missing_columns}"
-        )
+        raise ValueError(f"Missing required columns: {missing_columns}")
 
     # ---------------------------------------------------------
     # 2. Normalize dates internally
@@ -14709,35 +10910,23 @@ def create_lstm_sequences(
     )
 
     if df["InvoiceDate"].isna().any():
-        raise ValueError(
-            "InvoiceDate contains missing or invalid dates."
-        )
+        raise ValueError("InvoiceDate contains missing or invalid dates.")
 
     # ---------------------------------------------------------
     # 3. Validate customer and invoice identifiers
     # ---------------------------------------------------------
 
     if df["Customer ID"].isna().any():
-        raise ValueError(
-            "Customer ID contains missing values."
-        )
+        raise ValueError("Customer ID contains missing values.")
 
     if df["Customer ID"].eq(0).any():
-        raise ValueError(
-            "Customer ID 0 must be excluded from the LSTM pipeline."
-        )
+        raise ValueError("Customer ID 0 must be excluded from the LSTM pipeline.")
 
     if df["Invoice_ID"].isna().any():
-        raise ValueError(
-            "Invoice_ID contains missing values."
-        )
+        raise ValueError("Invoice_ID contains missing values.")
 
-    if df.duplicated(
-        subset=["Customer ID", "Invoice_ID"]
-    ).any():
-        raise ValueError(
-            "Duplicate customer-invoice events were found."
-        )
+    if df.duplicated(subset=["Customer ID", "Invoice_ID"]).any():
+        raise ValueError("Duplicate customer-invoice events were found.")
 
     # ---------------------------------------------------------
     # 4. Validate prediction target
@@ -14750,21 +10939,14 @@ def create_lstm_sequences(
 
     if df["Days_Until_Next_Purchase"].isna().any():
         raise ValueError(
-            "Days_Until_Next_Purchase contains missing or "
-            "non-numeric values."
+            "Days_Until_Next_Purchase contains missing or " "non-numeric values."
         )
 
-    if not np.isfinite(
-        df["Days_Until_Next_Purchase"].to_numpy(dtype=float)
-    ).all():
-        raise ValueError(
-            "Prediction targets contain infinite values."
-        )
+    if not np.isfinite(df["Days_Until_Next_Purchase"].to_numpy(dtype=float)).all():
+        raise ValueError("Prediction targets contain infinite values.")
 
     if (df["Days_Until_Next_Purchase"] < 0).any():
-        raise ValueError(
-            "Prediction targets cannot be negative."
-        )
+        raise ValueError("Prediction targets cannot be negative.")
 
     # ---------------------------------------------------------
     # 5. Identify model features
@@ -14780,12 +10962,9 @@ def create_lstm_sequences(
         base_features.append("Total_Quantity")
 
     category_features = [
-        column for column in df.columns
-        if column.startswith("Category_")
-        and (
-            column.endswith("_Line_Count")
-            or column.endswith("_Value")
-        )
+        column
+        for column in df.columns
+        if column.startswith("Category_") and column.endswith(("_Line_Count", "_Value"))
     ]
 
     if feature_columns is None:
@@ -14797,14 +10976,11 @@ def create_lstm_sequences(
         raise ValueError("No feature columns were selected.")
 
     missing_features = [
-        column for column in feature_columns
-        if column not in df.columns
+        column for column in feature_columns if column not in df.columns
     ]
 
     if missing_features:
-        raise ValueError(
-            f"Missing feature columns: {missing_features}"
-        )
+        raise ValueError(f"Missing feature columns: {missing_features}")
 
     # Prevent identifiers, dates, and future information from
     # accidentally entering the model as input features.
@@ -14818,14 +10994,12 @@ def create_lstm_sequences(
     }
 
     invalid_features = [
-        column for column in feature_columns
-        if column in forbidden_features
+        column for column in feature_columns if column in forbidden_features
     ]
 
     if invalid_features:
         raise ValueError(
-            "Identifiers, dates, and targets cannot be features: "
-            f"{invalid_features}"
+            "Identifiers, dates, and targets cannot be features: " f"{invalid_features}"
         )
 
     # ---------------------------------------------------------
@@ -14838,9 +11012,7 @@ def create_lstm_sequences(
             errors="coerce",
         )
 
-    feature_values = df[feature_columns].to_numpy(
-        dtype=np.float64
-    )
+    feature_values = df[feature_columns].to_numpy(dtype=np.float64)
 
     if not np.isfinite(feature_values).all():
         raise ValueError(
@@ -14874,13 +11046,11 @@ def create_lstm_sequences(
     ):
         customer_df = customer_df.reset_index(drop=True)
 
-        customer_features = customer_df[
-            feature_columns
-        ].to_numpy(dtype=np.float64)
+        customer_features = customer_df[feature_columns].to_numpy(dtype=np.float64)
 
-        customer_targets = customer_df[
-            "Days_Until_Next_Purchase"
-        ].to_numpy(dtype=np.float64)
+        customer_targets = customer_df["Days_Until_Next_Purchase"].to_numpy(
+            dtype=np.float64
+        )
 
         for target_idx in range(len(customer_df)):
 
@@ -14891,9 +11061,7 @@ def create_lstm_sequences(
                 target_idx - sequence_length + 1,
             )
 
-            history = customer_features[
-                start_idx:target_idx + 1
-            ]
+            history = customer_features[start_idx : target_idx + 1]
 
             history_length = len(history)
 
@@ -14919,22 +11087,20 @@ def create_lstm_sequences(
 
             target_row = customer_df.iloc[target_idx]
 
-            metadata_list.append({
-                "Customer ID": customer_id,
-                "Invoice_ID": target_row["Invoice_ID"],
-                "InvoiceDate": target_row["InvoiceDate"],
-                "Next_Purchase_Date": pd.to_datetime(
-                     target_row["Next_Purchase_Date"],
-                     errors="coerce", ),
-
-                "Days_Until_Next_Purchase": (
-                    customer_targets[target_idx]
-                ),
-                "History_Length": history_length,
-                "Padding_Length": (
-                    sequence_length - history_length
-                ),
-            })
+            metadata_list.append(
+                {
+                    "Customer ID": customer_id,
+                    "Invoice_ID": target_row["Invoice_ID"],
+                    "InvoiceDate": target_row["InvoiceDate"],
+                    "Next_Purchase_Date": pd.to_datetime(
+                        target_row["Next_Purchase_Date"],
+                        errors="coerce",
+                    ),
+                    "Days_Until_Next_Purchase": (customer_targets[target_idx]),
+                    "History_Length": history_length,
+                    "Padding_Length": (sequence_length - history_length),
+                }
+            )
 
     # ---------------------------------------------------------
     # 9. Convert outputs to arrays and DataFrame
@@ -14963,55 +11129,37 @@ def create_lstm_sequences(
         sequence_length,
         feature_count,
     ):
-        raise AssertionError(
-            f"Unexpected X shape: {X.shape}"
-        )
+        raise AssertionError(f"Unexpected X shape: {X.shape}")
 
     if X_mask.shape != X.shape[:2]:
-        raise AssertionError(
-            "Padding mask dimensions do not match X."
-        )
+        raise AssertionError("Padding mask dimensions do not match X.")
 
     if X_mask.dtype != bool:
-        raise AssertionError(
-            "X_mask must have Boolean dtype."
-        )
+        raise AssertionError("X_mask must have Boolean dtype.")
 
     if not X_mask.any(axis=1).all():
-        raise AssertionError(
-            "A sequence contains no actual purchase events."
-        )
+        raise AssertionError("A sequence contains no actual purchase events.")
 
     if not np.isfinite(X).all():
-        raise AssertionError(
-            "Generated sequences contain invalid values."
-        )
+        raise AssertionError("Generated sequences contain invalid values.")
 
     if not np.isfinite(y).all():
-        raise AssertionError(
-            "Generated targets contain invalid values."
-        )
+        raise AssertionError("Generated targets contain invalid values.")
 
     # Every artificial padding timestep must remain zero.
     if not np.all(X[~X_mask] == 0):
-        raise AssertionError(
-            "Artificial padding values must be zero."
-        )
+        raise AssertionError("Artificial padding values must be zero.")
 
     # Verify each sequence's mask matches its history length.
     observed_history_lengths = X_mask.sum(axis=1)
 
-    expected_history_lengths = sequence_metadata[
-        "History_Length"
-    ].to_numpy()
+    expected_history_lengths = sequence_metadata["History_Length"].to_numpy()
 
     if not np.array_equal(
         observed_history_lengths,
         expected_history_lengths,
     ):
-        raise AssertionError(
-            "Padding masks do not match sequence history lengths."
-        )
+        raise AssertionError("Padding masks do not match sequence history lengths.")
 
     # ---------------------------------------------------------
     # 11. Build audit report
@@ -15022,8 +11170,8 @@ def create_lstm_sequences(
     )
 
     sequence_audit = {
-        "input_target_rows": int(len(df)),
-        "sequence_count": int(len(X)),
+        "input_target_rows": len(df),
+        "sequence_count": len(X),
         "sequence_length": int(sequence_length),
         "feature_count": int(feature_count),
         "unique_customers": int(df["Customer ID"].nunique()),
@@ -15032,17 +11180,13 @@ def create_lstm_sequences(
         "X_mask_dtype": str(X_mask.dtype),
         "y_shape": tuple(y.shape),
         "short_history_sequences": short_history_count,
-        "sequences_with_padding": int(
-            (sequence_metadata["Padding_Length"] > 0).sum()
-        ),
+        "sequences_with_padding": int((sequence_metadata["Padding_Length"] > 0).sum()),
         "sequences_without_padding": int(
             (sequence_metadata["Padding_Length"] == 0).sum()
         ),
         "missing_values_in_X": int(np.isnan(X).sum()),
         "missing_values_in_y": int(np.isnan(y).sum()),
-        "padding_values_are_zero": bool(
-            np.all(X[~X_mask] == 0)
-        ),
+        "padding_values_are_zero": bool(np.all(X[~X_mask] == 0)),
         "mask_validation_passed": True,
         "target_min_days": float(y.min()),
         "target_median_days": float(np.median(y)),
@@ -15064,7 +11208,8 @@ def create_lstm_sequences(
     }
 
 
-#------ 5. Spliting chronological data ----------------------------------------------------
+# ------ 5. Spliting chronological data ----------------------------------------------------
+
 
 def split_lstm_sequences_chronologically(
     sequence_result,
@@ -15101,16 +11246,12 @@ def split_lstm_sequences_chronologically(
     if not isinstance(sequence_result, dict):
         raise TypeError("sequence_result must be a dictionary.")
 
-    required_keys = {
-        "X", "X_mask", "y", "sequence_metadata", "feature_columns"
-    }
+    required_keys = {"X", "X_mask", "y", "sequence_metadata", "feature_columns"}
 
     missing_keys = required_keys - set(sequence_result)
 
     if missing_keys:
-        raise ValueError(
-            f"Missing sequence_result keys: {sorted(missing_keys)}"
-        )
+        raise ValueError(f"Missing sequence_result keys: {sorted(missing_keys)}")
 
     if not (0 < train_fraction < 1):
         raise ValueError("train_fraction must be between 0 and 1.")
@@ -15119,19 +11260,13 @@ def split_lstm_sequences_chronologically(
         raise ValueError("validation_fraction must be between 0 and 1.")
 
     if train_fraction + validation_fraction >= 1:
-        raise ValueError(
-            "train_fraction + validation_fraction must be less than 1."
-        )
+        raise ValueError("train_fraction + validation_fraction must be less than 1.")
 
     if not (0 < min_validation_fraction < 1):
-        raise ValueError(
-            "min_validation_fraction must be between 0 and 1."
-        )
+        raise ValueError("min_validation_fraction must be between 0 and 1.")
 
     if not (0 < min_test_fraction < 1):
-        raise ValueError(
-            "min_test_fraction must be between 0 and 1."
-        )
+        raise ValueError("min_test_fraction must be between 0 and 1.")
 
     if min_validation_fraction + min_test_fraction >= 1:
         raise ValueError(
@@ -15185,9 +11320,7 @@ def split_lstm_sequences_chronologically(
             "Regenerate sequences with Next_Purchase_Date."
         )
 
-    metadata["InvoiceDate"] = pd.to_datetime(
-        metadata["InvoiceDate"], errors="coerce"
-    )
+    metadata["InvoiceDate"] = pd.to_datetime(metadata["InvoiceDate"], errors="coerce")
     metadata["Next_Purchase_Date"] = pd.to_datetime(
         metadata["Next_Purchase_Date"], errors="coerce"
     )
@@ -15195,9 +11328,7 @@ def split_lstm_sequences_chronologically(
     if metadata[list(required_metadata)].isna().any().any():
         raise ValueError("Event and next-purchase dates must be valid.")
 
-    if (
-        metadata["Next_Purchase_Date"] < metadata["InvoiceDate"]
-    ).any():
+    if (metadata["Next_Purchase_Date"] < metadata["InvoiceDate"]).any():
         raise ValueError("Next-purchase dates cannot precede event dates.")
 
     # =========================================================
@@ -15208,12 +11339,8 @@ def split_lstm_sequences_chronologically(
 
     target_test_fraction = 1.0 - train_fraction - validation_fraction
 
-    event_dates = metadata["InvoiceDate"].to_numpy(
-        dtype="datetime64[ns]"
-    )
-    next_dates = metadata["Next_Purchase_Date"].to_numpy(
-        dtype="datetime64[ns]"
-    )
+    event_dates = metadata["InvoiceDate"].to_numpy(dtype="datetime64[ns]")
+    next_dates = metadata["Next_Purchase_Date"].to_numpy(dtype="datetime64[ns]")
 
     unique_dates = np.sort(metadata["InvoiceDate"].unique())
 
@@ -15232,23 +11359,19 @@ def split_lstm_sequences_chronologically(
         )
     )
 
-    candidate_cutoffs = unique_dates[candidate_positions].astype(
-        "datetime64[ns]"
-    )
+    candidate_cutoffs = unique_dates[candidate_positions].astype("datetime64[ns]")
 
     # The minimums apply to proportions of all original sequences.
-    min_validation_count = int(
-        np.ceil(total * min_validation_fraction)
-    )
-    min_test_count = int(
-        np.ceil(total * min_test_fraction)
-    )
+    min_validation_count = int(np.ceil(total * min_validation_fraction))
+    min_test_count = int(np.ceil(total * min_test_fraction))
 
-    target_counts = np.array([
-        train_fraction * total,
-        validation_fraction * total,
-        target_test_fraction * total,
-    ])
+    target_counts = np.array(
+        [
+            train_fraction * total,
+            validation_fraction * total,
+            target_test_fraction * total,
+        ]
+    )
 
     # =========================================================
     # 3. Search cutoffs using final counts after purging
@@ -15262,10 +11385,7 @@ def split_lstm_sequences_chronologically(
 
         # A training sample is retained only when both its event
         # and next-purchase outcome precede the training cutoff.
-        train_keep = (
-            (event_dates < train_cutoff)
-            & (next_dates < train_cutoff)
-        )
+        train_keep = (event_dates < train_cutoff) & (next_dates < train_cutoff)
 
         train_count = int(train_keep.sum())
 
@@ -15300,19 +11420,20 @@ def split_lstm_sequences_chronologically(
 
             valid_candidate_count += 1
 
-            actual_counts = np.array([
-                train_count,
-                validation_count,
-                test_count,
-            ], dtype=float)
+            actual_counts = np.array(
+                [
+                    train_count,
+                    validation_count,
+                    test_count,
+                ],
+                dtype=float,
+            )
 
             # Minimize the total absolute deviation from requested
             # final counts after boundary purging.
             #
             # Every partition contributes equally to the score.
-            score = np.abs(
-                actual_counts - target_counts
-            ).sum() / total
+            score = np.abs(actual_counts - target_counts).sum() / total
 
             if score < best_score:
                 best_score = score
@@ -15323,9 +11444,7 @@ def split_lstm_sequences_chronologically(
                     "train_keep": train_keep.copy(),
                     "validation_keep": validation_keep.copy(),
                     "test_keep": test_keep.copy(),
-                    "train_candidate_count": int(
-                        (event_dates < train_cutoff).sum()
-                    ),
+                    "train_candidate_count": int((event_dates < train_cutoff).sum()),
                     "validation_candidate_count": int(
                         (
                             (event_dates >= train_cutoff)
@@ -15361,15 +11480,11 @@ def split_lstm_sequences_chronologically(
     y_validation = y[validation_indices].copy()
     y_test = y[test_indices].copy()
 
-    train_metadata = (
-        metadata.iloc[train_indices].copy().reset_index(drop=True)
-    )
+    train_metadata = metadata.iloc[train_indices].copy().reset_index(drop=True)
     validation_metadata = (
         metadata.iloc[validation_indices].copy().reset_index(drop=True)
     )
-    test_metadata = (
-        metadata.iloc[test_indices].copy().reset_index(drop=True)
-    )
+    test_metadata = metadata.iloc[test_indices].copy().reset_index(drop=True)
 
     # =========================================================
     # 5. Fit scaler using valid training timesteps only
@@ -15400,9 +11515,7 @@ def split_lstm_sequences_chronologically(
         return X_scaled
 
     X_train = transform_valid_timesteps(X_train_raw, mask_train)
-    X_validation = transform_valid_timesteps(
-        X_validation_raw, mask_validation
-    )
+    X_validation = transform_valid_timesteps(X_validation_raw, mask_validation)
     X_test = transform_valid_timesteps(X_test_raw, mask_test)
 
     # =========================================================
@@ -15414,25 +11527,16 @@ def split_lstm_sequences_chronologically(
 
     train_valid = bool(
         (train_metadata["InvoiceDate"] < train_cutoff).all()
-        and (
-            train_metadata["Next_Purchase_Date"] < train_cutoff
-        ).all()
+        and (train_metadata["Next_Purchase_Date"] < train_cutoff).all()
     )
 
     validation_valid = bool(
         (validation_metadata["InvoiceDate"] >= train_cutoff).all()
-        and (
-            validation_metadata["InvoiceDate"] < validation_cutoff
-        ).all()
-        and (
-            validation_metadata["Next_Purchase_Date"]
-            < validation_cutoff
-        ).all()
+        and (validation_metadata["InvoiceDate"] < validation_cutoff).all()
+        and (validation_metadata["Next_Purchase_Date"] < validation_cutoff).all()
     )
 
-    test_valid = bool(
-        (test_metadata["InvoiceDate"] >= validation_cutoff).all()
-    )
+    test_valid = bool((test_metadata["InvoiceDate"] >= validation_cutoff).all())
 
     padding_valid = bool(
         np.all(X_train[~mask_train] == 0)
@@ -15445,13 +11549,15 @@ def split_lstm_sequences_chronologically(
         and len(test_indices) >= min_test_count
     )
 
-    if not all([
-        train_valid,
-        validation_valid,
-        test_valid,
-        padding_valid,
-        minimum_sizes_valid,
-    ]):
+    if not all(
+        [
+            train_valid,
+            validation_valid,
+            test_valid,
+            padding_valid,
+            minimum_sizes_valid,
+        ]
+    ):
         raise AssertionError(
             "A temporal, minimum-size, or padding validation check failed."
         )
@@ -15468,58 +11574,41 @@ def split_lstm_sequences_chronologically(
 
     audit = {
         "total_sequences_before_split": int(total),
-
         "train_candidate_sequences": best["train_candidate_count"],
-        "validation_candidate_sequences": (
-            best["validation_candidate_count"]
-        ),
-        "test_candidate_sequences": int(len(test_indices)),
-
+        "validation_candidate_sequences": (best["validation_candidate_count"]),
+        "test_candidate_sequences": len(test_indices),
         "train_sequences_purged": int(
             best["train_candidate_count"] - len(train_indices)
         ),
         "validation_sequences_purged": int(
             best["validation_candidate_count"] - len(validation_indices)
         ),
-
-        "train_sequences_final": int(len(train_indices)),
-        "validation_sequences_final": int(len(validation_indices)),
-        "test_sequences_final": int(len(test_indices)),
-
+        "train_sequences_final": len(train_indices),
+        "validation_sequences_final": len(validation_indices),
+        "test_sequences_final": len(test_indices),
         "train_fraction_requested": float(train_fraction),
         "validation_fraction_requested": float(validation_fraction),
         "test_fraction_requested": float(target_test_fraction),
-
         "train_fraction_actual": round(len(train_indices) / total, 4),
-        "validation_fraction_actual": round(
-            len(validation_indices) / total, 4
-        ),
+        "validation_fraction_actual": round(len(validation_indices) / total, 4),
         "test_fraction_actual": round(len(test_indices) / total, 4),
-
         "minimum_validation_fraction": float(min_validation_fraction),
         "minimum_validation_sequences": int(min_validation_count),
         "minimum_test_fraction": float(min_test_fraction),
         "minimum_test_sequences": int(min_test_count),
-
         "train_cutoff_exclusive": str(train_cutoff),
         "validation_cutoff_exclusive": str(validation_cutoff),
-
-        "cutoff_search_points": int(len(candidate_cutoffs)),
+        "cutoff_search_points": len(candidate_cutoffs),
         "valid_cutoff_pairs_evaluated": int(valid_candidate_count),
         "cutoff_optimization_score": float(best_score),
-
         "feature_count": int(X.shape[2]),
         "sequence_length": int(X.shape[1]),
-        "scaler_fitted_on": (
-            "Training partition, valid timesteps only"
-        ),
-
+        "scaler_fitted_on": ("Training partition, valid timesteps only"),
         "training_temporal_validation_passed": train_valid,
         "validation_temporal_validation_passed": validation_valid,
         "test_temporal_validation_passed": test_valid,
         "padding_values_remain_zero": padding_valid,
         "minimum_partition_sizes_passed": minimum_sizes_valid,
-
         "train_target_median_days": float(np.median(y_train)),
         "validation_target_median_days": float(np.median(y_validation)),
         "test_target_median_days": float(np.median(y_test)),
@@ -15529,36 +11618,29 @@ def split_lstm_sequences_chronologically(
         "X_train": X_train,
         "X_validation": X_validation,
         "X_test": X_test,
-
         "X_train_raw": X_train_raw,
         "X_validation_raw": X_validation_raw,
         "X_test_raw": X_test_raw,
-
         "mask_train": mask_train,
         "mask_validation": mask_validation,
         "mask_test": mask_test,
-
         "y_train": y_train,
         "y_validation": y_validation,
         "y_test": y_test,
-
         "train_metadata": train_metadata,
         "validation_metadata": validation_metadata,
         "test_metadata": test_metadata,
-
         "feature_columns": feature_columns,
         "scaler": scaler,
-
         "cutoffs": {
             "train_cutoff": train_cutoff,
             "validation_cutoff": validation_cutoff,
         },
-
         "audit": audit,
     }
 
 
-#--------6. maste pipeline function ----------------------------------------------------------------
+# --------6. maste pipeline function ----------------------------------------------------------------
 def run_lstm_data_pipeline(
     df_transactions,
     sequence_length=5,
@@ -15609,57 +11691,43 @@ def run_lstm_data_pipeline(
     # ---------------------------------------------------------
 
     if not isinstance(df_transactions, pd.DataFrame):
-        raise TypeError(
-            "df_transactions must be a pandas DataFrame."
-        )
+        raise TypeError("df_transactions must be a pandas DataFrame.")
 
     if df_transactions.empty:
-        raise ValueError(
-            "df_transactions is empty."
-        )
+        raise ValueError("df_transactions is empty.")
 
-    if not isinstance(sequence_length, int) or isinstance(
-        sequence_length, bool
-    ) or sequence_length < 1:
-        raise ValueError(
-            "sequence_length must be a positive integer."
-        )
+    if (
+        not isinstance(sequence_length, int)
+        or isinstance(sequence_length, bool)
+        or sequence_length < 1
+    ):
+        raise ValueError("sequence_length must be a positive integer.")
 
     if not (
         isinstance(train_fraction, (int, float))
         and not isinstance(train_fraction, bool)
         and 0 < train_fraction < 1
     ):
-        raise ValueError(
-            "train_fraction must be between 0 and 1."
-        )
+        raise ValueError("train_fraction must be between 0 and 1.")
 
     if not (
         isinstance(validation_fraction, (int, float))
         and not isinstance(validation_fraction, bool)
         and 0 < validation_fraction < 1
     ):
-        raise ValueError(
-            "validation_fraction must be between 0 and 1."
-        )
+        raise ValueError("validation_fraction must be between 0 and 1.")
 
     if train_fraction + validation_fraction >= 1:
-        raise ValueError(
-            "train_fraction + validation_fraction must be less than 1."
-        )
+        raise ValueError("train_fraction + validation_fraction must be less than 1.")
 
     pipeline_audit = {
         "pipeline_name": "Vantara LSTM Data Preparation",
         "status": "running",
-        "input_transaction_rows": int(len(df_transactions)),
+        "input_transaction_rows": len(df_transactions),
         "sequence_length_requested": sequence_length,
         "train_fraction_requested": float(train_fraction),
-        "validation_fraction_requested": float(
-            validation_fraction
-        ),
-        "test_fraction_requested": float(
-            1 - train_fraction - validation_fraction
-        ),
+        "validation_fraction_requested": float(validation_fraction),
+        "test_fraction_requested": float(1 - train_fraction - validation_fraction),
         "completed_stages": [],
     }
 
@@ -15668,18 +11736,12 @@ def run_lstm_data_pipeline(
     # ---------------------------------------------------------
 
     if taxonomy_result is None:
-        taxonomy_result = analyze_product_taxonomy(
-            df_transactions
-        )
+        taxonomy_result = analyze_product_taxonomy(df_transactions)
 
     if not isinstance(taxonomy_result, dict):
-        raise TypeError(
-            "analyze_product_taxonomy must return a dictionary."
-        )
+        raise TypeError("analyze_product_taxonomy must return a dictionary.")
 
-    pipeline_audit["completed_stages"].append(
-        "product_taxonomy"
-    )
+    pipeline_audit["completed_stages"].append("product_taxonomy")
 
     # ---------------------------------------------------------
     # 3. Prepare eligible retail transactions
@@ -15691,13 +11753,9 @@ def run_lstm_data_pipeline(
     )
 
     if not isinstance(lstm_taxonomy_result, dict):
-        raise TypeError(
-            "prepare_lstm_product_taxonomy must return a dictionary."
-        )
+        raise TypeError("prepare_lstm_product_taxonomy must return a dictionary.")
 
-    pipeline_audit["completed_stages"].append(
-        "eligible_retail_transactions"
-    )
+    pipeline_audit["completed_stages"].append("eligible_retail_transactions")
 
     # ---------------------------------------------------------
     # 4. Aggregate purchase events
@@ -15708,54 +11766,36 @@ def run_lstm_data_pipeline(
     )
 
     if not isinstance(lstm_event_result, dict):
-        raise TypeError(
-            "build_lstm_purchase_events must return a dictionary."
-        )
+        raise TypeError("build_lstm_purchase_events must return a dictionary.")
 
     if "purchase_events" not in lstm_event_result:
-        raise KeyError(
-            "Event output does not contain 'purchase_events'."
-        )
+        raise KeyError("Event output does not contain 'purchase_events'.")
 
     purchase_events = lstm_event_result["purchase_events"]
 
     if purchase_events.empty:
-        raise ValueError(
-            "No purchase events were generated."
-        )
+        raise ValueError("No purchase events were generated.")
 
-    pipeline_audit["completed_stages"].append(
-        "purchase_event_aggregation"
-    )
+    pipeline_audit["completed_stages"].append("purchase_event_aggregation")
 
     # ---------------------------------------------------------
     # 5. Create next-purchase timing targets
     # ---------------------------------------------------------
 
-    lstm_target_result = create_lstm_purchase_timing_targets(
-        purchase_events
-    )
+    lstm_target_result = create_lstm_purchase_timing_targets(purchase_events)
 
     if not isinstance(lstm_target_result, dict):
-        raise TypeError(
-            "create_lstm_purchase_timing_targets must return a dictionary."
-        )
+        raise TypeError("create_lstm_purchase_timing_targets must return a dictionary.")
 
     if "modeling_targets" not in lstm_target_result:
-        raise KeyError(
-            "Target output does not contain 'modeling_targets'."
-        )
+        raise KeyError("Target output does not contain 'modeling_targets'.")
 
     modeling_targets = lstm_target_result["modeling_targets"]
 
     if modeling_targets.empty:
-        raise ValueError(
-            "No usable next-purchase targets were generated."
-        )
+        raise ValueError("No usable next-purchase targets were generated.")
 
-    pipeline_audit["completed_stages"].append(
-        "next_purchase_target_generation"
-    )
+    pipeline_audit["completed_stages"].append("next_purchase_target_generation")
 
     # ---------------------------------------------------------
     # 6. Generate LSTM sequences and padding masks
@@ -15767,9 +11807,7 @@ def run_lstm_data_pipeline(
     )
 
     if not isinstance(lstm_sequence_result, dict):
-        raise TypeError(
-            "create_lstm_sequences must return a dictionary."
-        )
+        raise TypeError("create_lstm_sequences must return a dictionary.")
 
     required_sequence_keys = {
         "X",
@@ -15780,10 +11818,7 @@ def run_lstm_data_pipeline(
         "sequence_audit",
     }
 
-    missing_sequence_keys = (
-        required_sequence_keys
-        - set(lstm_sequence_result.keys())
-    )
+    missing_sequence_keys = required_sequence_keys - set(lstm_sequence_result.keys())
 
     if missing_sequence_keys:
         raise KeyError(
@@ -15791,18 +11826,15 @@ def run_lstm_data_pipeline(
             f"{sorted(missing_sequence_keys)}"
         )
 
-    sequence_metadata = lstm_sequence_result[
-        "sequence_metadata"
-    ]
+    sequence_metadata = lstm_sequence_result["sequence_metadata"]
 
     required_metadata_columns = {
         "InvoiceDate",
         "Next_Purchase_Date",
     }
 
-    missing_metadata_columns = (
-        required_metadata_columns
-        - set(sequence_metadata.columns)
+    missing_metadata_columns = required_metadata_columns - set(
+        sequence_metadata.columns
     )
 
     if missing_metadata_columns:
@@ -15812,9 +11844,7 @@ def run_lstm_data_pipeline(
             "Update create_lstm_sequences() first."
         )
 
-    pipeline_audit["completed_stages"].append(
-        "lstm_sequence_generation"
-    )
+    pipeline_audit["completed_stages"].append("lstm_sequence_generation")
 
     # ---------------------------------------------------------
     # 7. Chronological split and training-only scaling
@@ -15845,15 +11875,11 @@ def run_lstm_data_pipeline(
         "audit",
     }
 
-    missing_split_keys = (
-        required_split_keys
-        - set(lstm_split_result.keys())
-    )
+    missing_split_keys = required_split_keys - set(lstm_split_result.keys())
 
     if missing_split_keys:
         raise KeyError(
-            "Split output is missing required keys: "
-            f"{sorted(missing_split_keys)}"
+            "Split output is missing required keys: " f"{sorted(missing_split_keys)}"
         )
 
     split_audit = lstm_split_result["audit"]
@@ -15866,20 +11892,13 @@ def run_lstm_data_pipeline(
     ]
 
     failed_checks = [
-        check
-        for check in required_audit_checks
-        if split_audit.get(check) is not True
+        check for check in required_audit_checks if split_audit.get(check) is not True
     ]
 
     if failed_checks:
-        raise AssertionError(
-            "Split validation failed: "
-            f"{failed_checks}"
-        )
+        raise AssertionError("Split validation failed: " f"{failed_checks}")
 
-    pipeline_audit["completed_stages"].append(
-        "chronological_split_and_scaling"
-    )
+    pipeline_audit["completed_stages"].append("chronological_split_and_scaling")
 
     # ---------------------------------------------------------
     # 8. Final summary and return
@@ -15887,51 +11906,41 @@ def run_lstm_data_pipeline(
 
     pipeline_audit["status"] = "success"
 
-    pipeline_audit["final_sequence_count"] = int(
-        len(lstm_sequence_result["X"])
-    )
+    pipeline_audit["final_sequence_count"] = len(lstm_sequence_result["X"])
 
-    pipeline_audit["feature_count"] = int(
-        lstm_sequence_result["X"].shape[2]
-    )
+    pipeline_audit["feature_count"] = int(lstm_sequence_result["X"].shape[2])
 
     pipeline_audit["final_split_audit"] = split_audit
 
     return {
         # Taxonomy
         "taxonomy": taxonomy_result,
-
         # Eligible transaction-level data
         "lstm_taxonomy": lstm_taxonomy_result,
-
         # Invoice-level events
         "purchase_events": purchase_events,
         "event_result": lstm_event_result,
-
         # Target generation
         "target_result": lstm_target_result,
         "modeling_targets": modeling_targets,
-
         # Sequence data
         "sequence_result": lstm_sequence_result,
-
         # Final model-ready datasets
         "split_result": lstm_split_result,
-
         # Overall pipeline report
         "audit": pipeline_audit,
     }
 
 
-
 ################################################################################################
-#===============================================================================================
+# ===============================================================================================
 # ------ FEATURE ENGINEERING SEPARATE FOR PRODUCT PURCHSE TIMMING BEHAVIOUR---------------------
 # -------FOR LSTM Sequential model
-#===============================================================================================
+# ===============================================================================================
 ################################################################################################
 
-#--------- 1. feature selction for autoencoder
+
+# --------- 1. feature selction for autoencoder
 def select_autoencoder_features(
     customer_features: pd.DataFrame,
     excluded_columns: list[str],
@@ -15950,31 +11959,24 @@ def select_autoencoder_features(
     """
 
     if "Customer ID" not in customer_features.columns:
-        raise ValueError(
-            "Customer ID column is missing."
-        )
+        raise ValueError("Customer ID column is missing.")
 
-    customer_ids = customer_features[
-        "Customer ID"
-    ].copy()
+    customer_ids = customer_features["Customer ID"].copy()
 
     X = customer_features.drop(
         columns=excluded_columns,
         errors="ignore",
     ).copy()
 
-    X = X.select_dtypes(
-        include="number"
-    )
+    X = X.select_dtypes(include="number")
 
     if X.empty:
-        raise ValueError(
-            "No numeric features available for the autoencoder."
-        )
+        raise ValueError("No numeric features available for the autoencoder.")
 
     return customer_ids, X
 
-#--------- 2. validate auto encoder feattures
+
+# --------- 2. validate auto encoder feattures
 def validate_autoencoder_features(
     X: pd.DataFrame,
 ) -> dict:
@@ -15993,39 +11995,26 @@ def validate_autoencoder_features(
     if X.columns.duplicated().any():
         raise ValueError("Duplicate feature columns detected.")
 
-    non_numeric = X.select_dtypes(
-        exclude="number"
-    ).columns.tolist()
+    non_numeric = X.select_dtypes(exclude="number").columns.tolist()
 
     if non_numeric:
-        raise ValueError(
-            f"Non-numeric features detected: {non_numeric}"
-        )
+        raise ValueError(f"Non-numeric features detected: {non_numeric}")
 
     if X.isna().any().any():
-        missing = X.columns[
-            X.isna().any()
-        ].tolist()
+        missing = X.columns[X.isna().any()].tolist()
 
-        raise ValueError(
-            f"Missing values detected in: {missing}"
-        )
+        raise ValueError(f"Missing values detected in: {missing}")
 
     values = X.to_numpy(dtype=np.float64)
 
     if not np.isfinite(values).all():
-        infinite_features = X.columns[
-            ~np.isfinite(values).all(axis=0)
-        ].tolist()
+        infinite_features = X.columns[~np.isfinite(values).all(axis=0)].tolist()
 
         raise ValueError(
-            f"Infinite or invalid values detected in: "
-            f"{infinite_features}"
+            f"Infinite or invalid values detected in: " f"{infinite_features}"
         )
 
-    constant_features = X.columns[
-        X.nunique(dropna=False) <= 1
-    ].tolist()
+    constant_features = X.columns[X.nunique(dropna=False) <= 1].tolist()
 
     validation_result = {
         "row_count": len(X),
@@ -16043,7 +12032,8 @@ def validate_autoencoder_features(
 
     return validation_result
 
-#--------- 3. Splitting the dataser into train,validation and test------
+
+# --------- 3. Splitting the dataser into train,validation and test------
 def split_autoencoder_dataset(
     customer_ids: pd.Series,
     X: pd.DataFrame,
@@ -16057,14 +12047,10 @@ def split_autoencoder_dataset(
     """
 
     if len(customer_ids) != len(X):
-        raise ValueError(
-            "Customer IDs and feature rows must have equal lengths."
-        )
+        raise ValueError("Customer IDs and feature rows must have equal lengths.")
 
     if not customer_ids.index.equals(X.index):
-        raise ValueError(
-            "Customer IDs and features must have matching indexes."
-        )
+        raise ValueError("Customer IDs and features must have matching indexes.")
 
     if customer_ids.isna().any():
         raise ValueError("Customer IDs contain missing values.")
@@ -16082,14 +12068,12 @@ def split_autoencoder_dataset(
     )
 
     # Divide the remaining 30% equally: 15% validation, 15% test
-    X_validation, X_test, ids_validation, ids_test = (
-        train_test_split(
-            X_temp,
-            ids_temp,
-            test_size=0.50,
-            random_state=random_state,
-            shuffle=True,
-        )
+    X_validation, X_test, ids_validation, ids_test = train_test_split(
+        X_temp,
+        ids_temp,
+        test_size=0.50,
+        random_state=random_state,
+        shuffle=True,
     )
 
     return {
@@ -16102,7 +12086,7 @@ def split_autoencoder_dataset(
     }
 
 
-#--------- 4. fir scaler on Dataset
+# --------- 4. fir scaler on Dataset
 def scale_autoencoder_features(
     X_train: pd.DataFrame,
     X_validation: pd.DataFrame,
@@ -16116,14 +12100,10 @@ def scale_autoencoder_features(
 
     # Ensure identical features in identical order
     if not X_train.columns.equals(X_validation.columns):
-        raise ValueError(
-            "Training and validation feature columns do not match."
-        )
+        raise ValueError("Training and validation feature columns do not match.")
 
     if not X_train.columns.equals(X_test.columns):
-        raise ValueError(
-            "Training and test feature columns do not match."
-        )
+        raise ValueError("Training and test feature columns do not match.")
 
     scaler = StandardScaler()
 

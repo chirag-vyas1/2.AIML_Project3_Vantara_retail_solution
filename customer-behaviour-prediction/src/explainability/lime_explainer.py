@@ -1,13 +1,12 @@
-
 from pathlib import Path
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-
 from lime.lime_tabular import LimeTabularExplainer
 
-#---- 1. Explainability With Lime
+
+# ---- 1. Explainability With Lime
 def explain_customer_with_lime(
     model,
     X_train: pd.DataFrame,
@@ -60,39 +59,27 @@ def explain_customer_with_lime(
         raise TypeError("X_train must be a pandas DataFrame.")
 
     if not isinstance(customer_features, pd.DataFrame):
-        raise TypeError(
-            "customer_features must be a pandas DataFrame."
-        )
+        raise TypeError("customer_features must be a pandas DataFrame.")
 
     if X_train.empty:
         raise ValueError("X_train is empty.")
 
     if len(customer_features) != 1:
-        raise ValueError(
-            "customer_features must contain exactly one row."
-        )
+        raise ValueError("customer_features must contain exactly one row.")
 
     if not hasattr(model, "predict_proba"):
-        raise TypeError(
-            "The model must support predict_proba()."
-        )
+        raise TypeError("The model must support predict_proba().")
 
     expected_features = (
-        list(feature_names)
-        if feature_names is not None
-        else list(X_train.columns)
+        list(feature_names) if feature_names is not None else list(X_train.columns)
     )
 
     if len(expected_features) != len(set(expected_features)):
         raise ValueError("Feature names contain duplicates.")
 
-    missing_train = [
-        name for name in expected_features
-        if name not in X_train.columns
-    ]
+    missing_train = [name for name in expected_features if name not in X_train.columns]
     missing_customer = [
-        name for name in expected_features
-        if name not in customer_features.columns
+        name for name in expected_features if name not in customer_features.columns
     ]
 
     if missing_train or missing_customer:
@@ -102,9 +89,7 @@ def explain_customer_with_lime(
         )
 
     if num_features < 1 or num_samples < 1:
-        raise ValueError(
-            "num_features and num_samples must be positive."
-        )
+        raise ValueError("num_features and num_samples must be positive.")
 
     # Keep exact model feature order
     X_background = X_train[expected_features].copy()
@@ -115,19 +100,13 @@ def explain_customer_with_lime(
         background_array = X_background.to_numpy(dtype=float)
         customer_array = customer.to_numpy(dtype=float)
     except (TypeError, ValueError) as exc:
-        raise ValueError(
-            "All model features must be numeric."
-        ) from exc
+        raise ValueError("All model features must be numeric.") from exc
 
     if not np.isfinite(background_array).all():
-        raise ValueError(
-            "Training features contain missing or infinite values."
-        )
+        raise ValueError("Training features contain missing or infinite values.")
 
     if not np.isfinite(customer_array).all():
-        raise ValueError(
-            "Customer features contain missing or infinite values."
-        )
+        raise ValueError("Customer features contain missing or infinite values.")
 
     if (
         hasattr(model, "n_features_in_")
@@ -139,9 +118,7 @@ def explain_customer_with_lime(
         )
 
     # 2. Create the LIME explainer using training data
-    class_names = [
-        str(label) for label in model.classes_
-    ]
+    class_names = [str(label) for label in model.classes_]
 
     lime_explainer = LimeTabularExplainer(
         training_data=background_array,
@@ -171,21 +148,16 @@ def explain_customer_with_lime(
 
     probability_dict = {
         str(label): float(probability)
-        for label, probability
-        in zip(model.classes_, probabilities)
+        for label, probability in zip(model.classes_, probabilities)
     }
 
     # 5. Get LIME contributions for the churn class
     if 1 in model.classes_:
-        churn_class_index = int(
-            np.flatnonzero(model.classes_ == 1)[0]
-        )
+        churn_class_index = int(np.flatnonzero(model.classes_ == 1)[0])
     else:
         churn_class_index = 0
 
-    lime_weights = explanation.as_list(
-        label=churn_class_index
-    )
+    lime_weights = explanation.as_list(label=churn_class_index)
 
     contribution_table = pd.DataFrame(
         lime_weights,
@@ -203,9 +175,7 @@ def explain_customer_with_lime(
     )
 
     # 6. Generate the LIME plot
-    figure = explanation.as_pyplot_figure(
-        label=churn_class_index
-    )
+    figure = explanation.as_pyplot_figure(label=churn_class_index)
 
     figure.tight_layout()
 
@@ -217,12 +187,8 @@ def explain_customer_with_lime(
         output_dir = Path(output_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
 
-        plot_path = (
-            output_dir / "lime_customer_explanation.png"
-        )
-        csv_path = (
-            output_dir / "lime_customer_contributions.csv"
-        )
+        plot_path = output_dir / "lime_customer_explanation.png"
+        csv_path = output_dir / "lime_customer_contributions.csv"
 
         figure.savefig(
             plot_path,
@@ -243,9 +209,7 @@ def explain_customer_with_lime(
     # 8. Return reusable results
     return {
         "prediction": int(predicted_class),
-        "prediction_label": (
-            "Churn" if predicted_class == 1 else "No Churn"
-        ),
+        "prediction_label": ("Churn" if predicted_class == 1 else "No Churn"),
         "class_probabilities": probability_dict,
         "explanation": explanation,
         "contributions": contribution_table,
@@ -255,7 +219,7 @@ def explain_customer_with_lime(
     }
 
 
-#---- 2. Comparing lime and Shap
+# ---- 2. Comparing lime and Shap
 def compare_lime_with_shap(
     lime_result: dict,
     shap_explanation,
@@ -274,9 +238,7 @@ def compare_lime_with_shap(
         raise ValueError("top_n must be positive.")
 
     if shap_explanation.values.ndim != 2:
-        raise ValueError(
-            "Expected SHAP values with shape (rows, features)."
-        )
+        raise ValueError("Expected SHAP values with shape (rows, features).")
 
     if not 0 <= customer_idx < shap_explanation.values.shape[0]:
         raise IndexError("Invalid customer_idx.")
@@ -284,14 +246,14 @@ def compare_lime_with_shap(
     shap_features = list(shap_explanation.feature_names)
 
     if not shap_features:
-        raise ValueError(
-            "SHAP explanation must include feature names."
-        )
+        raise ValueError("SHAP explanation must include feature names.")
 
-    shap_row = pd.DataFrame({
-        "Feature": shap_features,
-        "SHAP_Value": shap_explanation.values[customer_idx],
-    })
+    shap_row = pd.DataFrame(
+        {
+            "Feature": shap_features,
+            "SHAP_Value": shap_explanation.values[customer_idx],
+        }
+    )
 
     lime_table = lime_result["contributions"].copy()
 
@@ -300,15 +262,13 @@ def compare_lime_with_shap(
     lime_feature_names = []
     for condition in lime_table["Feature_Condition"]:
         matching_features = [
-            feature for feature in shap_features
-            if condition == feature
-            or condition.startswith(feature + " ")
+            feature
+            for feature in shap_features
+            if condition == feature or condition.startswith(feature + " ")
         ]
 
         lime_feature_names.append(
-            max(matching_features, key=len)
-            if matching_features
-            else None
+            max(matching_features, key=len) if matching_features else None
         )
 
     lime_table["Feature"] = lime_feature_names
@@ -316,25 +276,21 @@ def compare_lime_with_shap(
 
     # Aggregate LIME weights when multiple conditions
     # refer to the same feature.
-    lime_table = lime_table.groupby(
-        "Feature", as_index=False
-    )["LIME_Weight"].sum()
+    lime_table = lime_table.groupby("Feature", as_index=False)["LIME_Weight"].sum()
 
     comparison = shap_row.merge(
         lime_table,
         on="Feature",
         how="outer",
-    ).fillna({
-        "SHAP_Value": 0.0,
-        "LIME_Weight": 0.0,
-    })
+    ).fillna(
+        {
+            "SHAP_Value": 0.0,
+            "LIME_Weight": 0.0,
+        }
+    )
 
-    comparison["Absolute_SHAP"] = (
-        comparison["SHAP_Value"].abs()
-    )
-    comparison["Absolute_LIME"] = (
-        comparison["LIME_Weight"].abs()
-    )
+    comparison["Absolute_SHAP"] = comparison["SHAP_Value"].abs()
+    comparison["Absolute_LIME"] = comparison["LIME_Weight"].abs()
 
     comparison = comparison.sort_values(
         "Absolute_SHAP",

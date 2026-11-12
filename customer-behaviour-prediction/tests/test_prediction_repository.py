@@ -1,14 +1,14 @@
-
 from unittest.mock import MagicMock, patch
 
+import pandas as pd
 import pytest
 
-from src.utils.prediction_repository import (
-    get_customer_features,
-    save_prediction,
-)
+from src.utils.import_customer_features import import_customer_features
+from src.utils.prediction_repository import get_customer_features, save_prediction
 
 MODULE = "src.utils.prediction_repository"
+IMPORT_MODULE = "src.utils.import_customer_features"
+
 
 def test_get_customer_features_success():
     """Return customer features as a dictionary when found."""
@@ -33,6 +33,7 @@ def test_get_customer_features_success():
     connection.execute.assert_called_once()
     engine.dispose.assert_called_once()
 
+
 def test_get_customer_features_customer_not_found():
     """Return None when the customer has no feature record."""
     engine = MagicMock()
@@ -45,17 +46,21 @@ def test_get_customer_features_customer_not_found():
     assert result is None
     engine.dispose.assert_called_once()
 
+
 def test_get_customer_features_disposes_engine_on_error():
     """Dispose of the engine even if the database query fails."""
     engine = MagicMock()
     connection = engine.connect.return_value.__enter__.return_value
     connection.execute.side_effect = RuntimeError("Database query failed")
 
-    with patch(f"{MODULE}.get_database_engine", return_value=engine):
-        with pytest.raises(RuntimeError, match="Database query failed"):
-            get_customer_features(101)
+    with (
+        patch(f"{MODULE}.get_database_engine", return_value=engine),
+        pytest.raises(RuntimeError, match="Database query failed"),
+    ):
+        get_customer_features(101)
 
     engine.dispose.assert_called_once()
+
 
 def test_save_prediction_success():
     """Save a prediction when the customer and features exist."""
@@ -75,25 +80,29 @@ def test_save_prediction_success():
     connection.execute.assert_called_once()
     engine.dispose.assert_called_once()
 
+
 def test_save_prediction_customer_or_features_missing():
     """Raise ValueError if the prediction insert affects no rows."""
     engine = MagicMock()
     connection = engine.begin.return_value.__enter__.return_value
     connection.execute.return_value.rowcount = 0
 
-    with patch(f"{MODULE}.get_database_engine", return_value=engine):
-        with pytest.raises(
-            ValueError,
-            match="Customer 999 does not have both",
-        ):
-            save_prediction(
-                customer_id=999,
-                model_name="lightgbm",
-                predicted_class=1,
-                churn_probability=0.92,
-            )
+    with patch(
+        f"{MODULE}.get_database_engine",
+        return_value=engine,
+    ), pytest.raises(
+        ValueError,
+        match="Customer 999 does not have both",
+    ):
+        save_prediction(
+            customer_id=999,
+            model_name="lightgbm",
+            predicted_class=1,
+            churn_probability=0.92,
+        )
 
     engine.dispose.assert_called_once()
+
 
 def test_save_prediction_disposes_engine_on_database_error():
     """Dispose of the engine if inserting the prediction fails."""
@@ -101,33 +110,21 @@ def test_save_prediction_disposes_engine_on_database_error():
     connection = engine.begin.return_value.__enter__.return_value
     connection.execute.side_effect = RuntimeError("Insert failed")
 
-    with patch(f"{MODULE}.get_database_engine", return_value=engine):
-        with pytest.raises(RuntimeError, match="Insert failed"):
-            save_prediction(
-                customer_id=101,
-                model_name="lightgbm",
-                predicted_class=0,
-                churn_probability=0.15,
-            )
+    with (
+        patch(f"{MODULE}.get_database_engine", return_value=engine),
+        pytest.raises(RuntimeError, match="Insert failed"),
+    ):
+        save_prediction(
+            customer_id=101,
+            model_name="lightgbm",
+            predicted_class=0,
+            churn_probability=0.15,
+        )
 
     engine.dispose.assert_called_once()
 
 
-#================================================================================================================
-import pandas as pd
-from unittest.mock import MagicMock, patch
-
-from src.utils.import_customer_features import import_customer_features
-
-
-import pandas as pd
-import pytest
-from unittest.mock import MagicMock, patch
-
-from src.utils.import_customer_features import import_customer_features
-
-
-IMPORT_MODULE = "src.utils.import_customer_features"
+# ================================================================================================================
 
 
 def make_customer_features_csv(tmp_path, rows=None):
@@ -172,9 +169,7 @@ def make_customer_features_csv(tmp_path, rows=None):
     data = rows if rows is not None else [row]
 
     project_root = tmp_path
-    csv_path = (
-        project_root / "data" / "processed" / "customer_features.csv"
-    )
+    csv_path = project_root / "data" / "processed" / "customer_features.csv"
     csv_path.parent.mkdir(parents=True, exist_ok=True)
     pd.DataFrame(data).to_csv(csv_path, index=False)
 
@@ -186,27 +181,24 @@ def test_import_customer_features_file_not_found(tmp_path):
     with patch(
         f"{IMPORT_MODULE}.get_project_root",
         return_value=tmp_path,
+    ), pytest.raises(
+        FileNotFoundError,
+        match="Customer features CSV not found",
     ):
-        with pytest.raises(
-            FileNotFoundError,
-            match="Customer features CSV not found",
-        ):
-            import_customer_features()
+
+        import_customer_features()
 
 
 def test_import_customer_features_missing_columns(tmp_path):
     """Reject CSV files that lack required columns."""
     csv_path, row = make_customer_features_csv(tmp_path)
-    pd.DataFrame([{"Customer ID": row["Customer ID"]}]).to_csv(
-        csv_path, index=False
-    )
+    pd.DataFrame([{"Customer ID": row["Customer ID"]}]).to_csv(csv_path, index=False)
 
     with patch(
         f"{IMPORT_MODULE}.get_project_root",
         return_value=tmp_path,
-    ):
-        with pytest.raises(ValueError, match="Missing CSV columns"):
-            import_customer_features()
+    ), pytest.raises(ValueError, match="Missing CSV columns"):
+        import_customer_features()
 
 
 @pytest.mark.parametrize(
@@ -216,9 +208,7 @@ def test_import_customer_features_missing_columns(tmp_path):
         ({"Customer ID": 101}, "Customer ID contains duplicates"),
     ],
 )
-def test_import_customer_features_invalid_customer_ids(
-    tmp_path, change, message
-):
+def test_import_customer_features_invalid_customer_ids(tmp_path, change, message):
     """Reject missing or duplicated customer IDs."""
     _, row = make_customer_features_csv(tmp_path)
     first = row.copy()
@@ -235,9 +225,8 @@ def test_import_customer_features_invalid_customer_ids(
     with patch(
         f"{IMPORT_MODULE}.get_project_root",
         return_value=tmp_path,
-    ):
-        with pytest.raises(ValueError, match=message):
-            import_customer_features()
+    ), pytest.raises(ValueError, match=message):
+        import_customer_features()
 
 
 @pytest.mark.parametrize(
@@ -246,7 +235,7 @@ def test_import_customer_features_invalid_customer_ids(
         (
             "First_Purchase_Date",
             "not-a-date",
-             "Unknown datetime string format",
+            "Unknown datetime string format",
         ),
         (
             "Frequency",
@@ -260,9 +249,7 @@ def test_import_customer_features_invalid_customer_ids(
         ),
     ],
 )
-def test_import_customer_features_invalid_values(
-    tmp_path, column, value, message
-):
+def test_import_customer_features_invalid_values(tmp_path, column, value, message):
     """Reject invalid dates and non-integer count fields."""
     _, row = make_customer_features_csv(tmp_path)
     row[column] = value
@@ -271,9 +258,8 @@ def test_import_customer_features_invalid_values(
     with patch(
         f"{IMPORT_MODULE}.get_project_root",
         return_value=tmp_path,
-    ):
-        with pytest.raises(ValueError, match=message):
-            import_customer_features()
+    ), pytest.raises(ValueError, match=message):
+        import_customer_features()
 
 
 def test_import_customer_features_success(tmp_path, capsys):
@@ -311,14 +297,17 @@ def test_import_customer_features_disposes_engine_on_error(tmp_path):
     connection = engine.begin.return_value.__enter__.return_value
     connection.execute.side_effect = RuntimeError("Database insert failed")
 
-    with patch(
-        f"{IMPORT_MODULE}.get_project_root",
-        return_value=tmp_path,
-    ), patch(
-        f"{IMPORT_MODULE}.get_database_engine",
-        return_value=engine,
+    with (
+        patch(
+            f"{IMPORT_MODULE}.get_project_root",
+            return_value=tmp_path,
+        ),
+        patch(
+            f"{IMPORT_MODULE}.get_database_engine",
+            return_value=engine,
+        ),
+        pytest.raises(RuntimeError, match="Database insert failed"),
     ):
-        with pytest.raises(RuntimeError, match="Database insert failed"):
-            import_customer_features()
+        import_customer_features()
 
     engine.dispose.assert_called_once()

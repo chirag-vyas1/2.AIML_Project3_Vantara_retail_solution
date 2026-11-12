@@ -5,12 +5,14 @@ import pandas as pd
 import requests
 import yaml
 
+
 ################################################################################################
 # -------------------------------- downloading dataset  ----------------------------------------
 ################################################################################################
 def get_project_root() -> Path:
     """Return the root directory of the project."""
     return Path(__file__).resolve().parents[2]
+
 
 def load_config() -> dict:
     """Load project configuration from config.yaml."""
@@ -19,6 +21,7 @@ def load_config() -> dict:
 
     with open(config_path, "r", encoding="utf-8") as file:
         return yaml.safe_load(file)
+
 
 def download_online_retail_ii() -> Path:
     """
@@ -137,14 +140,10 @@ def load_dataframe(
     input_path = project_root / directory / filename
 
     if not input_path.exists():
-        raise FileNotFoundError(
-            f"Data file not found: {input_path}"
-        )
+        raise FileNotFoundError(f"Data file not found: {input_path}")
 
     if input_path.suffix.lower() != ".csv":
-        raise ValueError(
-            "Only .csv files are supported."
-        )
+        raise ValueError("Only .csv files are supported.")
 
     df = pd.read_csv(input_path)
 

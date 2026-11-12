@@ -1,5 +1,5 @@
-
 from sqlalchemy import text
+
 from src.utils.database import get_database_engine
 
 
@@ -48,9 +48,11 @@ def get_customer_features(customer_id: int) -> dict | None:
 
     try:
         with engine.connect() as connection:
-            row = connection.execute(
-                query, {"customer_id": customer_id}
-            ).mappings().first()
+            row = (
+                connection.execute(query, {"customer_id": customer_id})
+                .mappings()
+                .first()
+            )
 
             return dict(row) if row is not None else None
     finally:

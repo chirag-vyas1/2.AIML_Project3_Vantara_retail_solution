@@ -1,4 +1,5 @@
 from pathlib import Path
+
 import joblib
 import numpy as np
 import pandas as pd
@@ -7,6 +8,7 @@ import pandas as pd
 def get_project_root() -> Path:
     """Return the project root directory."""
     return Path(__file__).resolve().parents[2]
+
 
 """def save_model_artifact(
     model,
@@ -19,7 +21,7 @@ def get_project_root() -> Path:
     preprocessing=None,
     metadata=None,
 ):
-    """"""
+    """ """
     Save a trained model and its associated experiment information.
 
     Parameters
@@ -56,7 +58,7 @@ def get_project_root() -> Path:
     -------
     str
         Path of the saved model artifact.
-    """"""
+    """ """
 
     project_root = get_project_root()
 
@@ -96,6 +98,7 @@ def get_project_root() -> Path:
     return str(model_path)
 """
 
+
 def save_model_artifact(
     model,
     model_name,
@@ -112,10 +115,7 @@ def save_model_artifact(
     project_root = get_project_root()
 
     model_dir = (
-        project_root
-        / config["model_artifacts"]["model_dir"]
-        / model_type
-        / model_name
+        project_root / config["model_artifacts"]["model_dir"] / model_type / model_name
     )
     model_dir.mkdir(parents=True, exist_ok=True)
 
@@ -143,9 +143,7 @@ def save_model_artifact(
     # Save preprocessing and experiment details for either model type.
     preprocessing_path = None
     if preprocessing is not None:
-        preprocessing_path = (
-            model_dir / f"{model_name}_preprocessing.joblib"
-        )
+        preprocessing_path = model_dir / f"{model_name}_preprocessing.joblib"
         joblib.dump(preprocessing, preprocessing_path)
 
     metadata_path = model_dir / f"{model_name}_metadata.joblib"
@@ -163,9 +161,7 @@ def save_model_artifact(
 
     return {
         "model_path": str(model_path),
-        "preprocessing_path": (
-            str(preprocessing_path) if preprocessing_path else None
-        ),
+        "preprocessing_path": (str(preprocessing_path) if preprocessing_path else None),
         "metadata_path": str(metadata_path),
     }
 
@@ -180,9 +176,8 @@ def load_model_artifacts(
     """Load and validate a model using artifact settings from YAML."""
 
     from pathlib import Path
+
     import joblib
-    import numpy as np
-    import pandas as pd
 
     # 1. Read artifact configuration from YAML
     try:
@@ -193,31 +188,23 @@ def load_model_artifacts(
         expected_estimator = artifact_config["estimator_class"]
 
     except KeyError as exc:
-        raise KeyError(
-            f"Missing model artifact configuration: {exc}"
-        ) from exc
+        raise KeyError(f"Missing model artifact configuration: {exc}") from exc
 
     model_name = artifact_config["model_name"]
     expected_estimator = artifact_config["estimator_class"]
     artifact_format = artifact_config.get("artifact_format", "joblib")
 
     if artifact_format != "joblib":
-        raise ValueError(
-            f"Unsupported artifact format: {artifact_format}"
-        )
+        raise ValueError(f"Unsupported artifact format: {artifact_format}")
 
     # 2. Resolve artifact path
     project_root = Path(get_project_root()).resolve()
 
-    artifact_dir = (
-        project_root / model_root / model_type / model_name
-    )
+    artifact_dir = project_root / model_root / model_type / model_name
     artifact_path = artifact_dir / f"{model_name}_artifact.joblib"
 
     if not artifact_path.is_file():
-        raise FileNotFoundError(
-            f"Model artifact not found: {artifact_path}"
-        )
+        raise FileNotFoundError(f"Model artifact not found: {artifact_path}")
 
     # 3. Load artifact
     artifact = joblib.load(artifact_path)
@@ -226,22 +213,24 @@ def load_model_artifacts(
         raise TypeError("The saved artifact must be a dictionary.")
 
     required_keys = {
-        "model", "model_name", "model_type", "best_params",
-        "evaluation_results", "preprocessing", "metadata",
+        "model",
+        "model_name",
+        "model_type",
+        "best_params",
+        "evaluation_results",
+        "preprocessing",
+        "metadata",
     }
 
     missing_keys = required_keys - set(artifact)
     if missing_keys:
-        raise ValueError(
-            f"Artifact is missing keys: {sorted(missing_keys)}"
-        )
+        raise ValueError(f"Artifact is missing keys: {sorted(missing_keys)}")
 
     model = artifact["model"]
 
     if type(model).__name__ != expected_estimator:
         raise TypeError(
-            f"Expected {expected_estimator}, "
-            f"found {type(model).__name__}."
+            f"Expected {expected_estimator}, " f"found {type(model).__name__}."
         )
 
     if artifact["model_name"] != model_name:
@@ -280,14 +269,9 @@ def load_model_artifacts(
             raise ValueError("X_validation must not be empty.")
 
         if feature_names is None:
-            raise ValueError(
-                "Model feature names are unavailable for validation."
-            )
+            raise ValueError("Model feature names are unavailable for validation.")
 
-        missing = [
-            name for name in feature_names
-            if name not in X_validation.columns
-        ]
+        missing = [name for name in feature_names if name not in X_validation.columns]
         if missing:
             raise ValueError(f"Missing model features: {missing}")
 
@@ -296,10 +280,7 @@ def load_model_artifacts(
         if X_check.isnull().any().any():
             raise ValueError("Validation data contains missing values.")
 
-        if not all(
-            pd.api.types.is_numeric_dtype(dtype)
-            for dtype in X_check.dtypes
-        ):
+        if not all(pd.api.types.is_numeric_dtype(dtype) for dtype in X_check.dtypes):
             raise TypeError("All model features must be numeric.")
 
         if not np.isfinite(X_check.to_numpy(dtype=float)).all():
@@ -323,9 +304,7 @@ def load_model_artifacts(
         "n_features": n_features,
         "best_params": artifact["best_params"],
         "model_parameters": (
-            model.get_params(deep=False)
-            if hasattr(model, "get_params")
-            else None
+            model.get_params(deep=False) if hasattr(model, "get_params") else None
         ),
         "preprocessing": artifact["preprocessing"],
         "evaluation_results": artifact["evaluation_results"],

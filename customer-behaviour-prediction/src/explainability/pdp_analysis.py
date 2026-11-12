@@ -1,10 +1,8 @@
-
 from pathlib import Path
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-
 from sklearn.inspection import PartialDependenceDisplay
 
 
@@ -61,13 +59,7 @@ def generate_pdp_analysis(
         CSV paths and computed PDP tables.
     """
 
-    from pathlib import Path
-
-    import numpy as np
     import pandas as pd
-    import matplotlib.pyplot as plt
-
-    from sklearn.inspection import PartialDependenceDisplay
 
     # --------------------------------------------------
     # 1. Validate input data
@@ -82,33 +74,22 @@ def generate_pdp_analysis(
         raise ValueError("X contains duplicate column names.")
 
     if not hasattr(model, "predict_proba"):
-        raise TypeError(
-            "The model must support predict_proba()."
-        )
+        raise TypeError("The model must support predict_proba().")
 
     expected_features = (
-        list(feature_names)
-        if feature_names is not None
-        else list(X.columns)
+        list(feature_names) if feature_names is not None else list(X.columns)
     )
 
     if not expected_features:
         raise ValueError("No model features were provided.")
 
     if len(expected_features) != len(set(expected_features)):
-        raise ValueError(
-            "Expected feature names contain duplicates."
-        )
+        raise ValueError("Expected feature names contain duplicates.")
 
-    missing_features = [
-        name for name in expected_features
-        if name not in X.columns
-    ]
+    missing_features = [name for name in expected_features if name not in X.columns]
 
     if missing_features:
-        raise ValueError(
-            f"Missing model features: {missing_features}"
-        )
+        raise ValueError(f"Missing model features: {missing_features}")
 
     # Preserve the exact feature order expected by the model.
     X_pdp = X.loc[:, expected_features].copy()
@@ -117,61 +98,43 @@ def generate_pdp_analysis(
     try:
         X_pdp = X_pdp.astype("float64")
     except (TypeError, ValueError) as exc:
-        raise ValueError(
-            "All PDP input features must be numeric."
-        ) from exc
+        raise ValueError("All PDP input features must be numeric.") from exc
 
     values = X_pdp.to_numpy(dtype=np.float64)
 
     if not np.isfinite(values).all():
-        raise ValueError(
-            "PDP input contains missing or infinite values."
-        )
+        raise ValueError("PDP input contains missing or infinite values.")
 
-    if (
-        hasattr(model, "n_features_in_")
-        and X_pdp.shape[1] != model.n_features_in_
-    ):
+    if hasattr(model, "n_features_in_") and X_pdp.shape[1] != model.n_features_in_:
         raise ValueError(
             f"Model expects {model.n_features_in_} features, "
             f"but received {X_pdp.shape[1]}."
         )
 
     if grid_resolution < 2:
-        raise ValueError(
-            "grid_resolution must be at least 2."
-        )
+        raise ValueError("grid_resolution must be at least 2.")
 
     if max_samples is not None:
         if not isinstance(max_samples, (int, np.integer)):
-            raise TypeError(
-                "max_samples must be an integer or None."
-            )
+            raise TypeError("max_samples must be an integer or None.")
         if max_samples < 1:
-            raise ValueError(
-                "max_samples must be positive or None."
-            )
+            raise ValueError("max_samples must be positive or None.")
 
     # --------------------------------------------------
     # 2. Validate target class
     # --------------------------------------------------
     if not hasattr(model, "classes_"):
-        raise ValueError(
-            "The fitted model must expose classes_."
-        )
+        raise ValueError("The fitted model must expose classes_.")
 
     class_labels = list(model.classes_)
 
     matching_classes = [
-        index
-        for index, label in enumerate(class_labels)
-        if label == target_class
+        index for index, label in enumerate(class_labels) if label == target_class
     ]
 
     if not matching_classes:
         raise ValueError(
-            f"Target class {target_class!r} is not in "
-            f"model classes {class_labels}."
+            f"Target class {target_class!r} is not in " f"model classes {class_labels}."
         )
 
     # sklearn expects the index of the desired probability
@@ -188,32 +151,21 @@ def generate_pdp_analysis(
             "Frequency",
         ]
 
-        features = [
-            name for name in defaults
-            if name in X_pdp.columns
-        ]
+        features = [name for name in defaults if name in X_pdp.columns]
     else:
         features = list(features)
 
     if not features:
-        raise ValueError(
-            "No valid PDP features were selected."
-        )
+        raise ValueError("No valid PDP features were selected.")
 
     if len(features) != len(set(features)):
-        raise ValueError(
-            "The requested PDP features contain duplicates."
-        )
+        raise ValueError("The requested PDP features contain duplicates.")
 
-    missing_pdp_features = [
-        name for name in features
-        if name not in X_pdp.columns
-    ]
+    missing_pdp_features = [name for name in features if name not in X_pdp.columns]
 
     if missing_pdp_features:
         raise ValueError(
-            f"Requested PDP features are missing: "
-            f"{missing_pdp_features}"
+            f"Requested PDP features are missing: " f"{missing_pdp_features}"
         )
 
     # --------------------------------------------------
@@ -257,39 +209,28 @@ def generate_pdp_analysis(
             # Extract the computed PDP grid and average values.
             pdp_result = display.pd_results[0]
 
-            grid_values = np.asarray(
-                pdp_result["grid_values"][0]
-            ).reshape(-1)
+            grid_values = np.asarray(pdp_result["grid_values"][0]).reshape(-1)
 
             # The result is already restricted to the requested
             # target class. Do not index it again by class index.
-            average_values = np.asarray(
-                pdp_result["average"]
-            ).reshape(-1)
+            average_values = np.asarray(pdp_result["average"]).reshape(-1)
 
             if len(grid_values) != len(average_values):
-                raise ValueError(
-                    f"PDP grid/value length mismatch for {feature}."
-                )
+                raise ValueError(f"PDP grid/value length mismatch for {feature}.")
 
             if not np.isfinite(average_values).all():
-                raise ValueError(
-                    f"PDP values for {feature} are not finite."
-                )
+                raise ValueError(f"PDP values for {feature} are not finite.")
 
-            pdp_table = pd.DataFrame({
-                feature: grid_values,
-                "Average_Predicted_Probability": average_values,
-            })
-
-            ax.set_title(
-                f"Partial Dependence: {feature}"
+            pdp_table = pd.DataFrame(
+                {
+                    feature: grid_values,
+                    "Average_Predicted_Probability": average_values,
+                }
             )
+
+            ax.set_title(f"Partial Dependence: {feature}")
             ax.set_xlabel(feature)
-            ax.set_ylabel(
-                f"Average predicted probability "
-                f"(class {target_class})"
-            )
+            ax.set_ylabel(f"Average predicted probability " f"(class {target_class})")
             ax.set_ylim(0, 1)
 
             fig.tight_layout()
@@ -302,21 +243,12 @@ def generate_pdp_analysis(
 
             if output_dir is not None:
                 safe_feature_name = "".join(
-                    char
-                    if char.isalnum() or char in "_-"
-                    else "_"
-                    for char in feature
+                    char if char.isalnum() or char in "_-" else "_" for char in feature
                 )
 
-                plot_path = (
-                    output_dir
-                    / f"pdp_{safe_feature_name}.png"
-                )
+                plot_path = output_dir / f"pdp_{safe_feature_name}.png"
 
-                csv_path = (
-                    output_dir
-                    / f"pdp_{safe_feature_name}.csv"
-                )
+                csv_path = output_dir / f"pdp_{safe_feature_name}.csv"
 
                 fig.savefig(
                     plot_path,

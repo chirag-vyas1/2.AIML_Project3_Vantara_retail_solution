@@ -1,5 +1,3 @@
-
-from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -39,12 +37,11 @@ def test_load_config_file_not_found(tmp_path):
     with patch(
         "src.utils.config_loader.get_project_root",
         return_value=tmp_path,
+    ), pytest.raises(
+        FileNotFoundError,
+        match="Configuration file not found",
     ):
-        with pytest.raises(
-            FileNotFoundError,
-            match="Configuration file not found",
-        ):
-            load_config()
+        load_config()
 
 
 def test_load_config_empty_yaml(tmp_path):
@@ -59,12 +56,11 @@ def test_load_config_empty_yaml(tmp_path):
     with patch(
         "src.utils.config_loader.get_project_root",
         return_value=tmp_path,
+    ), pytest.raises(
+        ValueError,
+        match="YAML configuration must contain a mapping",
     ):
-        with pytest.raises(
-            ValueError,
-            match="YAML configuration must contain a mapping",
-        ):
-            load_config()
+        load_config()
 
 
 def test_load_config_yaml_list_instead_of_mapping(tmp_path):
@@ -79,9 +75,8 @@ def test_load_config_yaml_list_instead_of_mapping(tmp_path):
     with patch(
         "src.utils.config_loader.get_project_root",
         return_value=tmp_path,
+    ), pytest.raises(
+        ValueError,
+        match="YAML configuration must contain a mapping",
     ):
-        with pytest.raises(
-            ValueError,
-            match="YAML configuration must contain a mapping",
-        ):
-            load_config()
+        load_config()

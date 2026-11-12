@@ -1,34 +1,24 @@
-
-import pandas as pd
-from IPython.display import display
-
-from sklearn.linear_model import LogisticRegression
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.svm import SVC
 import time
-from sklearn.metrics import accuracy_score
-from sklearn.metrics import precision_score
-from sklearn.metrics import recall_score
-from sklearn.metrics import f1_score
-from sklearn.metrics import roc_auc_score
-from sklearn.metrics import confusion_matrix
 
+from lightgbm import LGBMClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import (
+    accuracy_score,
+    confusion_matrix,
+    f1_score,
+    precision_score,
+    recall_score,
+    roc_auc_score,
+)
+
+# ------ 3. library for cross validation ------
+from sklearn.model_selection import RandomizedSearchCV
+from sklearn.svm import SVC
+from sklearn.tree import DecisionTreeClassifier
 
 # ------- 1. Model Registry for Classification Models -------
-from sklearn.linear_model import LogisticRegression
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.svm import SVC
-
 from xgboost import XGBClassifier
-from lightgbm import LGBMClassifier
-
-
-#------ 3. library for cross validation ------
-from sklearn.model_selection import RandomizedSearchCV
-
-
 
 
 # ------- 1. Model Registry for -------
@@ -40,9 +30,7 @@ def get_model_registry(config: dict) -> dict:
     are included in the registry.
     """
 
-    classification_config = (
-        config["model"]["classification"]
-    )
+    classification_config = config["model"]["classification"]
 
     model_registry = {}
 
@@ -78,7 +66,8 @@ def get_model_registry(config: dict) -> dict:
 
     return model_registry
 
-#-------- 2. building baseline models ----
+
+# -------- 2. building baseline models ----
 def build_classification_model(
     model_name: str,
     config: dict,
@@ -101,28 +90,20 @@ def build_classification_model(
         Configured classification model.
     """
 
-    classification_config = (
-        config["model"]["classification"]
-    )
+    classification_config = config["model"]["classification"]
 
     if model_name not in classification_config:
-        raise ValueError(
-            f"Unknown classification model: {model_name}"
-        )
+        raise ValueError(f"Unknown classification model: {model_name}")
 
     model_config = classification_config[model_name]
 
     if not model_config.get("enabled", False):
-        raise ValueError(
-            f"Classification model '{model_name}' is disabled."
-        )
+        raise ValueError(f"Classification model '{model_name}' is disabled.")
 
     model_registry = get_model_registry(config)
 
     if model_name not in model_registry:
-        raise ValueError(
-            f"Model '{model_name}' is not available in the registry."
-        )
+        raise ValueError(f"Model '{model_name}' is not available in the registry.")
 
     model_class = model_registry[model_name]["model_class"]
 
@@ -131,14 +112,12 @@ def build_classification_model(
         {},
     )
 
-    model = model_class(
-        **base_parameters
-    )
+    model = model_class(**base_parameters)
 
     return model
 
 
-#-------- 3. training individual basemodel  function ----------
+# -------- 3. training individual basemodel  function ----------
 def train_classification_model(
     model,
     X_train,
@@ -172,8 +151,7 @@ def train_classification_model(
 
     if len(X_train) != len(y_train):
         raise ValueError(
-            "X_train and y_train must contain "
-            "the same number of observations."
+            "X_train and y_train must contain " "the same number of observations."
         )
 
     start_time = time.perf_counter()
@@ -185,9 +163,7 @@ def train_classification_model(
 
     end_time = time.perf_counter()
 
-    training_time_seconds = (
-        end_time - start_time
-    )
+    training_time_seconds = end_time - start_time
 
     return (
         model,
@@ -195,7 +171,7 @@ def train_classification_model(
     )
 
 
-#-------- 4. train baseline for all six classification model-------
+# -------- 4. train baseline for all six classification model-------
 def train_baseline_classification_models(
     config: dict,
     X_train,
@@ -212,14 +188,11 @@ def train_baseline_classification_models(
         Dictionary containing fitted models and training times.
     """
 
-    classification_config = (
-        config["model"]["classification"]
-    )
+    classification_config = config["model"]["classification"]
 
     model_names = [
         model_name
-        for model_name, model_config
-        in classification_config.items()
+        for model_name, model_config in classification_config.items()
         if model_config.get("enabled", False)
     ]
 
@@ -232,9 +205,8 @@ def train_baseline_classification_models(
             config=config,
         )
 
-        use_scaled_features = (
-            classification_config[model_name]
-            .get("feature_scaling", False)
+        use_scaled_features = classification_config[model_name].get(
+            "feature_scaling", False
         )
 
         if use_scaled_features:
@@ -242,12 +214,10 @@ def train_baseline_classification_models(
         else:
             X_train_model = X_train
 
-        fitted_model, training_time = (
-            train_classification_model(
-                model=model,
-                X_train=X_train_model,
-                y_train=y_train,
-            )
+        fitted_model, training_time = train_classification_model(
+            model=model,
+            X_train=X_train_model,
+            y_train=y_train,
         )
 
         trained_models[model_name] = {
@@ -259,7 +229,7 @@ def train_baseline_classification_models(
     return trained_models
 
 
-#------- 5. Evaluate the classification model ----------
+# ------- 5. Evaluate the classification model ----------
 def evaluate_classification_model(
     model,
     X_data,
@@ -293,8 +263,7 @@ def evaluate_classification_model(
 
     if len(X_data) != len(y_data):
         raise ValueError(
-            "X_data and y_data must contain "
-            "the same number of observations."
+            "X_data and y_data must contain " "the same number of observations."
         )
 
     y_pred = model.predict(X_data)
@@ -324,15 +293,11 @@ def evaluate_classification_model(
 
     if hasattr(model, "predict_proba"):
 
-        y_score = model.predict_proba(
-            X_data
-        )[:, 1]
+        y_score = model.predict_proba(X_data)[:, 1]
 
     else:
 
-        y_score = model.decision_function(
-            X_data
-        )
+        y_score = model.decision_function(X_data)
 
     roc_auc = roc_auc_score(
         y_data,
@@ -354,7 +319,7 @@ def evaluate_classification_model(
     }
 
 
-#--------6. Evalaution for all six-----
+# --------6. Evalaution for all six-----
 def evaluate_baseline_classification_models(
     baseline_models: dict,
     X_validation,
@@ -419,8 +384,7 @@ def evaluate_baseline_classification_models(
     return evaluation_results
 
 
-
-#---------7.hyperparameter tuning random frorest ------
+# ---------7.hyperparameter tuning random frorest ------
 def tune_classification_model(
     model,
     hyperparameter_space,
@@ -475,14 +439,11 @@ def tune_classification_model(
 
     if len(X_train) != len(y_train):
         raise ValueError(
-            "X_train and y_train must contain "
-            "the same number of observations."
+            "X_train and y_train must contain " "the same number of observations."
         )
 
     if not hyperparameter_space:
-        raise ValueError(
-            "hyperparameter_space cannot be empty."
-        )
+        raise ValueError("hyperparameter_space cannot be empty.")
 
     search = RandomizedSearchCV(
         estimator=model,

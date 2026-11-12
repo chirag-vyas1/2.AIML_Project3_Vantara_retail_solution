@@ -1,17 +1,14 @@
-from sklearn.linear_model import LinearRegression, Ridge
-from sklearn.tree import DecisionTreeRegressor
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.svm import SVR
-from xgboost import XGBRegressor
-from lightgbm import LGBMRegressor
 import time
-from sklearn.metrics import mean_absolute_error
-from sklearn.metrics import mean_squared_error
-from sklearn.metrics import r2_score
+
 import numpy as np
+from lightgbm import LGBMRegressor
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.linear_model import LinearRegression, Ridge
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.model_selection import RandomizedSearchCV
-
-
+from sklearn.svm import SVR
+from sklearn.tree import DecisionTreeRegressor
+from xgboost import XGBRegressor
 
 
 # ------- 1. Model Registry for Regression -------
@@ -25,9 +22,7 @@ def get_regression_model_registry(
     are included in the registry.
     """
 
-    regression_config = (
-        config["model"]["regression"]
-    )
+    regression_config = config["model"]["regression"]
 
     model_registry = {}
 
@@ -68,6 +63,7 @@ def get_regression_model_registry(
 
     return model_registry
 
+
 # ------- 2. Model Building for Regression -------
 def build_regression_model(
     model_name: str,
@@ -91,28 +87,20 @@ def build_regression_model(
         Configured regression model.
     """
 
-    regression_config = (
-        config["model"]["regression"]
-    )
+    regression_config = config["model"]["regression"]
 
     if model_name not in regression_config:
-        raise ValueError(
-            f"Unknown regression model: {model_name}"
-        )
+        raise ValueError(f"Unknown regression model: {model_name}")
 
     model_config = regression_config[model_name]
 
     if not model_config.get("enabled", False):
-        raise ValueError(
-            f"Regression model '{model_name}' is disabled."
-        )
+        raise ValueError(f"Regression model '{model_name}' is disabled.")
 
     model_registry = get_regression_model_registry(config)
 
     if model_name not in model_registry:
-        raise ValueError(
-            f"Model '{model_name}' is not available in the registry."
-        )
+        raise ValueError(f"Model '{model_name}' is not available in the registry.")
 
     model_class = model_registry[model_name]["model_class"]
 
@@ -121,11 +109,10 @@ def build_regression_model(
         {},
     )
 
-    model = model_class(
-        **base_parameters
-    )
+    model = model_class(**base_parameters)
 
     return model
+
 
 # ------- 3. Training Individual Regression Model -------
 def train_regression_model(
@@ -150,8 +137,7 @@ def train_regression_model(
 
     if len(X_train) != len(y_train):
         raise ValueError(
-            "X_train and y_train must contain "
-            "the same number of observations."
+            "X_train and y_train must contain " "the same number of observations."
         )
 
     start_time = time.perf_counter()
@@ -163,11 +149,10 @@ def train_regression_model(
 
     end_time = time.perf_counter()
 
-    training_time_seconds = (
-        end_time - start_time
-    )
+    training_time_seconds = end_time - start_time
 
     return model, training_time_seconds
+
 
 # ------- 4. Train Baseline Regression Models -------
 def train_baseline_regression_models(
@@ -187,14 +172,11 @@ def train_baseline_regression_models(
         training times.
     """
 
-    regression_config = (
-        config["model"]["regression"]
-    )
+    regression_config = config["model"]["regression"]
 
     model_names = [
         model_name
-        for model_name, model_config
-        in regression_config.items()
+        for model_name, model_config in regression_config.items()
         if model_config.get("enabled", False)
     ]
 
@@ -207,9 +189,8 @@ def train_baseline_regression_models(
             config=config,
         )
 
-        use_scaled_features = (
-            regression_config[model_name]
-            .get("feature_scaling", False)
+        use_scaled_features = regression_config[model_name].get(
+            "feature_scaling", False
         )
 
         if use_scaled_features:
@@ -217,12 +198,10 @@ def train_baseline_regression_models(
         else:
             X_train_model = X_train
 
-        fitted_model, training_time = (
-            train_regression_model(
-                model=model,
-                X_train=X_train_model,
-                y_train=y_train,
-            )
+        fitted_model, training_time = train_regression_model(
+            model=model,
+            X_train=X_train_model,
+            y_train=y_train,
         )
 
         trained_models[model_name] = {
@@ -268,8 +247,7 @@ def evaluate_regression_model(
 
     if len(X_data) != len(y_data):
         raise ValueError(
-            "X_data and y_data must contain "
-            "the same number of observations."
+            "X_data and y_data must contain " "the same number of observations."
         )
 
     y_pred = model.predict(X_data)
@@ -297,6 +275,7 @@ def evaluate_regression_model(
         "r2": r2,
     }
 
+
 # ------- 6. Evaluate All Baseline Regression Models -------
 def evaluate_baseline_regression_models(
     baseline_models: dict,
@@ -321,9 +300,7 @@ def evaluate_baseline_regression_models(
         raise ValueError("X_validation is empty.")
 
     if X_validation_scaled.empty:
-        raise ValueError(
-            "X_validation_scaled is empty."
-        )
+        raise ValueError("X_validation_scaled is empty.")
 
     if y_validation.empty:
         raise ValueError("y_validation is empty.")
@@ -393,14 +370,11 @@ def tune_regression_model(
 
     if len(X_train) != len(y_train):
         raise ValueError(
-            "X_train and y_train must contain "
-            "the same number of observations."
+            "X_train and y_train must contain " "the same number of observations."
         )
 
     if not hyperparameter_space:
-        raise ValueError(
-            "hyperparameter_space cannot be empty."
-        )
+        raise ValueError("hyperparameter_space cannot be empty.")
 
     search = RandomizedSearchCV(
         estimator=model,
@@ -428,29 +402,23 @@ def tune_regression_model(
     )
 
 
-
 ########################################################################################
-#================================================================
-#--- lstm MODEL ----------------------------
-#=================================================================
+# ================================================================
+# --- lstm MODEL ----------------------------
+# =================================================================
 ########################################################################################################################
-import numpy as np
+from pathlib import Path
+
+import matplotlib.pyplot as plt
 import pandas as pd
 import tensorflow as tf
 import yaml
-
-from pathlib import Path
 from sklearn.model_selection import ParameterSampler
-from sklearn.metrics import mean_absolute_error, mean_squared_error
-
 from tensorflow.keras import Model
-from tensorflow.keras.layers import Input, LSTM, Dropout, Dense
-from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.callbacks import EarlyStopping
-import matplotlib.pyplot as plt
-from sklearn.metrics import mean_absolute_error
-from sklearn.metrics import mean_squared_error
-from sklearn.metrics import r2_score
+from tensorflow.keras.layers import LSTM, Dense, Dropout, Input
+from tensorflow.keras.optimizers import Adam
+
 
 def build_lstm_model(
     sequence_length,
@@ -510,6 +478,7 @@ def build_lstm_model(
 
     return model
 
+
 def train_lstm_model(
     model,
     X_train,
@@ -556,6 +525,7 @@ def train_lstm_model(
 
     return model, history, best_epoch
 
+
 def tune_lstm_model(
     split_result,
     regression_config,
@@ -598,13 +568,9 @@ def tune_lstm_model(
     mask_train = split_result["mask_train"]
     mask_validation = split_result["mask_validation"]
 
-    y_train = np.asarray(
-        split_result["y_train"]
-    ).reshape(-1)
+    y_train = np.asarray(split_result["y_train"]).reshape(-1)
 
-    y_validation = np.asarray(
-        split_result["y_validation"]
-    ).reshape(-1)
+    y_validation = np.asarray(split_result["y_validation"]).reshape(-1)
 
     # Validate dimensions.
     if X_train.ndim != 3 or X_validation.ndim != 3:
@@ -617,9 +583,7 @@ def tune_lstm_model(
         raise ValueError("Training mask shape does not match sequences.")
 
     if mask_validation.shape != X_validation.shape[:2]:
-        raise ValueError(
-            "Validation mask shape does not match sequences."
-        )
+        raise ValueError("Validation mask shape does not match sequences.")
 
     if len(y_train) != len(X_train):
         raise ValueError("Training target length mismatch.")
@@ -629,9 +593,7 @@ def tune_lstm_model(
 
     if not all(
         np.isfinite(array).all()
-        for array in (
-            X_train, X_validation, y_train, y_validation
-        )
+        for array in (X_train, X_validation, y_train, y_validation)
     ):
         raise ValueError("Non-finite values found in model data.")
 
@@ -703,23 +665,19 @@ def tune_lstm_model(
             verbose=0,
         ).reshape(-1)
 
-        val_mae = float(
-            mean_absolute_error(y_validation, predictions)
-        )
+        val_mae = float(mean_absolute_error(y_validation, predictions))
 
-        val_rmse = float(
-            np.sqrt(
-                mean_squared_error(y_validation, predictions)
-            )
-        )
+        val_rmse = float(np.sqrt(mean_squared_error(y_validation, predictions)))
 
-        results.append({
-            "trial": trial,
-            **sampled_parameters,
-            "best_epoch": best_epoch,
-            "validation_mae": val_mae,
-            "validation_rmse": val_rmse,
-        })
+        results.append(
+            {
+                "trial": trial,
+                **sampled_parameters,
+                "best_epoch": best_epoch,
+                "validation_mae": val_mae,
+                "validation_rmse": val_rmse,
+            }
+        )
 
         print(
             f"Best epoch: {best_epoch} | "
@@ -740,9 +698,7 @@ def tune_lstm_model(
             }
 
     results_df = (
-        pd.DataFrame(results)
-        .sort_values("validation_mae")
-        .reset_index(drop=True)
+        pd.DataFrame(results).sort_values("validation_mae").reset_index(drop=True)
     )
 
     median_baseline_mae = mean_absolute_error(
@@ -777,9 +733,7 @@ def run_lstm_tuning_pipeline(
         config = yaml.safe_load(file)
 
     if not isinstance(config, dict) or "regression" not in config:
-        raise ValueError(
-            "config.yaml must contain a top-level 'regression' section."
-        )
+        raise ValueError("config.yaml must contain a top-level 'regression' section.")
 
     result = tune_lstm_model(
         split_result=split_result,
@@ -794,14 +748,8 @@ def run_lstm_tuning_pipeline(
     for key, value in result["best_params"].items():
         print(f"  {key}: {value}")
 
-    print(
-        f"\nBest validation MAE: "
-        f"{result['best_validation_mae']:.3f} days"
-    )
-    print(
-        f"Median baseline MAE: "
-        f"{result['median_baseline_mae']:.3f} days"
-    )
+    print(f"\nBest validation MAE: " f"{result['best_validation_mae']:.3f} days")
+    print(f"Median baseline MAE: " f"{result['median_baseline_mae']:.3f} days")
 
     if result["best_validation_mae"] < result["median_baseline_mae"]:
         print("Result: LSTM beats the median baseline.")
@@ -812,6 +760,7 @@ def run_lstm_tuning_pipeline(
     print(result["results"].head(5).to_string(index=False))
 
     return result
+
 
 def evaluate_lstm_model(
     model,
@@ -864,9 +813,7 @@ def evaluate_lstm_model(
     }
 
     if baseline_value is not None:
-        baseline_predictions = np.full(
-            len(y_true), float(baseline_value)
-        )
+        baseline_predictions = np.full(len(y_true), float(baseline_value))
         metrics["Baseline_MAE_days"] = float(
             mean_absolute_error(y_true, baseline_predictions)
         )
@@ -874,17 +821,20 @@ def evaluate_lstm_model(
             metrics["Baseline_MAE_days"] - metrics["MAE_days"]
         )
 
-    predictions_df = pd.DataFrame({
-        "actual_days": y_true,
-        "predicted_days": y_pred,
-        "residual_days": residuals,
-        "absolute_error_days": np.abs(residuals),
-    })
+    predictions_df = pd.DataFrame(
+        {
+            "actual_days": y_true,
+            "predicted_days": y_pred,
+            "residual_days": residuals,
+            "absolute_error_days": np.abs(residuals),
+        }
+    )
 
     return {
         "metrics": metrics,
         "predictions": predictions_df,
     }
+
 
 def visualize_lstm_evaluation(evaluation_result):
     """
@@ -947,6 +897,7 @@ def visualize_lstm_evaluation(evaluation_result):
         "residual_distribution": fig2,
         "absolute_error_distribution": fig3,
     }
+
 
 def predict_lstm_hybrid(
     model,

@@ -1,4 +1,3 @@
-
 import os
 
 from sqlalchemy import URL, create_engine, text
@@ -12,9 +11,7 @@ def get_database_engine():
     password = os.getenv("DB_PASSWORD")
 
     if not password:
-        raise ValueError(
-            "DB_PASSWORD environment variable is not set."
-        )
+        raise ValueError("DB_PASSWORD environment variable is not set.")
 
     database_url = URL.create(
         drivername="postgresql+psycopg",
@@ -43,9 +40,7 @@ def test_database_connection():
 
     try:
         with engine.connect() as connection:
-            result = connection.execute(
-                text("SELECT current_database();")
-            )
+            result = connection.execute(text("SELECT current_database();"))
 
             return result.scalar_one()
 

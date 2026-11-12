@@ -1,9 +1,10 @@
+from pathlib import Path
+from unittest.mock import patch
 
 import joblib
 import pytest
-from pathlib import Path
-from unittest.mock import patch
 from sklearn.linear_model import LogisticRegression
+
 from src.models.model_persistance import save_model_artifact
 
 
@@ -60,9 +61,7 @@ def test_save_model_artifact(tmp_path):
     assert artifact["metadata"] == metadata
 
     # Verify the preprocessing artifact.
-    saved_preprocessing = joblib.load(
-        saved_paths["preprocessing_path"]
-    )
+    saved_preprocessing = joblib.load(saved_paths["preprocessing_path"])
     assert saved_preprocessing == preprocessing
 
     # Verify the metadata artifact.
@@ -75,6 +74,7 @@ def test_save_model_artifact(tmp_path):
     assert saved_metadata["training_time"] == 2.5
     assert saved_metadata["metadata"] == metadata
 
+
 def test_load_model_artifacts(tmp_path):
     """Test loading and validating a saved model artifact."""
     import numpy as np
@@ -82,8 +82,8 @@ def test_load_model_artifacts(tmp_path):
     from sklearn.linear_model import LogisticRegression
 
     from src.models.model_persistance import (
-        save_model_artifact,
         load_model_artifacts,
+        save_model_artifact,
     )
 
     # 1. Train a model with named features.
@@ -108,10 +108,11 @@ def test_load_model_artifacts(tmp_path):
     from unittest.mock import patch
 
     with patch(
-         "src.models.model_persistance.get_project_root",
-          return_value=tmp_path,):
-        
-        saved_paths = save_model_artifact(
+        "src.models.model_persistance.get_project_root",
+        return_value=tmp_path,
+    ):
+
+        save_model_artifact(
             model=model,
             model_name="test_logistic_regression",
             model_type="classification",
@@ -156,10 +157,7 @@ def test_load_model_artifacts(tmp_path):
 
     assert loaded["validation_report"]["artifact_exists"] is True
     assert loaded["validation_report"]["artifact_loaded"] is True
-    assert (
-        loaded["validation_report"]["prediction_smoke_test_passed"]
-        is True
-    )
+    assert loaded["validation_report"]["prediction_smoke_test_passed"] is True
     assert loaded["preprocessing"] is None
     assert loaded["metadata"] == {"purpose": "unit test"}
 

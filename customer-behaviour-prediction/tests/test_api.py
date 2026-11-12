@@ -9,14 +9,12 @@ trained model artifact or a PostgreSQL connection for those endpoints.
 
 import warnings
 
-
 warnings.filterwarnings(
     "ignore",
     message=r"Using `httpx` with `starlette\.testclient` is deprecated.*",
     category=Warning,
     module=r"fastapi\.testclient",
 )
-
 
 warnings.filterwarnings(
     "ignore",
@@ -52,14 +50,13 @@ def api_client():
     """Provide a TestClient configured with a fake model bundle."""
     feature_names = list(CustomerFeatures.model_fields.keys())
     app.state.model_bundle = {
-    "model": DummyChurnModel(),
-    "model_name": "test_model",
-    "model_type": "classification",
-    "feature_names": feature_names,
-    "n_features": len(feature_names),
-     }
+        "model": DummyChurnModel(),
+        "model_name": "test_model",
+        "model_type": "classification",
+        "feature_names": feature_names,
+        "n_features": len(feature_names),
+    }
     return TestClient(app)
-
 
 
 @pytest.fixture
@@ -75,7 +72,6 @@ def valid_customer_payload():
             payload[field_name] = 0.0
 
     return payload
-
 
 
 def test_api_endpoints(api_client, valid_customer_payload):

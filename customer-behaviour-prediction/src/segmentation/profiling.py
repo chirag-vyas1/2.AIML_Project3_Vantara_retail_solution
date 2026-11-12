@@ -1,19 +1,15 @@
-
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-
-from sklearn.metrics import silhouette_score
-from sklearn.metrics import davies_bouldin_score
-
 from sklearn.cluster import KMeans
-from sklearn.metrics import silhouette_score
+from sklearn.metrics import davies_bouldin_score, silhouette_score
 
 ################################################################
-#---- K-means clustering Experiments ------
+# ---- K-means clustering Experiments ------
 ################################################################
 
-#----- 1. to run experiment on clustering ----------
+
+# ----- 1. to run experiment on clustering ----------
 def run_kmeans_experiments(
     X,
     k_values=range(2, 11),
@@ -58,10 +54,7 @@ def run_kmeans_experiments(
     if not X.columns.is_unique:
         raise ValueError("Feature names must be unique.")
 
-    if not all(
-        pd.api.types.is_numeric_dtype(dtype)
-        for dtype in X.dtypes
-    ):
+    if not all(pd.api.types.is_numeric_dtype(dtype) for dtype in X.dtypes):
         raise ValueError("All features must be numeric.")
 
     if not np.isfinite(X.to_numpy(dtype=float)).all():
@@ -78,9 +71,7 @@ def run_kmeans_experiments(
         or not 2 <= k < len(X)
         for k in k_values
     ):
-        raise ValueError(
-            "Each k must be an integer between 2 and len(X) - 1."
-        )
+        raise ValueError("Each k must be an integer between 2 and len(X) - 1.")
 
     if len(set(k_values)) != len(k_values):
         raise ValueError("Candidate k values must be unique.")
@@ -88,21 +79,14 @@ def run_kmeans_experiments(
     if n_init < 1:
         raise ValueError("n_init must be at least 1.")
 
-    if (
-        silhouette_sample_size is not None
-        and silhouette_sample_size < 2
-    ):
-        raise ValueError(
-            "silhouette_sample_size must be at least 2 or None."
-        )
+    if silhouette_sample_size is not None and silhouette_sample_size < 2:
+        raise ValueError("silhouette_sample_size must be at least 2 or None.")
 
     results = []
     models = {}
 
     sample_size = (
-        None
-        if silhouette_sample_size is None
-        else min(silhouette_sample_size, len(X))
+        None if silhouette_sample_size is None else min(silhouette_sample_size, len(X))
     )
 
     for k in k_values:
@@ -121,11 +105,13 @@ def run_kmeans_experiments(
             random_state=random_state,
         )
 
-        results.append({
-            "k": k,
-            "inertia": model.inertia_,
-            "silhouette_score": score,
-        })
+        results.append(
+            {
+                "k": k,
+                "inertia": model.inertia_,
+                "silhouette_score": score,
+            }
+        )
 
         models[k] = model
 
@@ -135,7 +121,7 @@ def run_kmeans_experiments(
     }
 
 
-#------2. visualize k-means experiement --------------------------------
+# ------2. visualize k-means experiement --------------------------------
 def visualize_kmeans_experiments(results_df):
     """
     Visualize K-Means experiment results using:
@@ -161,23 +147,19 @@ def visualize_kmeans_experiments(results_df):
     missing_columns = required_columns - set(results_df.columns)
 
     if missing_columns:
-        raise ValueError(
-            f"Missing required columns: {sorted(missing_columns)}"
-        )
+        raise ValueError(f"Missing required columns: {sorted(missing_columns)}")
 
     if results_df.empty:
         raise ValueError("Experiment results cannot be empty.")
 
     if not np.isfinite(
-        results_df[
-            ["k", "inertia", "silhouette_score"]
-        ].to_numpy(dtype=float)
+        results_df[["k", "inertia", "silhouette_score"]].to_numpy(dtype=float)
     ).all():
         raise ValueError("Experiment results contain invalid values.")
 
     results_df = results_df.sort_values("k")
 
-    fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+    _fig, axes = plt.subplots(1, 2, figsize=(14, 5))
 
     # Elbow curve
     axes[0].plot(
@@ -207,7 +189,7 @@ def visualize_kmeans_experiments(results_df):
     plt.show()
 
 
-#------ 3. fit_kmeans_clustering ----------------------------------------------------
+# ------ 3. fit_kmeans_clustering ----------------------------------------------------
 def fit_kmeans_cluster(
     X,
     n_clusters,
@@ -248,10 +230,7 @@ def fit_kmeans_cluster(
     if not X.columns.is_unique:
         raise ValueError("Feature names must be unique.")
 
-    if not all(
-        pd.api.types.is_numeric_dtype(dtype)
-        for dtype in X.dtypes
-    ):
+    if not all(pd.api.types.is_numeric_dtype(dtype) for dtype in X.dtypes):
         raise ValueError("All features must be numeric.")
 
     if not np.isfinite(X.to_numpy(dtype=float)).all():
@@ -262,9 +241,7 @@ def fit_kmeans_cluster(
         or isinstance(n_clusters, (bool, np.bool_))
         or not 2 <= n_clusters < len(X)
     ):
-        raise ValueError(
-            "n_clusters must be between 2 and len(X) - 1."
-        )
+        raise ValueError("n_clusters must be between 2 and len(X) - 1.")
 
     if n_init < 1:
         raise ValueError("n_init must be at least 1.")
@@ -291,7 +268,8 @@ def fit_kmeans_cluster(
         "cluster_sizes": cluster_sizes,
     }
 
-#------ 4. Evaluate kmeans model ----------------------------------------------------
+
+# ------ 4. Evaluate kmeans model ----------------------------------------------------
 def evaluate_kmeans_cluster(X, model, labels):
     """
     Evaluate the final fitted K-Means clustering model.
@@ -331,9 +309,7 @@ def evaluate_kmeans_cluster(X, model, labels):
     labels = np.asarray(labels)
 
     if labels.ndim != 1 or len(labels) != len(X):
-        raise ValueError(
-            "labels must contain one cluster assignment per row in X."
-        )
+        raise ValueError("labels must contain one cluster assignment per row in X.")
 
     if pd.isna(labels).any():
         raise ValueError("Cluster labels cannot contain missing values.")
@@ -341,14 +317,10 @@ def evaluate_kmeans_cluster(X, model, labels):
     n_clusters = len(np.unique(labels))
 
     if n_clusters < 2 or n_clusters >= len(X):
-        raise ValueError(
-            "Evaluation requires between 2 and len(X) - 1 clusters."
-        )
+        raise ValueError("Evaluation requires between 2 and len(X) - 1 clusters.")
 
     if n_clusters != model.n_clusters:
-        raise ValueError(
-            "The number of unique labels does not match model.n_clusters."
-        )
+        raise ValueError("The number of unique labels does not match model.n_clusters.")
 
     # Calculate evaluation metrics
     inertia = model.inertia_

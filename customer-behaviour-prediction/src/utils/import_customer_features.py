@@ -1,28 +1,20 @@
-
 from pathlib import Path
 
 import pandas as pd
 from sqlalchemy import text
 
-from src.utils.database import get_database_engine
 from src.models.model_persistance import get_project_root
+from src.utils.database import get_database_engine
 
 
 def import_customer_features() -> None:
     """Import validated customer data into PostgreSQL."""
 
     project_root = Path(get_project_root()).resolve()
-    csv_path = (
-        project_root
-        / "data"
-        / "processed"
-        / "customer_features.csv"
-    )
+    csv_path = project_root / "data" / "processed" / "customer_features.csv"
 
     if not csv_path.is_file():
-        raise FileNotFoundError(
-            f"Customer features CSV not found: {csv_path}"
-        )
+        raise FileNotFoundError(f"Customer features CSV not found: {csv_path}")
 
     df = pd.read_csv(csv_path)
 
@@ -65,9 +57,7 @@ def import_customer_features() -> None:
 
     missing_columns = set(required_columns) - set(df.columns)
     if missing_columns:
-        raise ValueError(
-            f"Missing CSV columns: {sorted(missing_columns)}"
-        )
+        raise ValueError(f"Missing CSV columns: {sorted(missing_columns)}")
 
     if df["Customer ID"].isna().any():
         raise ValueError("Customer ID contains missing values.")
@@ -78,17 +68,13 @@ def import_customer_features() -> None:
     df["First_Purchase_Date"] = pd.to_datetime(
         df["First_Purchase_Date"], errors="raise"
     )
-    df["Last_Purchase_Date"] = pd.to_datetime(
-        df["Last_Purchase_Date"], errors="raise"
-    )
+    df["Last_Purchase_Date"] = pd.to_datetime(df["Last_Purchase_Date"], errors="raise")
 
     if not (df["Frequency"] % 1 == 0).all():
         raise ValueError("Frequency contains non-integer values.")
 
     if not (df["Historical_Invoice_Count"] % 1 == 0).all():
-        raise ValueError(
-            "Historical_Invoice_Count contains non-integer values."
-        )
+        raise ValueError("Historical_Invoice_Count contains non-integer values.")
 
     customer_df = df[
         [
@@ -112,21 +98,17 @@ def import_customer_features() -> None:
         "Average_Order_Spend": "average_order_spend",
         "Historical_CLV": "historical_clv",
         "Customer_Lifetime_Days": "customer_lifetime_days",
-        "Historical_Average_Order_Value":
-            "historical_average_order_value",
+        "Historical_Average_Order_Value": "historical_average_order_value",
         "Historical_Invoice_Count": "historical_invoice_count",
         "Average_Basket_Size": "average_basket_size",
         "Purchase_Frequency_Trend": "purchase_frequency_trend",
         "Interpurchase_Variance": "interpurchase_variance",
-        "Seasonal_Purchase_Concentration":
-            "seasonal_purchase_concentration",
+        "Seasonal_Purchase_Concentration": "seasonal_purchase_concentration",
         "Home_Fragrance_Affinity": "home_fragrance_affinity",
         "Lighting_Candles_Affinity": "lighting_candles_affinity",
         "Stationery_Paper_Affinity": "stationery_paper_affinity",
-        "Jewelry_Fashion_Accessories_Affinity":
-            "jewelry_fashion_accessories_affinity",
-        "Bags_Travel_Accessories_Affinity":
-            "bags_travel_accessories_affinity",
+        "Jewelry_Fashion_Accessories_Affinity": "jewelry_fashion_accessories_affinity",
+        "Bags_Travel_Accessories_Affinity": "bags_travel_accessories_affinity",
         "Kitchen_Dining_Affinity": "kitchen_dining_affinity",
         "Storage_Organization_Affinity": "storage_organization_affinity",
         "Garden_Outdoor_Affinity": "garden_outdoor_affinity",
@@ -138,20 +120,17 @@ def import_customer_features() -> None:
         "Home_Decor_Affinity": "home_decor_affinity",
         "Other___Unclassified_Affinity": "other_unclassified_affinity",
         "Return_Rate": "return_rate",
-        "Discount_Markdown_Sensitivity":
-            "discount_markdown_sensitivity",
+        "Discount_Markdown_Sensitivity": "discount_markdown_sensitivity",
         "Engagement_Score": "engagement_score",
         "Engagement_Band": "engagement_band",
     }
 
-    feature_df = df[list(feature_column_map)].rename(
-        columns=feature_column_map
-    )
+    feature_df = df[list(feature_column_map)].rename(columns=feature_column_map)
 
     feature_df["frequency"] = feature_df["frequency"].astype(int)
-    feature_df["historical_invoice_count"] = (
-        feature_df["historical_invoice_count"].astype(int)
-    )
+    feature_df["historical_invoice_count"] = feature_df[
+        "historical_invoice_count"
+    ].astype(int)
 
     # actual_churn is deliberately omitted because no confirmed
     # actual-churn label is present in this CSV.

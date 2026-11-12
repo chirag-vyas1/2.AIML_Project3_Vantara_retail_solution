@@ -1,20 +1,15 @@
-
+from io import BytesIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
-import pandas as pd
-from fastapi import APIRouter
-from fastapi import HTTPException
-from fastapi import Request
-from fastapi import UploadFile
-from fastapi import File
-from pydantic import BaseModel, FiniteFloat
-from api.schemas.prediction import CustomerFeatures
-from fastapi.responses import StreamingResponse
-from io import BytesIO
 
-from src.utils.prediction_repository import get_customer_features
-from src.utils.prediction_repository import save_prediction
+import pandas as pd
+from fastapi import APIRouter, File, HTTPException, Request, UploadFile
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel, FiniteFloat
+
+from api.schemas.prediction import CustomerFeatures
 from src.services.batch_prediction_service import predict_batch_from_csv
+from src.utils.prediction_repository import get_customer_features, save_prediction
 
 router = APIRouter()
 
@@ -65,10 +60,12 @@ def predict_customer(
         churn_probability=churn_probability,
     )
 
+
 class BatchPredictionResponse(BaseModel):
     model_name: str
     total_customers: int
     predictions: list[PredictionResponse]
+
 
 @router.post(
     "/predict/batch",
@@ -89,9 +86,7 @@ def predict_batch(
     feature_names = bundle["feature_names"]
 
     # Convert all customers into one DataFrame.
-    customer_records = [
-        customer.model_dump() for customer in customers
-    ]
+    customer_records = [customer.model_dump() for customer in customers]
 
     X_customers = pd.DataFrame(
         customer_records,
@@ -110,9 +105,7 @@ def predict_batch(
             PredictionResponse(
                 model_name=bundle["model_name"],
                 predicted_class=int(predicted_classes[i]),
-                churn_probability=float(
-                    probabilities[i][class_index]
-                ),
+                churn_probability=float(probabilities[i][class_index]),
             )
             for i in range(len(customers))
         ]
@@ -128,7 +121,6 @@ def predict_batch(
         total_customers=len(customers),
         predictions=results,
     )
-
 
 
 @router.post(
@@ -206,12 +198,10 @@ def predict_existing_customer(customer_id: int, request: Request):
         ) from exc
 
 
-
-
 @router.post("/predict/batch/csv")
 async def predict_batch_csv(
     request: Request,
-    file: UploadFile = File(...),
+    file: UploadFile = File(...),  # noqa: B008
 ):
     """Upload a CSV of customer features and download churn predictions."""
 
@@ -249,8 +239,7 @@ async def predict_batch_csv(
             BytesIO(csv_content),
             media_type="text/csv",
             headers={
-                "Content-Disposition":
-                    'attachment; filename="churn_predictions.csv"'
+                "Content-Disposition": 'attachment; filename="churn_predictions.csv"'
             },
         )
 

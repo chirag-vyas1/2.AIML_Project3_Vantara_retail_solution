@@ -1,4 +1,3 @@
-
 import pandas as pd
 import pytest
 
@@ -7,15 +6,17 @@ from src.explainability.explanation_template import generate_churn_explanation
 
 def make_shap_data():
     """Create sample SHAP contributions for testing."""
-    return pd.DataFrame({
-        "Feature": [
-            "Recency",
-            "Frequency",
-            "Engagement_Score",
-            "Average_Order_Spend",
-        ],
-        "SHAP_Value": [0.8, -0.6, 0.4, -0.2],
-    })
+    return pd.DataFrame(
+        {
+            "Feature": [
+                "Recency",
+                "Frequency",
+                "Engagement_Score",
+                "Average_Order_Spend",
+            ],
+            "SHAP_Value": [0.8, -0.6, 0.4, -0.2],
+        }
+    )
 
 
 def test_churn_explanation_shap_high_risk():
@@ -44,12 +45,8 @@ def test_churn_explanation_moderate_and_lower_risk():
     """Test the moderate and lower churn risk thresholds."""
     data = make_shap_data()
 
-    moderate = generate_churn_explanation(
-        1, {"1": 0.55}, data
-    )
-    lower = generate_churn_explanation(
-        1, {"1": 0.25}, data
-    )
+    moderate = generate_churn_explanation(1, {"1": 0.55}, data)
+    lower = generate_churn_explanation(1, {"1": 0.25}, data)
 
     assert moderate["risk_level"] == "Moderate"
     assert lower["risk_level"] == "Lower"
@@ -84,18 +81,18 @@ def test_no_churn_elevated_risk():
 
 def test_lime_explanation_feature_condition():
     """Support the LIME Feature_Condition column."""
-    contributions = pd.DataFrame({
-        "Feature_Condition": [
-            "Recency > 90",
-            "Frequency <= 2",
-            "Engagement_Score < 0.3",
-        ],
-        "LIME_Weight": [0.7, -0.5, 0.2],
-    })
-
-    result = generate_churn_explanation(
-        1, {"1": 0.75}, contributions, top_n=2
+    contributions = pd.DataFrame(
+        {
+            "Feature_Condition": [
+                "Recency > 90",
+                "Frequency <= 2",
+                "Engagement_Score < 0.3",
+            ],
+            "LIME_Weight": [0.7, -0.5, 0.2],
+        }
     )
+
+    result = generate_churn_explanation(1, {"1": 0.75}, contributions, top_n=2)
 
     assert result["explanation_method"] == "LIME"
     assert result["supporting_features"] == [
@@ -107,14 +104,14 @@ def test_lime_explanation_feature_condition():
 
 def test_lime_explanation_feature_column():
     """Support LIME data using the generic Feature column."""
-    contributions = pd.DataFrame({
-        "Feature": ["Recency", "Frequency"],
-        "LIME_Weight": [0.6, -0.4],
-    })
-
-    result = generate_churn_explanation(
-        1, {"1": 0.8}, contributions
+    contributions = pd.DataFrame(
+        {
+            "Feature": ["Recency", "Frequency"],
+            "LIME_Weight": [0.6, -0.4],
+        }
     )
+
+    result = generate_churn_explanation(1, {"1": 0.8}, contributions)
 
     assert result["explanation_method"] == "LIME"
     assert result["supporting_features"] == ["Recency"]
@@ -125,53 +122,41 @@ def test_lime_explanation_feature_column():
 def test_invalid_prediction(prediction):
     """Reject unsupported prediction classes."""
     with pytest.raises(ValueError, match="prediction must be 0 or 1"):
-        generate_churn_explanation(
-            prediction, {"1": 0.5}, make_shap_data()
-        )
+        generate_churn_explanation(prediction, {"1": 0.5}, make_shap_data())
 
 
 @pytest.mark.parametrize("probabilities", [None, [], "0.5"])
 def test_invalid_probabilities_type(probabilities):
     """Require probabilities to be a dictionary."""
     with pytest.raises(TypeError, match="probabilities must be a dictionary"):
-        generate_churn_explanation(
-            1, probabilities, make_shap_data()
-        )
+        generate_churn_explanation(1, probabilities, make_shap_data())
 
 
 @pytest.mark.parametrize("contributions", [None, [], {"Feature": "Recency"}])
 def test_invalid_contributions_type(contributions):
     """Require contributions to be a pandas DataFrame."""
     with pytest.raises(TypeError, match="contributions must be a DataFrame"):
-        generate_churn_explanation(
-            1, {"1": 0.5}, contributions
-        )
+        generate_churn_explanation(1, {"1": 0.5}, contributions)
 
 
 def test_empty_contributions():
     """Reject an empty contributions DataFrame."""
     with pytest.raises(ValueError, match="contributions cannot be empty"):
-        generate_churn_explanation(
-            1, {"1": 0.5}, pd.DataFrame()
-        )
+        generate_churn_explanation(1, {"1": 0.5}, pd.DataFrame())
 
 
 @pytest.mark.parametrize("top_n", [0, -1])
 def test_invalid_top_n(top_n):
     """Require top_n to be positive."""
     with pytest.raises(ValueError, match="top_n must be positive"):
-        generate_churn_explanation(
-            1, {"1": 0.5}, make_shap_data(), top_n=top_n
-        )
+        generate_churn_explanation(1, {"1": 0.5}, make_shap_data(), top_n=top_n)
 
 
 @pytest.mark.parametrize("probability", [-0.1, 1.1, float("nan"), float("inf")])
 def test_invalid_churn_probability(probability):
     """Reject probabilities outside the valid range or non-finite values."""
     with pytest.raises(ValueError):
-        generate_churn_explanation(
-            1, {"1": probability}, make_shap_data()
-        )
+        generate_churn_explanation(1, {"1": probability}, make_shap_data())
 
 
 def test_missing_contribution_column():
@@ -206,10 +191,12 @@ def test_missing_lime_feature_column():
 
 def test_non_numeric_contributions():
     """Reject contribution values that cannot be converted to numbers."""
-    contributions = pd.DataFrame({
-        "Feature": ["Recency"],
-        "SHAP_Value": ["not-a-number"],
-    })
+    contributions = pd.DataFrame(
+        {
+            "Feature": ["Recency"],
+            "SHAP_Value": ["not-a-number"],
+        }
+    )
 
     with pytest.raises(ValueError):
         generate_churn_explanation(1, {"1": 0.5}, contributions)
@@ -218,10 +205,12 @@ def test_non_numeric_contributions():
 @pytest.mark.parametrize("value", [float("inf"), float("-inf"), float("nan")])
 def test_non_finite_contributions(value):
     """Reject infinite and missing contribution values."""
-    contributions = pd.DataFrame({
-        "Feature": ["Recency"],
-        "SHAP_Value": [value],
-    })
+    contributions = pd.DataFrame(
+        {
+            "Feature": ["Recency"],
+            "SHAP_Value": [value],
+        }
+    )
 
     with pytest.raises(ValueError, match="Contribution values must be finite"):
         generate_churn_explanation(1, {"1": 0.5}, contributions)
@@ -229,9 +218,7 @@ def test_non_finite_contributions(value):
 
 def test_missing_churn_probability_defaults_to_zero():
     """Use zero when class-1 probability is not provided."""
-    result = generate_churn_explanation(
-        1, {"0": 1.0}, make_shap_data()
-    )
+    result = generate_churn_explanation(1, {"0": 1.0}, make_shap_data())
 
     assert result["churn_probability"] == 0.0
     assert result["risk_level"] == "Lower"
@@ -239,32 +226,31 @@ def test_missing_churn_probability_defaults_to_zero():
 
 def test_feature_names_are_formatted_in_explanation():
     """Convert underscores to spaces in readable explanation text."""
-    result = generate_churn_explanation(
-        1, {"1": 0.8}, make_shap_data()
-    )
+    result = generate_churn_explanation(1, {"1": 0.8}, make_shap_data())
 
     assert "Engagement Score" in result["explanation_text"]
     assert "Engagement_Score" not in result["explanation_text"]
 
 
 ##################################################################################################################################
-#----------------------------------------------- lime explainability -------------------------------------------------------------
+# ----------------------------------------------- lime explainability -------------------------------------------------------------
 ##################################################################################################################################
 
 
-
 import matplotlib
+
 matplotlib.use("Agg")
 
 from unittest.mock import MagicMock, patch
 
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
 import pytest
 
-from src.explainability.lime_explainer import explain_customer_with_lime
-from src.explainability.lime_explainer import compare_lime_with_shap
+from src.explainability.lime_explainer import (
+    compare_lime_with_shap,
+    explain_customer_with_lime,
+)
 
 
 def test_lime_explainability(tmp_path):
@@ -272,17 +258,10 @@ def test_lime_explainability(tmp_path):
     Test LIME explanation generation, validation, output paths,
     and comparison with SHAP without changing production code.
     """
-    import numpy as np
+    from pathlib import Path
+
     import pandas as pd
     import pytest
-    import matplotlib.pyplot as plt
-    from pathlib import Path
-    from unittest.mock import MagicMock, patch
-
-    from src.explainability.lime_explainer import (
-        explain_customer_with_lime,
-        compare_lime_with_shap,
-    )
 
     module = "src.explainability.lime_explainer"
 
@@ -519,9 +498,7 @@ def test_lime_explainability(tmp_path):
         wrong_feature_count_model = MagicMock()
         wrong_feature_count_model.classes_ = np.array([0, 1])
         wrong_feature_count_model.n_features_in_ = 4
-        wrong_feature_count_model.predict_proba.return_value = np.array(
-            [[0.25, 0.75]]
-        )
+        wrong_feature_count_model.predict_proba.return_value = np.array([[0.25, 0.75]])
         wrong_feature_count_model.predict.return_value = np.array([1])
 
         with pytest.raises((TypeError, ValueError)):
@@ -541,9 +518,7 @@ def test_lime_explainability(tmp_path):
         fallback_model.predict.return_value = np.array([2])
 
         fallback_explanation = MagicMock()
-        fallback_explanation.as_list.return_value = [
-            ("Recency > 20", 0.2)
-        ]
+        fallback_explanation.as_list.return_value = [("Recency > 20", 0.2)]
         fallback_explanation.as_pyplot_figure.return_value = MagicMock()
 
         with patch(f"{module}.LimeTabularExplainer") as fallback_class:
@@ -626,15 +601,9 @@ def test_lime_explainability(tmp_path):
             reverse=True,
         )
 
-        assert (
-            comparison["Absolute_SHAP"]
-            == comparison["SHAP_Value"].abs()
-        ).all()
+        assert (comparison["Absolute_SHAP"] == comparison["SHAP_Value"].abs()).all()
 
-        assert (
-            comparison["Absolute_LIME"]
-            == comparison["LIME_Weight"].abs()
-        ).all()
+        assert (comparison["Absolute_LIME"] == comparison["LIME_Weight"].abs()).all()
 
         # ---------------------------------------------------------
         # 8. Test invalid comparison inputs
@@ -692,18 +661,17 @@ def test_lime_explainability(tmp_path):
     finally:
         plt.close("all")
 
+
 #########################################################################################################################################
-#-------------------------- PDP Tests 
+# -------------------------- PDP Tests
 ########################################################################################################################################
+
 
 def test_generate_pdp_analysis(tmp_path):
     """Test PDP generation, artifacts, and input validation."""
-    import numpy as np
+
     import pandas as pd
     import pytest
-    import matplotlib.pyplot as plt
-    from pathlib import Path
-    from unittest.mock import MagicMock, patch
 
     from src.explainability.pdp_analysis import generate_pdp_analysis
 
@@ -731,9 +699,7 @@ def test_generate_pdp_analysis(tmp_path):
         fake_display = MagicMock()
         fake_display.pd_results = [
             {
-                "grid_values": [
-                    np.array([10.0, 20.0, 30.0])
-                ],
+                "grid_values": [np.array([10.0, 20.0, 30.0])],
                 "average": np.array([[0.2, 0.5, 0.8]]),
             }
         ]
@@ -776,9 +742,9 @@ def test_generate_pdp_analysis(tmp_path):
             "Average_Predicted_Probability",
         ]
         assert pdp_table["Recency"].tolist() == [10.0, 20.0, 30.0]
-        assert pdp_table[
-            "Average_Predicted_Probability"
-        ].tolist() == pytest.approx([0.2, 0.5, 0.8])
+        assert pdp_table["Average_Predicted_Probability"].tolist() == pytest.approx(
+            [0.2, 0.5, 0.8]
+        )
 
         plot_info = result["plots"]["Recency"]
 
@@ -1002,7 +968,7 @@ def test_generate_pdp_analysis(tmp_path):
             )
 
         model_without_classes = MagicMock(spec=["predict_proba"])
-        
+
         with pytest.raises(ValueError, match="classes_"):
             generate_pdp_analysis(
                 model=model_without_classes,
@@ -1041,17 +1007,19 @@ def test_generate_pdp_analysis(tmp_path):
             }
         ]
 
-        with patch(
-            f"{module}.PartialDependenceDisplay.from_estimator",
-            return_value=mismatched_display,
+        with (
+            patch(
+                f"{module}.PartialDependenceDisplay.from_estimator",
+                return_value=mismatched_display,
+            ),
+            pytest.raises(ValueError, match="length mismatch"),
         ):
-            with pytest.raises(ValueError, match="length mismatch"):
-                generate_pdp_analysis(
-                    model=model,
-                    X=X,
-                    features=["Recency"],
-                    output_dir=None,
-                )
+            generate_pdp_analysis(
+                model=model,
+                X=X,
+                features=["Recency"],
+                output_dir=None,
+            )
 
         nonfinite_display = MagicMock()
         nonfinite_display.pd_results = [
@@ -1061,32 +1029,19 @@ def test_generate_pdp_analysis(tmp_path):
             }
         ]
 
-        with patch(
-            f"{module}.PartialDependenceDisplay.from_estimator",
-            return_value=nonfinite_display,
+        with (
+            patch(
+                f"{module}.PartialDependenceDisplay.from_estimator",
+                return_value=nonfinite_display,
+            ),
+            pytest.raises(ValueError, match="not finite"),
         ):
-            with pytest.raises(ValueError, match="not finite"):
-                generate_pdp_analysis(
-                    model=model,
-                    X=X,
-                    features=["Recency"],
-                    output_dir=None,
-                )
+            generate_pdp_analysis(
+                model=model,
+                X=X,
+                features=["Recency"],
+                output_dir=None,
+            )
 
     finally:
         plt.close("all")
-
-
-
-
-        
-
-
-
-
-
-
-
-
-
-

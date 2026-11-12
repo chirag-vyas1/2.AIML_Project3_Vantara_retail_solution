@@ -1,22 +1,17 @@
-
 from pathlib import Path
 
-import tensorflow as tf
 import joblib
 import numpy as np
 import pandas as pd
-from tensorflow.keras.layers import Input
-from tensorflow.keras.layers import Dense
-from tensorflow.keras.layers import Dropout
-from tensorflow.keras.layers import BatchNormalization
+import tensorflow as tf
 from tensorflow.keras import Sequential
+from tensorflow.keras.layers import BatchNormalization, Dense, Dropout, Input
 from tensorflow.keras.optimizers import Adam
 
-from src.data.ingest import load_config
-from src.data.ingest import get_project_root
+from src.data.ingest import get_project_root, load_config
 
 
-#-----  1. transform churn features with saved scaler  --------------
+# -----  1. transform churn features with saved scaler  --------------
 def transform_churn_features_with_saved_scaler(
     X_train: pd.DataFrame,
     X_val: pd.DataFrame,
@@ -88,9 +83,7 @@ def transform_churn_features_with_saved_scaler(
             raise ValueError(f"{name} contains duplicate feature names.")
 
         if list(X.columns) != feature_columns:
-            raise ValueError(
-                f"{name} feature columns/order do not match X_train."
-            )
+            raise ValueError(f"{name} feature columns/order do not match X_train.")
 
     # --------------------------------------------------
     # 3. Validate numeric, missing, and infinite values
@@ -100,8 +93,7 @@ def transform_churn_features_with_saved_scaler(
         ("X_val", X_val),
         ("X_test", X_test),
     ]:
-        if not all(pd.api.types.is_numeric_dtype(dtype)
-                   for dtype in X.dtypes):
+        if not all(pd.api.types.is_numeric_dtype(dtype) for dtype in X.dtypes):
             raise ValueError(f"{name} contains non-numeric features.")
 
         if X.isna().any().any():
@@ -130,11 +122,11 @@ def transform_churn_features_with_saved_scaler(
             f"but X_train contains {len(feature_columns)}."
         )
 
-    if hasattr(scaler, "feature_names_in_"):
-        if list(scaler.feature_names_in_) != feature_columns:
-            raise ValueError(
-                "Feature names/order do not match the saved scaler."
-            )
+    if (
+        hasattr(scaler, "feature_names_in_")
+        and list(scaler.feature_names_in_) != feature_columns
+    ):
+        raise ValueError("Feature names/order do not match the saved scaler.")
 
     # --------------------------------------------------
     # 5. Apply the same scaler to every partition
@@ -149,9 +141,7 @@ def transform_churn_features_with_saved_scaler(
         ("X_test_scaled", X_test_scaled),
     ]:
         if not np.isfinite(X_scaled).all():
-            raise ValueError(
-                f"{name} contains non-finite values after scaling."
-            )
+            raise ValueError(f"{name} contains non-finite values after scaling.")
 
     return {
         "X_train_scaled": X_train_scaled,
@@ -162,7 +152,8 @@ def transform_churn_features_with_saved_scaler(
         "feature_columns": feature_columns,
     }
 
-#-----  2. validating scaled data --------------------------------
+
+# -----  2. validating scaled data --------------------------------
 def validate_scaled_churn_features(
     X_train_scaled,
     X_val_scaled,
@@ -230,9 +221,7 @@ def validate_scaled_churn_features(
 
     for name, X in original_sets.items():
         if list(X.columns) != feature_columns:
-            raise ValueError(
-                f"{name} feature names/order do not match X_train."
-            )
+            raise ValueError(f"{name} feature names/order do not match X_train.")
 
     checks["original_feature_columns_match"] = True
 
@@ -264,9 +253,7 @@ def validate_scaled_churn_features(
             raise ValueError(f"{name} contains non-numeric values.")
 
         if not np.isfinite(array).all():
-            raise ValueError(
-                f"{name} contains NaN or infinite values."
-            )
+            raise ValueError(f"{name} contains NaN or infinite values.")
 
         metrics[f"{name}_shape"] = array.shape
 
@@ -281,9 +268,7 @@ def validate_scaled_churn_features(
         ("test", X_test, X_test_scaled),
     ]:
         if len(X) != len(X_scaled):
-            raise ValueError(
-                f"{name}: original and scaled row counts differ."
-            )
+            raise ValueError(f"{name}: original and scaled row counts differ.")
 
     checks["scaled_row_counts_match"] = True
 
@@ -309,22 +294,16 @@ def validate_scaled_churn_features(
     min_feature_std = float(feature_stds.min())
 
     metrics["maximum_absolute_training_mean"] = max_abs_mean
-    metrics["maximum_absolute_training_std_deviation_from_one"] = (
-        max_std_deviation
-    )
+    metrics["maximum_absolute_training_std_deviation_from_one"] = max_std_deviation
     metrics["minimum_training_feature_std"] = min_feature_std
 
-    checks["training_mean_approximately_zero"] = (
-        max_abs_mean <= mean_tolerance
-    )
+    checks["training_mean_approximately_zero"] = max_abs_mean <= mean_tolerance
 
     # Constant features cannot have unit standard deviation.
     constant_feature_indices = np.flatnonzero(feature_stds == 0).tolist()
     metrics["constant_scaled_feature_indices"] = constant_feature_indices
 
-    checks["training_std_approximately_one"] = (
-        max_std_deviation <= std_tolerance
-    )
+    checks["training_std_approximately_one"] = max_std_deviation <= std_tolerance
 
     # --------------------------------------------------
     # 5. Validate optional targets
@@ -391,18 +370,15 @@ def validate_scaled_churn_features(
         print("\nOverall result:", "PASS" if overall_passed else "FAIL")
 
     if not overall_passed:
-        failed_checks = [
-            name for name, passed in checks.items() if not passed
-        ]
+        failed_checks = [name for name, passed in checks.items() if not passed]
         raise ValueError(
-            "Scaled churn feature validation failed: "
-            + ", ".join(failed_checks)
+            "Scaled churn feature validation failed: " + ", ".join(failed_checks)
         )
 
     return report
 
 
-#-----  3. Build DL model ----------------------------------------------------
+# -----  3. Build DL model ----------------------------------------------------
 def build_deep_learning_model(
     model_type: str,
     input_shape: int,
@@ -443,9 +419,7 @@ def build_deep_learning_model(
         )
 
     if task_type not in {"classification", "regression"}:
-        raise ValueError(
-            "task_type must be 'classification' or 'regression'."
-        )
+        raise ValueError("task_type must be 'classification' or 'regression'.")
 
     if model_type == "ann" and task_type != "classification":
         raise ValueError("The current ANN configuration is for classification.")
@@ -457,12 +431,10 @@ def build_deep_learning_model(
         raise ValueError("input_shape must be positive.")
 
     if not hidden_units or any(
-        not isinstance(units, int) or units <= 0
-        for units in hidden_units
+        not isinstance(units, int) or units <= 0 for units in hidden_units
     ):
         raise ValueError(
-            "hidden_units must contain positive integers, "
-            "for example (64, 32, 16)."
+            "hidden_units must contain positive integers, " "for example (64, 32, 16)."
         )
 
     if not 0 <= dropout_rate < 1:
@@ -508,7 +480,7 @@ def build_deep_learning_model(
     return model
 
 
-#----- 4. Train Deep learning model --------------------------------
+# ----- 4. Train Deep learning model --------------------------------
 def train_deep_learning_model(
     model,
     X_train,
@@ -534,6 +506,7 @@ def train_deep_learning_model(
         best epoch, best validation loss, and early-stopping callback.
     """
     import random
+
     import numpy as np
     import tensorflow as tf
     from tensorflow.keras.callbacks import EarlyStopping
@@ -590,13 +563,9 @@ def train_deep_learning_model(
     # 4. Validate feature matrices
     for name, X in [("X_train", X_train), ("X_val", X_val)]:
         if X.ndim != 2 or X.shape[0] == 0 or X.shape[1] == 0:
-            raise ValueError(
-                f"{name} must be a non-empty 2D feature matrix."
-            )
+            raise ValueError(f"{name} must be a non-empty 2D feature matrix.")
         if not np.isfinite(X).all():
-            raise ValueError(
-                f"{name} contains NaN or infinite values."
-            )
+            raise ValueError(f"{name} contains NaN or infinite values.")
 
     # 5. Validate targets and row alignment
     if len(X_train) != len(y_train):
@@ -614,30 +583,17 @@ def train_deep_learning_model(
         if not np.isin(y_val, [0, 1]).all():
             raise ValueError("Validation targets must contain only 0 and 1.")
 
-        output_activation = getattr(
-            model.layers[-1], "activation", None
-        )
-        if (
-            output_activation is None
-            or output_activation.__name__ != "sigmoid"
-        ):
-            raise ValueError(
-                "Binary classification requires a sigmoid output layer."
-            )
+        output_activation = getattr(model.layers[-1], "activation", None)
+        if output_activation is None or output_activation.__name__ != "sigmoid":
+            raise ValueError("Binary classification requires a sigmoid output layer.")
 
     # 6. Validate model dimensions
     if X_train.shape[1] != X_val.shape[1]:
-        raise ValueError(
-            "Training and validation feature counts do not match."
-        )
+        raise ValueError("Training and validation feature counts do not match.")
     if model.input_shape[-1] != X_train.shape[1]:
-        raise ValueError(
-            "Feature count does not match the model input shape."
-        )
+        raise ValueError("Feature count does not match the model input shape.")
     if model.output_shape[-1] != 1:
-        raise ValueError(
-            "This function expects a model with one output neuron."
-        )
+        raise ValueError("This function expects a model with one output neuron.")
 
     # 7. Set random seeds
     random.seed(random_seed)
@@ -683,7 +639,8 @@ def train_deep_learning_model(
     }
 
 
-#---- 5. Tunning th Deep Learning model --------------------------------
+# ---- 5. Tunning th Deep Learning model --------------------------------
+
 
 def tune_deep_learning_model(
     model_type,
@@ -711,6 +668,7 @@ def tune_deep_learning_model(
     validation evaluation, and a table of all trials.
     """
     import itertools
+
     import numpy as np
     import pandas as pd
     import tensorflow as tf
@@ -733,9 +691,7 @@ def tune_deep_learning_model(
         scoring = "auc" if task_type == "classification" else "mae"
 
     allowed_scores = {
-        "classification": {
-            "auc", "accuracy", "precision", "recall", "f1"
-        },
+        "classification": {"auc", "accuracy", "precision", "recall", "f1"},
         "regression": {"mae", "rmse", "r2"},
     }
 
@@ -778,9 +734,7 @@ def tune_deep_learning_model(
         not isinstance(values, (list, tuple)) or len(values) == 0
         for values in parameter_grid.values()
     ):
-        raise ValueError(
-            "parameter_grid must contain non-empty lists or tuples."
-        )
+        raise ValueError("parameter_grid must contain non-empty lists or tuples.")
 
     # 4. Validate basic dataset dimensions
     X_train_array = np.asarray(X_train)
@@ -790,22 +744,16 @@ def tune_deep_learning_model(
         raise ValueError("Training and validation features must be 2D.")
 
     if X_train_array.shape[1] != X_val_array.shape[1]:
-        raise ValueError(
-            "Training and validation feature counts do not match."
-        )
+        raise ValueError("Training and validation feature counts do not match.")
 
     # 5. Generate combinations
     parameter_names = list(parameter_grid.keys())
 
     combinations = list(
-        itertools.product(
-            *(parameter_grid[name] for name in parameter_names)
-        )
+        itertools.product(*(parameter_grid[name] for name in parameter_names))
     )
 
-    maximize_score = scoring in {
-        "auc", "accuracy", "precision", "recall", "f1", "r2"
-    }
+    maximize_score = scoring in {"auc", "accuracy", "precision", "recall", "f1", "r2"}
 
     best_score = -np.inf if maximize_score else np.inf
     best_model = None
@@ -880,23 +828,22 @@ def tune_deep_learning_model(
 
         if score is None or not np.isfinite(score):
             raise ValueError(
-                f"Trial {trial_number} produced an invalid "
-                f"{scoring} score."
+                f"Trial {trial_number} produced an invalid " f"{scoring} score."
             )
 
-        trial_results.append({
-            "trial": trial_number,
-            **params,
-            "scoring": scoring,
-            "score": float(score),
-            "best_epoch": training_result["best_epoch"],
-            "epochs_completed": training_result["epochs_completed"],
-            **metrics,
-        })
-
-        is_better = (
-            score > best_score if maximize_score else score < best_score
+        trial_results.append(
+            {
+                "trial": trial_number,
+                **params,
+                "scoring": scoring,
+                "score": float(score),
+                "best_epoch": training_result["best_epoch"],
+                "epochs_completed": training_result["epochs_completed"],
+                **metrics,
+            }
         )
+
+        is_better = score > best_score if maximize_score else score < best_score
 
         if is_better:
             best_score = float(score)
@@ -929,7 +876,8 @@ def tune_deep_learning_model(
         "trials_completed": len(trial_results),
     }
 
-#----- 6. Evaluating Deel learning function-----
+
+# -----6. Evaluating Deel learning function-----
 def evaluate_deep_learning_model(
     model,
     X,
@@ -953,15 +901,15 @@ def evaluate_deep_learning_model(
     import numpy as np
     from sklearn.metrics import (
         accuracy_score,
-        precision_score,
-        recall_score,
-        f1_score,
-        roc_auc_score,
-        confusion_matrix,
         classification_report,
+        confusion_matrix,
+        f1_score,
         mean_absolute_error,
         mean_squared_error,
+        precision_score,
         r2_score,
+        recall_score,
+        roc_auc_score,
     )
 
     # 1. Infer task from the compiled loss
@@ -988,9 +936,7 @@ def evaluate_deep_learning_model(
     elif loss_name in regression_losses:
         task_type = "regression"
     else:
-        raise ValueError(
-            f"Cannot infer task from loss '{loss_name}'."
-        )
+        raise ValueError(f"Cannot infer task from loss '{loss_name}'.")
 
     # 2. Validate inputs
     X = np.asarray(X, dtype=np.float32)
@@ -1015,9 +961,7 @@ def evaluate_deep_learning_model(
         raise ValueError("threshold must be between 0 and 1.")
 
     # 3. Generate predictions
-    predictions = np.asarray(
-        model.predict(X, verbose=0)
-    ).reshape(-1)
+    predictions = np.asarray(model.predict(X, verbose=0)).reshape(-1)
 
     if len(predictions) != len(y_true):
         raise ValueError("Prediction and target lengths do not match.")
@@ -1041,15 +985,9 @@ def evaluate_deep_learning_model(
 
         metrics = {
             "accuracy": float(accuracy_score(y_true, y_pred)),
-            "precision": float(
-                precision_score(y_true, y_pred, zero_division=0)
-            ),
-            "recall": float(
-                recall_score(y_true, y_pred, zero_division=0)
-            ),
-            "f1": float(
-                f1_score(y_true, y_pred, zero_division=0)
-            ),
+            "precision": float(precision_score(y_true, y_pred, zero_division=0)),
+            "recall": float(recall_score(y_true, y_pred, zero_division=0)),
+            "f1": float(f1_score(y_true, y_pred, zero_division=0)),
             "confusion_matrix": confusion_matrix(
                 y_true, y_pred, labels=[0, 1]
             ).tolist(),
@@ -1058,9 +996,7 @@ def evaluate_deep_learning_model(
 
         # AUC requires both classes to be present.
         if len(np.unique(y_true)) == 2:
-            metrics["auc"] = float(
-                roc_auc_score(y_true, predictions)
-            )
+            metrics["auc"] = float(roc_auc_score(y_true, predictions))
         else:
             metrics["auc"] = None
 
@@ -1086,9 +1022,7 @@ def evaluate_deep_learning_model(
 
         metrics = {
             "mae": float(mean_absolute_error(y_true, predictions)),
-            "rmse": float(
-                np.sqrt(mean_squared_error(y_true, predictions))
-            ),
+            "rmse": float(np.sqrt(mean_squared_error(y_true, predictions))),
             "r2": float(r2_score(y_true, predictions)),
         }
 
@@ -1107,7 +1041,7 @@ def evaluate_deep_learning_model(
     }
 
 
-#---- 7. visualization --------------------------------
+# ----7. visualization--------------------------------
 def visualize_deep_learning_results(
     evaluation_result,
     history=None,
@@ -1131,9 +1065,9 @@ def visualize_deep_learning_results(
     None
         Displays Matplotlib figures.
     """
-    import numpy as np
     import matplotlib.pyplot as plt
-    from sklearn.metrics import roc_curve, ConfusionMatrixDisplay
+    import numpy as np
+    from sklearn.metrics import ConfusionMatrixDisplay, roc_curve
 
     task_type = evaluation_result["task_type"]
     metrics = evaluation_result["metrics"]
@@ -1164,9 +1098,7 @@ def visualize_deep_learning_results(
             if "auc" in history_dict:
                 curve_groups.append(("auc", "val_auc", "AUC"))
             if "accuracy" in history_dict:
-                curve_groups.append(
-                    ("accuracy", "val_accuracy", "Accuracy")
-                )
+                curve_groups.append(("accuracy", "val_accuracy", "Accuracy"))
         else:
             if "mae" in history_dict:
                 curve_groups.append(("mae", "val_mae", "MAE"))
@@ -1199,7 +1131,6 @@ def visualize_deep_learning_results(
 
     # 3. Classification plots
     if task_type == "classification":
-        y_pred = (predictions >= metrics["threshold"]).astype(int)
 
         cm = np.asarray(metrics["confusion_matrix"])
 
@@ -1263,18 +1194,15 @@ def visualize_deep_learning_results(
         plt.show()
 
 
-
 ################################################################
-#===============================================================
-#------------------------ AUTO ENCODER --------------------------------------
-#===============================================================
+# ===============================================================
+# ------------------------ AUTO ENCODER --------------------------------------
+# ===============================================================
 ################################################################
-
-import tensorflow as tf
-from tensorflow.keras import Model, Input
-from tensorflow.keras.layers import Dense
-from tensorflow.keras.optimizers import Adam
+from tensorflow.keras import Model
 from tensorflow.keras.callbacks import EarlyStopping
+
+
 #  1. build Autoencoder --------------------------------
 def build_autoencoder(
     input_dim: int,
@@ -1290,9 +1218,7 @@ def build_autoencoder(
         raise ValueError("input_dim must be positive.")
 
     if not 0 < encoding_dim < hidden_dim < input_dim:
-        raise ValueError(
-            "Require encoding_dim < hidden_dim < input_dim."
-        )
+        raise ValueError("Require encoding_dim < hidden_dim < input_dim.")
 
     inputs = Input(shape=(input_dim,), name="customer_features")
 
@@ -1350,9 +1276,7 @@ def train_autoencoder(
     """
 
     if list(X_train.columns) != list(X_validation.columns):
-        raise ValueError(
-            "Training and validation features must match."
-        )
+        raise ValueError("Training and validation features must match.")
 
     early_stopping = EarlyStopping(
         monitor="val_loss",
@@ -1393,12 +1317,8 @@ def calculate_reconstruction_errors(
     if X.empty:
         raise ValueError("Input feature dataset is empty.")
 
-    if not np.isfinite(
-        X.to_numpy(dtype=np.float64)
-    ).all():
-        raise ValueError(
-            "Input features contain missing or infinite values."
-        )
+    if not np.isfinite(X.to_numpy(dtype=np.float64)).all():
+        raise ValueError("Input features contain missing or infinite values.")
 
     reconstructed = model.predict(
         X.to_numpy(dtype="float32"),
@@ -1408,13 +1328,9 @@ def calculate_reconstruction_errors(
     original = X.to_numpy(dtype="float32")
 
     if reconstructed.shape != original.shape:
-        raise ValueError(
-            "Reconstructed shape does not match input shape."
-        )
+        raise ValueError("Reconstructed shape does not match input shape.")
 
-    feature_errors = np.square(
-        original - reconstructed
-    )
+    feature_errors = np.square(original - reconstructed)
 
     mean_squared_error = feature_errors.mean(axis=1)
 
@@ -1447,76 +1363,49 @@ def validate_anomaly_thresholds(
         ("validation_errors", validation_errors),
     ):
         if required_column not in errors.columns:
-            raise ValueError(
-                f"{name} must contain '{required_column}'."
-            )
+            raise ValueError(f"{name} must contain '{required_column}'.")
 
         values = errors[required_column]
 
         if values.empty or not values.notna().all():
-            raise ValueError(
-                f"{name} contains empty or missing errors."
-            )
+            raise ValueError(f"{name} contains empty or missing errors.")
 
         if (values < 0).any():
-            raise ValueError(
-                f"{name} contains negative reconstruction errors."
-            )
+            raise ValueError(f"{name} contains negative reconstruction errors.")
 
-        if not values.map(
-            lambda value: value < float("inf")
-        ).all():
-            raise ValueError(
-                f"{name} contains infinite errors."
-            )
+        if not values.map(lambda value: value < float("inf")).all():
+            raise ValueError(f"{name} contains infinite errors.")
 
-    if any(
-        percentile <= 0 or percentile >= 100
-        for percentile in percentiles
-    ):
-        raise ValueError(
-            "Percentiles must be between 0 and 100."
-        )
+    if any(percentile <= 0 or percentile >= 100 for percentile in percentiles):
+        raise ValueError("Percentiles must be between 0 and 100.")
 
-    train_values = train_errors[
-        required_column
-    ]
+    train_values = train_errors[required_column]
 
-    validation_values = validation_errors[
-        required_column
-    ]
+    validation_values = validation_errors[required_column]
 
     results = []
 
     for percentile in percentiles:
-        threshold = float(
-            train_values.quantile(percentile / 100)
-        )
+        threshold = float(train_values.quantile(percentile / 100))
 
         train_flagged = train_values > threshold
         validation_flagged = validation_values > threshold
 
-        results.append({
-            "percentile": percentile,
-            "threshold": threshold,
-            "train_flagged_count": int(train_flagged.sum()),
-            "train_flagged_pct": (
-                train_flagged.mean() * 100
-            ),
-            "validation_flagged_count": int(
-                validation_flagged.sum()
-            ),
-            "validation_flagged_pct": (
-                validation_flagged.mean() * 100
-            ),
-        })
+        results.append(
+            {
+                "percentile": percentile,
+                "threshold": threshold,
+                "train_flagged_count": int(train_flagged.sum()),
+                "train_flagged_pct": (train_flagged.mean() * 100),
+                "validation_flagged_count": int(validation_flagged.sum()),
+                "validation_flagged_pct": (validation_flagged.mean() * 100),
+            }
+        )
 
     return pd.DataFrame(results)
 
 
 # 5. Predict customer anamolies
-
-
 def predict_customer_anomalies(
     model,
     X_scaled: pd.DataFrame,
@@ -1529,26 +1418,16 @@ def predict_customer_anomalies(
     """
 
     if len(X_scaled) != len(customer_ids):
-        raise ValueError(
-            "Customer IDs and features must have equal lengths."
-        )
+        raise ValueError("Customer IDs and features must have equal lengths.")
 
     if not X_scaled.index.equals(customer_ids.index):
-        raise ValueError(
-            "Customer IDs and features must have matching indexes."
-        )
+        raise ValueError("Customer IDs and features must have matching indexes.")
 
-    if not np.isfinite(
-        X_scaled.to_numpy(dtype=np.float64)
-    ).all():
-        raise ValueError(
-            "Scaled features contain missing or infinite values."
-        )
+    if not np.isfinite(X_scaled.to_numpy(dtype=np.float64)).all():
+        raise ValueError("Scaled features contain missing or infinite values.")
 
     if not np.isfinite(threshold) or threshold < 0:
-        raise ValueError(
-            "Threshold must be a finite, non-negative number."
-        )
+        raise ValueError("Threshold must be a finite, non-negative number.")
 
     errors = calculate_reconstruction_errors(
         model=model,
@@ -1558,16 +1437,12 @@ def predict_customer_anomalies(
     results = pd.DataFrame(
         {
             "Customer ID": customer_ids.to_numpy(),
-            "reconstruction_error": (
-                errors["reconstruction_error"].to_numpy()
-            ),
+            "reconstruction_error": (errors["reconstruction_error"].to_numpy()),
         },
         index=X_scaled.index,
     )
 
-    results["anomaly_review_flag"] = (
-        results["reconstruction_error"] > threshold
-    )
+    results["anomaly_review_flag"] = results["reconstruction_error"] > threshold
 
     results["review_status"] = np.where(
         results["anomaly_review_flag"],

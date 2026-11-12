@@ -1,11 +1,9 @@
-
 from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import shap
-
 
 
 def run_shap_analysis(
@@ -40,8 +38,7 @@ def run_shap_analysis(
         raise ValueError("Expected feature names contain duplicates.")
 
     missing_features = [
-        feature for feature in expected_features
-        if feature not in X_validation.columns
+        feature for feature in expected_features if feature not in X_validation.columns
     ]
 
     if missing_features:
@@ -56,29 +53,19 @@ def run_shap_analysis(
     try:
         feature_array = X_explain.to_numpy(dtype=float)
     except (TypeError, ValueError) as exc:
-        raise ValueError(
-            "Validation features must contain numeric values."
-        ) from exc
+        raise ValueError("Validation features must contain numeric values.") from exc
 
     if not np.isfinite(feature_array).all():
-        raise ValueError(
-            "Validation features contain infinite or invalid values."
-        )
+        raise ValueError("Validation features contain infinite or invalid values.")
 
-    if (
-        hasattr(model, "n_features_in_")
-        and X_explain.shape[1] != model.n_features_in_
-    ):
+    if hasattr(model, "n_features_in_") and X_explain.shape[1] != model.n_features_in_:
         raise ValueError(
             f"Model expects {model.n_features_in_} features, "
             f"but received {X_explain.shape[1]}."
         )
 
-    if y_validation is not None:
-        if len(y_validation) != len(X_explain):
-            raise ValueError(
-                "y_validation and X_validation lengths differ."
-            )
+    if y_validation is not None and len(y_validation) != len(X_explain):
+        raise ValueError("y_validation and X_validation lengths differ.")
 
     print("=" * 65)
     print("SHAP ANALYSIS VALIDATION")
@@ -102,10 +89,7 @@ def run_shap_analysis(
     print("-" * 65)
     print(f"Total customers       : {len(predictions)}")
     print(f"Predicted churn       : {predicted_churn_count}")
-    print(
-        f"Predicted no churn    : "
-        f"{int(np.sum(predictions == 0))}"
-    )
+    print(f"Predicted no churn    : " f"{int(np.sum(predictions == 0))}")
 
     # 4. Select a customer
     if customer_idx is None:
@@ -130,24 +114,22 @@ def run_shap_analysis(
         raise TypeError("customer_idx must be an integer.")
 
     if not 0 <= customer_idx < len(X_explain):
-        raise IndexError(
-            "customer_idx is outside the validation data."
-        )
+        raise IndexError("customer_idx is outside the validation data.")
 
     # 5. Get selected customer's prediction and features
     customer_idx = int(customer_idx)
     customer_row = X_explain.iloc[[customer_idx]]
     customer_prediction = int(predictions[customer_idx])
 
-    prediction_label = (
-        "Churn" if customer_prediction == 1 else "No Churn"
-    )
+    prediction_label = "Churn" if customer_prediction == 1 else "No Churn"
 
     # Convert the row into a readable feature table
-    customer_feature_table = pd.DataFrame({
-        "Feature": customer_row.columns,
-        "Value": customer_row.iloc[0].to_numpy(),
-    })
+    customer_feature_table = pd.DataFrame(
+        {
+            "Feature": customer_row.columns,
+            "Value": customer_row.iloc[0].to_numpy(),
+        }
+    )
 
     # 6. Get class probabilities
     class_probabilities = {}
@@ -157,8 +139,7 @@ def run_shap_analysis(
 
         class_probabilities = {
             str(class_label): float(probability)
-            for class_label, probability
-            in zip(model.classes_, probabilities)
+            for class_label, probability in zip(model.classes_, probabilities)
         }
 
     # 7. Get actual churn label
@@ -167,9 +148,7 @@ def run_shap_analysis(
     if y_validation is not None:
         if isinstance(y_validation, pd.DataFrame):
             if y_validation.shape[1] != 1:
-                raise ValueError(
-                    "y_validation DataFrame must have one column."
-                )
+                raise ValueError("y_validation DataFrame must have one column.")
             actual_churn = y_validation.iloc[customer_idx, 0]
 
         elif isinstance(y_validation, pd.Series):
@@ -197,9 +176,7 @@ def run_shap_analysis(
             print(f"{label:<12}: {probability:.2%}")
 
     if actual_churn is not None:
-        actual_label = (
-            "Churn" if actual_churn == 1 else "No Churn"
-        )
+        actual_label = "Churn" if actual_churn == 1 else "No Churn"
 
         print(f"\nActual outcome : {actual_label}")
         print(
@@ -213,9 +190,11 @@ def run_shap_analysis(
         customer_feature_table.to_string(
             index=False,
             formatters={
-                "Value": lambda value: f"{value:,.4f}"
-                if isinstance(value, (int, float, np.number))
-                else str(value)
+                "Value": lambda value: (
+                    f"{value:,.4f}"
+                    if isinstance(value, (int, float, np.number))
+                    else str(value)
+                )
             },
         )
     )
@@ -239,6 +218,7 @@ def run_shap_analysis(
         "customer_idx": customer_idx,
         "customer_explanation": customer_result,
     }
+
 
 def explain_customer_waterfall(
     model,
@@ -293,9 +273,7 @@ def explain_customer_waterfall(
         raise TypeError("customer_idx must be an integer.")
 
     if not 0 <= customer_idx < len(X):
-        raise IndexError(
-            f"customer_idx must be between 0 and {len(X) - 1}."
-        )
+        raise IndexError(f"customer_idx must be between 0 and {len(X) - 1}.")
 
     if max_display < 1:
         raise ValueError("max_display must be at least 1.")
@@ -307,9 +285,7 @@ def explain_customer_waterfall(
         raise ValueError("Customer features contain missing values.")
 
     if not np.isfinite(customer.to_numpy(dtype=float)).all():
-        raise ValueError(
-            "Customer features contain infinite or invalid values."
-        )
+        raise ValueError("Customer features contain infinite or invalid values.")
 
     # 3. Generate SHAP explanation
     explanation = explainer(customer)
@@ -318,10 +294,7 @@ def explain_customer_waterfall(
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    plot_path = (
-        output_dir
-        / f"customer_{customer_idx}_shap_waterfall.png"
-    )
+    plot_path = output_dir / f"customer_{customer_idx}_shap_waterfall.png"
 
     # 5. Generate and save waterfall plot
     try:
@@ -363,8 +336,7 @@ def explain_customer_waterfall(
 
         result["class_probabilities"] = {
             str(class_label): float(probability)
-            for class_label, probability
-            in zip(model.classes_, probabilities)
+            for class_label, probability in zip(model.classes_, probabilities)
         }
 
     print(f"SHAP waterfall saved to: {plot_path}")
@@ -374,6 +346,7 @@ def explain_customer_waterfall(
         print("Class probabilities:", result["class_probabilities"])
 
     return result
+
 
 def explain_global_summary(
     explainer,
@@ -420,9 +393,7 @@ def explain_global_summary(
         raise ValueError("X is empty.")
 
     if plot_type not in {"dot", "bar"}:
-        raise ValueError(
-            "plot_type must be either 'dot' or 'bar'."
-        )
+        raise ValueError("plot_type must be either 'dot' or 'bar'.")
 
     if max_display < 1:
         raise ValueError("max_display must be at least 1.")
@@ -440,11 +411,7 @@ def explain_global_summary(
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    filename = (
-        "shap_summary_dot.png"
-        if plot_type == "dot"
-        else "shap_summary_bar.png"
-    )
+    filename = "shap_summary_dot.png" if plot_type == "dot" else "shap_summary_bar.png"
     plot_path = output_dir / filename
 
     try:
@@ -484,6 +451,7 @@ def explain_global_summary(
         "shap_values": shap_values,
         "plot_type": plot_type,
     }
+
 
 def plot_feature_importance(
     model,
@@ -548,30 +516,25 @@ def plot_feature_importance(
         )
 
         if values.ndim != 2:
-            raise ValueError(
-                "Expected SHAP values with shape "
-                "(samples, features)."
-            )
+            raise ValueError("Expected SHAP values with shape " "(samples, features).")
 
         if values.shape[1] != len(feature_names):
-            raise ValueError(
-                "SHAP feature count does not match feature_names."
-            )
+            raise ValueError("SHAP feature count does not match feature_names.")
 
         importance_values = np.abs(values).mean(axis=0)
         importance_column = "Mean_Absolute_SHAP"
         filename_prefix = "shap_feature_importance"
 
     if len(importance_values) != len(feature_names):
-        raise ValueError(
-            "Importance count does not match feature_names."
-        )
+        raise ValueError("Importance count does not match feature_names.")
 
     # Create and sort the importance table
-    importance_df = pd.DataFrame({
-        "Feature": feature_names,
-        importance_column: importance_values,
-    })
+    importance_df = pd.DataFrame(
+        {
+            "Feature": feature_names,
+            importance_column: importance_values,
+        }
+    )
 
     importance_df = importance_df.sort_values(
         by=importance_column,
@@ -632,10 +595,7 @@ def plot_feature_importance(
     }
 
 
-import numpy as np
 import pandas as pd
-import shap
-import matplotlib.pyplot as plt
 
 
 def explain_customer_for_dashboard(
@@ -658,16 +618,12 @@ def explain_customer_for_dashboard(
         raise TypeError("customer_features must be a DataFrame.")
 
     if len(customer_features) != 1:
-        raise ValueError(
-            "Provide exactly one customer row."
-        )
+        raise ValueError("Provide exactly one customer row.")
 
     if customer_features.isna().any().any():
         raise ValueError("Customer features contain missing values.")
 
-    if not np.isfinite(
-        customer_features.to_numpy(dtype=float)
-    ).all():
+    if not np.isfinite(customer_features.to_numpy(dtype=float)).all():
         raise ValueError("Customer features contain invalid values.")
 
     # Calculate the SHAP explanation
@@ -678,27 +634,23 @@ def explain_customer_for_dashboard(
 
     probabilities = {}
     if hasattr(model, "predict_proba"):
-        raw_probabilities = model.predict_proba(
-            customer_features
-        )[0]
+        raw_probabilities = model.predict_proba(customer_features)[0]
 
         probabilities = {
             str(label): float(probability)
-            for label, probability in zip(
-                model.classes_, raw_probabilities
-            )
+            for label, probability in zip(model.classes_, raw_probabilities)
         }
 
     # Prepare feature contribution table
-    contributions = pd.DataFrame({
-        "Feature": customer_features.columns,
-        "Value": customer_features.iloc[0].values,
-        "SHAP_Value": explanation.values[0],
-    })
-
-    contributions["Absolute_SHAP"] = (
-        contributions["SHAP_Value"].abs()
+    contributions = pd.DataFrame(
+        {
+            "Feature": customer_features.columns,
+            "Value": customer_features.iloc[0].values,
+            "SHAP_Value": explanation.values[0],
+        }
     )
+
+    contributions["Absolute_SHAP"] = contributions["SHAP_Value"].abs()
 
     contributions = contributions.sort_values(
         "Absolute_SHAP",
@@ -716,14 +668,13 @@ def explain_customer_for_dashboard(
 
     return {
         "prediction": prediction,
-        "prediction_label": (
-            "Churn" if prediction == 1 else "No Churn"
-        ),
+        "prediction_label": ("Churn" if prediction == 1 else "No Churn"),
         "probabilities": probabilities,
         "contributions": contributions,
         "shap_explanation": explanation,
         "figure": figure,
     }
+
 
 """
 def explain_global_for_dashboard(
@@ -778,6 +729,7 @@ def explain_global_for_dashboard(
         "figure": figure,
     }"""
 
+
 def explain_global_for_dashboard(
     explainer,
     X: pd.DataFrame,
@@ -808,15 +760,19 @@ def explain_global_for_dashboard(
     explanation = explainer(X)
 
     # Global feature importance
-    importance = pd.DataFrame({
-        "Feature": X.columns,
-        "Mean_Absolute_SHAP": np.abs(
-            explanation.values
-        ).mean(axis=0),
-    }).sort_values(
-        "Mean_Absolute_SHAP",
-        ascending=False,
-    ).reset_index(drop=True)
+    importance = (
+        pd.DataFrame(
+            {
+                "Feature": X.columns,
+                "Mean_Absolute_SHAP": np.abs(explanation.values).mean(axis=0),
+            }
+        )
+        .sort_values(
+            "Mean_Absolute_SHAP",
+            ascending=False,
+        )
+        .reset_index(drop=True)
+    )
 
     # Global beeswarm summary plot
     shap.plots.beeswarm(
@@ -832,18 +788,3 @@ def explain_global_for_dashboard(
         "shap_explanation": explanation,
         "figure": figure,
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

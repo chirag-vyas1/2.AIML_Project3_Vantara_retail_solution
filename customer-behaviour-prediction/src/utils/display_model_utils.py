@@ -1,10 +1,11 @@
-from IPython.display import display
-import pandas as pd
 import matplotlib.pyplot as plt
+import pandas as pd
 import seaborn as sns
+from IPython.display import display
+
 
 ################################################################
-#---- for classification model  -----------------
+# ---- for classification model  -----------------
 ################################################################
 def display_model_registry(
     model_config: dict,
@@ -29,51 +30,37 @@ def display_model_registry(
 
     for model_name, config in model_config.items():
 
-        display_name = model_name.replace(
-            "_", " "
-        ).title()
+        display_name = model_name.replace("_", " ").title()
 
-        enabled = config.get(
-            "enabled",
-            False
-        )
+        enabled = config.get("enabled", False)
 
         print(f"\n{display_name}")
         print("-" * 90)
 
         print(f"Enabled: {enabled}")
 
-        base_parameters = config.get(
-            "base_parameters",
-            {}
-        )
+        base_parameters = config.get("base_parameters", {})
 
         print("\nBase Parameters")
 
         if base_parameters:
             for parameter, value in base_parameters.items():
-                print(
-                    f"  {parameter:<30}: {value}"
-                )
+                print(f"  {parameter:<30}: {value}")
         else:
             print("  None")
 
-        hyperparameter_space = config.get(
-            "hyperparameter_space",
-            {}
-        )
+        hyperparameter_space = config.get("hyperparameter_space", {})
 
         print("\nHyperparameter Space")
 
         if hyperparameter_space:
             for parameter, values in hyperparameter_space.items():
-                print(
-                    f"  {parameter:<30}: {values}"
-                )
+                print(f"  {parameter:<30}: {values}")
         else:
             print("  Not configured")
 
     print("\n" + "=" * 90)
+
 
 def display_baseline_training_results(
     baseline_models: dict,
@@ -99,19 +86,13 @@ def display_baseline_training_results(
 
         model = result["model"]
 
-        display_name = model_name.replace(
-            "_", " "
-        ).title()
+        display_name = model_name.replace("_", " ").title()
 
         results.append(
             {
                 "Model": display_name,
                 "Estimator": model.__class__.__name__,
-                "Feature Scaling": (
-                    "Yes"
-                    if result["feature_scaling"]
-                    else "No"
-                ),
+                "Feature Scaling": ("Yes" if result["feature_scaling"] else "No"),
                 "Training Time (sec)": round(
                     result["training_time"],
                     4,
@@ -126,12 +107,7 @@ def display_baseline_training_results(
     print("=" * 90)
 
     display(
-        results_df.style
-        .format(
-            {
-                "Training Time (sec)": "{:.4f}"
-            }
-        )
+        results_df.style.format({"Training Time (sec)": "{:.4f}"})
         .set_properties(
             **{
                 "text-align": "center",
@@ -149,6 +125,7 @@ def display_baseline_training_results(
             ]
         )
     )
+
 
 def display_classification_evaluation(
     evaluation_results: dict,
@@ -174,9 +151,7 @@ def display_classification_evaluation(
 
     for model_name, metrics in evaluation_results.items():
 
-        display_name = model_name.replace(
-            "_", " "
-        ).title()
+        display_name = model_name.replace("_", " ").title()
 
         results.append(
             {
@@ -201,8 +176,7 @@ def display_classification_evaluation(
     print("=" * 100)
 
     display(
-        results_df.style
-        .format(
+        results_df.style.format(
             {
                 "Accuracy": "{:.4f}",
                 "Precision": "{:.4f}",
@@ -280,9 +254,7 @@ def display_classification_evaluation_visuals(
         yticklabels=["Actual Non-Churn", "Actual Churn"],
     )
 
-    plt.title(
-        f"{model_name} - Confusion Matrix"
-    )
+    plt.title(f"{model_name} - Confusion Matrix")
 
     plt.xlabel("Predicted")
     plt.ylabel("Actual")
@@ -303,9 +275,7 @@ def display_classification_evaluation_visuals(
 
     plt.ylim(0, 1)
 
-    plt.title(
-        f"{model_name} - Classification Metrics"
-    )
+    plt.title(f"{model_name} - Classification Metrics")
 
     plt.ylabel("Score")
 
@@ -331,6 +301,7 @@ def display_classification_evaluation_visuals(
 # --- for regression model --------
 ############################################
 
+
 def display_clv_validation(validation_results: dict) -> None:
     """
     Display CLV regression dataset validation results.
@@ -339,33 +310,17 @@ def display_clv_validation(validation_results: dict) -> None:
     print("CLV REGRESSION DATASET VALIDATION")
     print("=" * 50)
 
-    print(
-        f"Rows: {validation_results['row_count']}"
-    )
+    print(f"Rows: {validation_results['row_count']}")
 
-    print(
-        f"Columns: {validation_results['column_count']}"
-    )
+    print(f"Columns: {validation_results['column_count']}")
 
-    print(
-        f"Duplicate Customer IDs: "
-        f"{validation_results['duplicate_customer_id']}"
-    )
+    print(f"Duplicate Customer IDs: " f"{validation_results['duplicate_customer_id']}")
 
-    print(
-        f"Missing Customer IDs: "
-        f"{validation_results['missing_customer_id']}"
-    )
+    print(f"Missing Customer IDs: " f"{validation_results['missing_customer_id']}")
 
-    print(
-        f"Missing Target: "
-        f"{validation_results['missing_target']}"
-    )
+    print(f"Missing Target: " f"{validation_results['missing_target']}")
 
-    print(
-        f"Negative Target: "
-        f"{validation_results['negative_target']}"
-    )
+    print(f"Negative Target: " f"{validation_results['negative_target']}")
 
     print(
         f"Missing Predictor Values: "
@@ -375,35 +330,17 @@ def display_clv_validation(validation_results: dict) -> None:
     print("\nTarget Statistics")
     print("-" * 50)
 
-    print(
-        f"Target: "
-        f"{validation_results['target_column']}"
-    )
+    print(f"Target: " f"{validation_results['target_column']}")
 
-    print(
-        f"Mean: "
-        f"{validation_results['target_mean']:.2f}"
-    )
+    print(f"Mean: " f"{validation_results['target_mean']:.2f}")
 
-    print(
-        f"Median: "
-        f"{validation_results['target_median']:.2f}"
-    )
+    print(f"Median: " f"{validation_results['target_median']:.2f}")
 
-    print(
-        f"Std: "
-        f"{validation_results['target_std']:.2f}"
-    )
+    print(f"Std: " f"{validation_results['target_std']:.2f}")
 
-    print(
-        f"Minimum: "
-        f"{validation_results['target_min']:.2f}"
-    )
+    print(f"Minimum: " f"{validation_results['target_min']:.2f}")
 
-    print(
-        f"Maximum: "
-        f"{validation_results['target_max']:.2f}"
-    )
+    print(f"Maximum: " f"{validation_results['target_max']:.2f}")
 
     print(
         f"Zero CLV: "
@@ -424,6 +361,7 @@ def display_clv_validation(validation_results: dict) -> None:
         print("PASSED")
     else:
         print("FAILED")
+
 
 def display_clv_analysis(
     clv_analysis: dict,
@@ -449,17 +387,11 @@ def display_clv_analysis(
     print("\nDataset Structure")
     print("-" * 70)
 
-    print(
-        f"Shape: {clv_analysis['shape']}"
-    )
+    print(f"Shape: {clv_analysis['shape']}")
 
-    print(
-        f"Rows: {clv_analysis['row_count']}"
-    )
+    print(f"Rows: {clv_analysis['row_count']}")
 
-    print(
-        f"Columns: {clv_analysis['column_count']}"
-    )
+    print(f"Columns: {clv_analysis['column_count']}")
 
     # ============================================================
     # 2. Duplicate analysis
@@ -468,15 +400,9 @@ def display_clv_analysis(
     print("\nDuplicate Analysis")
     print("-" * 70)
 
-    print(
-        f"Duplicate rows: "
-        f"{clv_analysis['duplicate_rows']}"
-    )
+    print(f"Duplicate rows: " f"{clv_analysis['duplicate_rows']}")
 
-    print(
-        f"Duplicate Customer IDs: "
-        f"{clv_analysis['duplicate_customer_ids']}"
-    )
+    print(f"Duplicate Customer IDs: " f"{clv_analysis['duplicate_customer_ids']}")
 
     # ============================================================
     # 3. Missing-value analysis
@@ -485,47 +411,30 @@ def display_clv_analysis(
     print("\nMissing-Value Analysis")
     print("-" * 70)
 
-    print(
-        f"Total missing values: "
-        f"{clv_analysis['total_missing_values']}"
-    )
+    print(f"Total missing values: " f"{clv_analysis['total_missing_values']}")
 
     if clv_analysis["missing_columns"]:
 
         print("\nColumns with missing values:")
 
-        for column, count in (
-            clv_analysis["missing_columns"].items()
-        ):
-            print(
-                f"  {column}: {count}"
-            )
+        for column, count in clv_analysis["missing_columns"].items():
+            print(f"  {column}: {count}")
 
     else:
-        print(
-            "No columns contain missing values."
-        )
+        print("No columns contain missing values.")
 
     # ============================================================
     # 4. CLV target statistics
     # ============================================================
 
-    clv_statistics = (
-        clv_analysis["clv_statistics"]
-    )
+    clv_statistics = clv_analysis["clv_statistics"]
 
     print("\nCLV Target Analysis")
     print("-" * 70)
 
-    print(
-        f"Target column: "
-        f"{clv_statistics['target_column']}"
-    )
+    print(f"Target column: " f"{clv_statistics['target_column']}")
 
-    print(
-        f"Prediction window: "
-        f"{clv_statistics['prediction_window_days']} days"
-    )
+    print(f"Prediction window: " f"{clv_statistics['prediction_window_days']} days")
 
     print(
         f"Zero CLV customers: "
@@ -548,55 +457,25 @@ def display_clv_analysis(
     print("\nCLV Distribution")
     print("-" * 70)
 
-    print(
-        f"Mean: "
-        f"{clv_statistics['mean_clv']:.2f}"
-    )
+    print(f"Mean: " f"{clv_statistics['mean_clv']:.2f}")
 
-    print(
-        f"Median: "
-        f"{clv_statistics['median_clv']:.2f}"
-    )
+    print(f"Median: " f"{clv_statistics['median_clv']:.2f}")
 
-    print(
-        f"Standard deviation: "
-        f"{clv_statistics['standard_deviation']:.2f}"
-    )
+    print(f"Standard deviation: " f"{clv_statistics['standard_deviation']:.2f}")
 
-    print(
-        f"Minimum: "
-        f"{clv_statistics['minimum_clv']:.2f}"
-    )
+    print(f"Minimum: " f"{clv_statistics['minimum_clv']:.2f}")
 
-    print(
-        f"25th percentile: "
-        f"{clv_statistics['percentile_25']:.2f}"
-    )
+    print(f"25th percentile: " f"{clv_statistics['percentile_25']:.2f}")
 
-    print(
-        f"75th percentile: "
-        f"{clv_statistics['percentile_75']:.2f}"
-    )
+    print(f"75th percentile: " f"{clv_statistics['percentile_75']:.2f}")
 
-    print(
-        f"90th percentile: "
-        f"{clv_statistics['percentile_90']:.2f}"
-    )
+    print(f"90th percentile: " f"{clv_statistics['percentile_90']:.2f}")
 
-    print(
-        f"95th percentile: "
-        f"{clv_statistics['percentile_95']:.2f}"
-    )
+    print(f"95th percentile: " f"{clv_statistics['percentile_95']:.2f}")
 
-    print(
-        f"99th percentile: "
-        f"{clv_statistics['percentile_99']:.2f}"
-    )
+    print(f"99th percentile: " f"{clv_statistics['percentile_99']:.2f}")
 
-    print(
-        f"Maximum: "
-        f"{clv_statistics['maximum_clv']:.2f}"
-    )
+    print(f"Maximum: " f"{clv_statistics['maximum_clv']:.2f}")
 
     # ============================================================
     # 5. Quality checks
@@ -605,21 +484,13 @@ def display_clv_analysis(
     print("\nQuality Checks")
     print("-" * 70)
 
-    for check_name, result in (
-        clv_analysis["quality_checks"].items()
-    ):
+    for check_name, result in clv_analysis["quality_checks"].items():
 
         status = "PASS" if result else "FAIL"
 
-        formatted_name = (
-            check_name
-            .replace("_", " ")
-            .title()
-        )
+        formatted_name = check_name.replace("_", " ").title()
 
-        print(
-            f"{formatted_name}: {status}"
-        )
+        print(f"{formatted_name}: {status}")
 
     # ============================================================
     # 6. Overall quality status
@@ -634,6 +505,7 @@ def display_clv_analysis(
         print("FAILED")
 
     print("=" * 70)
+
 
 def display_regression_evaluation(
     evaluation_results: dict,
@@ -660,9 +532,7 @@ def display_regression_evaluation(
 
     for model_name, metrics in evaluation_results.items():
 
-        display_name = model_name.replace(
-            "_", " "
-        ).title()
+        display_name = model_name.replace("_", " ").title()
 
         results.append(
             {
@@ -685,8 +555,7 @@ def display_regression_evaluation(
     print("=" * 100)
 
     display(
-        results_df.style
-        .format(
+        results_df.style.format(
             {
                 "MAE": "{:.4f}",
                 "RMSE": "{:.4f}",
@@ -755,9 +624,7 @@ def display_regression_evaluation_visuals(
         metrics.values(),
     )
 
-    plt.title(
-        f"{model_name} - Regression Metrics"
-    )
+    plt.title(f"{model_name} - Regression Metrics")
 
     plt.ylabel("Metric Value")
 
@@ -816,9 +683,7 @@ def display_actual_vs_predicted(
         label="Perfect Prediction",
     )
 
-    plt.title(
-        f"{model_name} - Actual vs. Predicted"
-    )
+    plt.title(f"{model_name} - Actual vs. Predicted")
 
     plt.xlabel("Actual Future CLV")
     plt.ylabel("Predicted Future CLV")

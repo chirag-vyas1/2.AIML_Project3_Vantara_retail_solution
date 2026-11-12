@@ -1,4 +1,3 @@
-
 import pandas as pd
 
 
@@ -78,14 +77,10 @@ def generate_churn_explanation(
         method_name = "LIME"
 
     else:
-        raise ValueError(
-            "Contributions must contain SHAP_Value or LIME_Weight."
-        )
+        raise ValueError("Contributions must contain SHAP_Value or LIME_Weight.")
 
     if feature_column not in contributions.columns:
-        raise ValueError(
-            f"Missing feature column: {feature_column}"
-        )
+        raise ValueError(f"Missing feature column: {feature_column}")
 
     # Rank the strongest positive and negative contributions
     table = contributions.copy()
@@ -94,9 +89,11 @@ def generate_churn_explanation(
         errors="raise",
     )
 
-    if not table[contribution_column].map(
-        lambda value: pd.notna(value) and abs(value) != float("inf")
-    ).all():
+    if (
+        not table[contribution_column]
+        .map(lambda value: pd.notna(value) and abs(value) != float("inf"))
+        .all()
+    ):
         raise ValueError("Contribution values must be finite.")
 
     positive = table[table[contribution_column] > 0].sort_values(
@@ -143,11 +140,7 @@ def generate_churn_explanation(
         )
 
     else:
-        risk_level = (
-            "Lower"
-            if churn_probability < 0.40
-            else "Elevated"
-        )
+        risk_level = "Lower" if churn_probability < 0.40 else "Elevated"
 
         summary = (
             f"The model predicts that this customer will not churn. "
@@ -162,10 +155,10 @@ def generate_churn_explanation(
 
     # Convert feature names into readable text
     def format_features(feature_list):
-        return ", ".join(
-            str(name).replace("_", " ")
-            for name in feature_list
-        ) or "No clear features identified by this explanation."
+        return (
+            ", ".join(str(name).replace("_", " ") for name in feature_list)
+            or "No clear features identified by this explanation."
+        )
 
     explanation_text = (
         summary

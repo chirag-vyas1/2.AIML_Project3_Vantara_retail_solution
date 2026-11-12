@@ -1,7 +1,7 @@
 ############################################## Data Cleaning Functions ################################################
 import pandas as pd
- 
-    
+
+
 # 1. -------------- duplicate removal ---------------
 def clean_duplicates(df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -24,6 +24,7 @@ def clean_duplicates(df: pd.DataFrame) -> pd.DataFrame:
         cleaned_df = cleaned_df.drop_duplicates().reset_index(drop=True)
 
     return cleaned_df
+
 
 # 2. ----------- Handle Quantity And Price ----------
 def handle_quantity_and_price(
@@ -71,9 +72,7 @@ def handle_quantity_and_price(
     missing_columns = required_columns - set(df.columns)
 
     if missing_columns:
-        raise ValueError(
-            f"Missing required columns: {sorted(missing_columns)}"
-        )
+        raise ValueError(f"Missing required columns: {sorted(missing_columns)}")
 
     working_df = df.copy()
 
@@ -100,13 +99,9 @@ def handle_quantity_and_price(
 
     quantity_iqr = quantity_q3 - quantity_q1
 
-    quantity_lower_bound = (
-        quantity_q1 - 1.5 * quantity_iqr
-    )
+    quantity_lower_bound = quantity_q1 - 1.5 * quantity_iqr
 
-    quantity_upper_bound = (
-        quantity_q3 + 1.5 * quantity_iqr
-    )
+    quantity_upper_bound = quantity_q3 + 1.5 * quantity_iqr
 
     # =========================================================
     # 4. Price IQR calculation
@@ -128,29 +123,21 @@ def handle_quantity_and_price(
 
     price_iqr = price_q3 - price_q1
 
-    price_lower_bound = (
-        price_q1 - 1.5 * price_iqr
-    )
+    price_lower_bound = price_q1 - 1.5 * price_iqr
 
-    price_upper_bound = (
-        price_q3 + 1.5 * price_iqr
-    )
+    price_upper_bound = price_q3 + 1.5 * price_iqr
 
     # =========================================================
     # 5. IQR outlier flags
     # =========================================================
 
     working_df["Quantity IQR Outlier"] = (
-        (working_df["Quantity"] < quantity_lower_bound)
-        | (working_df["Quantity"] > quantity_upper_bound)
-    )
+        working_df["Quantity"] < quantity_lower_bound
+    ) | (working_df["Quantity"] > quantity_upper_bound)
 
-    working_df["Price IQR Outlier"] = (
-        (working_df["Price"] > 0)
-        & (
-            (working_df["Price"] < price_lower_bound)
-            | (working_df["Price"] > price_upper_bound)
-        )
+    working_df["Price IQR Outlier"] = (working_df["Price"] > 0) & (
+        (working_df["Price"] < price_lower_bound)
+        | (working_df["Price"] > price_upper_bound)
     )
 
     # =========================================================
@@ -161,12 +148,7 @@ def handle_quantity_and_price(
     # Other negative-quantity records are classified as returns.
     # =========================================================
 
-    invoice_text = (
-        working_df["Invoice"]
-        .astype("string")
-        .str.strip()
-        .str.upper()
-    )
+    invoice_text = working_df["Invoice"].astype("string").str.strip().str.upper()
 
     working_df["Transaction Type"] = "Purchase"
 
@@ -175,10 +157,7 @@ def handle_quantity_and_price(
         na=False,
     )
 
-    return_mask = (
-        (working_df["Quantity"] < 0)
-        & ~cancellation_mask
-    )
+    return_mask = (working_df["Quantity"] < 0) & ~cancellation_mask
 
     working_df.loc[
         cancellation_mask,
@@ -207,10 +186,9 @@ def handle_quantity_and_price(
     # Positive IQR outliers are potential bulk purchases.
     # They are NOT removed automatically.
 
-    potential_bulk_mask = (
-        (working_df["Quantity"] > 0)
-        & working_df["Quantity IQR Outlier"]
-    )
+    potential_bulk_mask = (working_df["Quantity"] > 0) & working_df[
+        "Quantity IQR Outlier"
+    ]
 
     working_df.loc[
         potential_bulk_mask,
@@ -221,19 +199,13 @@ def handle_quantity_and_price(
     # 8. Calculate transaction value
     # =========================================================
 
-    working_df["Transaction Value"] = (
-        working_df["Quantity"]
-        * working_df["Price"]
-    )
+    working_df["Transaction Value"] = working_df["Quantity"] * working_df["Price"]
 
     # =========================================================
     # 9. Identify extreme quantities
     # =========================================================
 
-    extreme_quantity_mask = (
-        working_df["Quantity"]
-        > extreme_quantity_threshold
-    )
+    extreme_quantity_mask = working_df["Quantity"] > extreme_quantity_threshold
 
     # =========================================================
     # 10. Calculate exceptional transaction-value threshold
@@ -241,24 +213,17 @@ def handle_quantity_and_price(
     # Use positive sales only.
     # =========================================================
 
-    positive_sales_mask = (
-        (working_df["Quantity"] > 0)
-        & (working_df["Price"] > 0)
-    )
+    positive_sales_mask = (working_df["Quantity"] > 0) & (working_df["Price"] > 0)
 
-    positive_transaction_values = (
-        working_df.loc[
-            positive_sales_mask,
-            "Transaction Value",
-        ]
-    )
+    positive_transaction_values = working_df.loc[
+        positive_sales_mask,
+        "Transaction Value",
+    ]
 
     if len(positive_transaction_values) > 0:
 
-        extreme_value_threshold = (
-            positive_transaction_values.quantile(
-                extreme_value_quantile
-            )
+        extreme_value_threshold = positive_transaction_values.quantile(
+            extreme_value_quantile
         )
 
     else:
@@ -272,24 +237,14 @@ def handle_quantity_and_price(
     # are evidence of a potential genuine bulk order.
     # =========================================================
 
-    extreme_rows_per_invoice = (
-        extreme_quantity_mask
-        .groupby(working_df["Invoice"])
-        .sum()
-    )
+    extreme_rows_per_invoice = extreme_quantity_mask.groupby(
+        working_df["Invoice"]
+    ).sum()
 
-    bulk_invoice_numbers = (
-        extreme_rows_per_invoice[
-            extreme_rows_per_invoice >= 2
-        ]
-        .index
-    )
+    bulk_invoice_numbers = extreme_rows_per_invoice[extreme_rows_per_invoice >= 2].index
 
-    coherent_bulk_invoice_mask = (
-        extreme_quantity_mask
-        & working_df["Invoice"].isin(
-            bulk_invoice_numbers
-        )
+    coherent_bulk_invoice_mask = extreme_quantity_mask & working_df["Invoice"].isin(
+        bulk_invoice_numbers
     )
 
     # =========================================================
@@ -302,43 +257,30 @@ def handle_quantity_and_price(
 
     if "Customer ID" in working_df.columns:
 
-        extreme_rows_per_customer = (
-            extreme_quantity_mask
-            .groupby(working_df["Customer ID"])
-            .sum()
-        )
+        extreme_rows_per_customer = extreme_quantity_mask.groupby(
+            working_df["Customer ID"]
+        ).sum()
 
-        bulk_customer_ids = (
-            extreme_rows_per_customer[
-                extreme_rows_per_customer >= 2
-            ]
-            .index
-        )
+        bulk_customer_ids = extreme_rows_per_customer[
+            extreme_rows_per_customer >= 2
+        ].index
 
-        repeated_bulk_customer_mask = (
-            extreme_quantity_mask
-            & working_df["Customer ID"].isin(
-                bulk_customer_ids
-            )
-        )
+        repeated_bulk_customer_mask = extreme_quantity_mask & working_df[
+            "Customer ID"
+        ].isin(bulk_customer_ids)
 
     else:
 
-        repeated_bulk_customer_mask = (
-            pd.Series(
-                False,
-                index=working_df.index,
-            )
+        repeated_bulk_customer_mask = pd.Series(
+            False,
+            index=working_df.index,
         )
 
     # =========================================================
     # 13. Final legitimate bulk identification
     # =========================================================
 
-    legitimate_bulk_mask = (
-        coherent_bulk_invoice_mask
-        | repeated_bulk_customer_mask
-    )
+    legitimate_bulk_mask = coherent_bulk_invoice_mask | repeated_bulk_customer_mask
 
     working_df.loc[
         legitimate_bulk_mask,
@@ -360,10 +302,7 @@ def handle_quantity_and_price(
     isolated_extreme_mask = (
         extreme_quantity_mask
         & (working_df["Price"] > 0)
-        & (
-            working_df["Transaction Value"]
-            > extreme_value_threshold
-        )
+        & (working_df["Transaction Value"] > extreme_value_threshold)
         & ~legitimate_bulk_mask
     )
 
@@ -378,18 +317,11 @@ def handle_quantity_and_price(
 
     working_df["Price Treatment"] = "Normal"
 
-    high_price_mask = (
-        (working_df["Price"] > 0)
-        & working_df["Price IQR Outlier"]
-    )
+    high_price_mask = (working_df["Price"] > 0) & working_df["Price IQR Outlier"]
 
-    zero_price_mask = (
-        working_df["Price"] == 0
-    )
+    zero_price_mask = working_df["Price"] == 0
 
-    negative_price_mask = (
-        working_df["Price"] < 0
-    )
+    negative_price_mask = working_df["Price"] < 0
 
     working_df.loc[
         high_price_mask,
@@ -441,12 +373,9 @@ def handle_quantity_and_price(
     # should not contribute to normal sales calculations.
     # =========================================================
 
-    working_df["Analytical Transaction Value"] = (
-        working_df["Transaction Value"]
-        .where(
-            working_df["Include In Sales Analysis"],
-            0,
-        )
+    working_df["Analytical Transaction Value"] = working_df["Transaction Value"].where(
+        working_df["Include In Sales Analysis"],
+        0,
     )
 
     # =========================================================
@@ -470,15 +399,9 @@ def handle_quantity_and_price(
     }
 
     working_df.attrs["domain_rules"] = {
-        "extreme_quantity_threshold": (
-            extreme_quantity_threshold
-        ),
-        "extreme_value_quantile": (
-            extreme_value_quantile
-        ),
-        "extreme_value_threshold": float(
-            extreme_value_threshold
-        ),
+        "extreme_quantity_threshold": (extreme_quantity_threshold),
+        "extreme_value_quantile": (extreme_value_quantile),
+        "extreme_value_threshold": float(extreme_value_threshold),
     }
 
     return working_df
@@ -513,9 +436,7 @@ def standardize_descriptions(df: pd.DataFrame) -> pd.DataFrame:
     missing_columns = required_columns - set(df.columns)
 
     if missing_columns:
-        raise ValueError(
-            f"Missing required columns: {sorted(missing_columns)}"
-        )
+        raise ValueError(f"Missing required columns: {sorted(missing_columns)}")
 
     working_df = df.copy()
 
@@ -523,20 +444,13 @@ def standardize_descriptions(df: pd.DataFrame) -> pd.DataFrame:
     # 1. Preserve original description
     # ---------------------------------------------------------
 
-    working_df["Original Description"] = (
-        working_df["Description"].astype("string")
-    )
+    working_df["Original Description"] = working_df["Description"].astype("string")
 
     # ---------------------------------------------------------
     # 2. Create normalized StockCode key for lookup
     # ---------------------------------------------------------
 
-    stockcode_key = (
-        working_df["StockCode"]
-        .astype("string")
-        .str.strip()
-        .str.upper()
-    )
+    stockcode_key = working_df["StockCode"].astype("string").str.strip().str.upper()
 
     # ---------------------------------------------------------
     # 3. Standardize description formatting
@@ -560,20 +474,13 @@ def standardize_descriptions(df: pd.DataFrame) -> pd.DataFrame:
     # 4. Identify obvious data-quality notes/placeholders
     # ---------------------------------------------------------
 
-    data_quality_note_mask = (
-        standardized_description.str.contains(
-            r"WRONGLY\s+(MARKED|CODED)"
-            r"|MARKED\s+AS"
-            r"|FOUND"
-            r"|MISSING",
-            regex=True,
-            na=False,
-        )
+    data_quality_note_mask = standardized_description.str.contains(
+        r"WRONGLY\s+(MARKED|CODED)" r"|MARKED\s+AS" r"|FOUND" r"|MISSING",
+        regex=True,
+        na=False,
     )
 
-    working_df["Description Data Quality Note"] = (
-        data_quality_note_mask
-    )
+    working_df["Description Data Quality Note"] = data_quality_note_mask
 
     # ---------------------------------------------------------
     # 5. Prepare lookup source
@@ -594,13 +501,9 @@ def standardize_descriptions(df: pd.DataFrame) -> pd.DataFrame:
         ]
     )
 
-    lookup_source = lookup_source[
-        lookup_source["StockCode_Key"] != ""
-    ]
+    lookup_source = lookup_source[lookup_source["StockCode_Key"] != ""]
 
-    lookup_source = lookup_source[
-        lookup_source["Description"] != ""
-    ]
+    lookup_source = lookup_source[lookup_source["Description"] != ""]
 
     # ---------------------------------------------------------
     # 6. Remove obvious data-quality notes from canonical
@@ -616,11 +519,8 @@ def standardize_descriptions(df: pd.DataFrame) -> pd.DataFrame:
     # ---------------------------------------------------------
 
     description_lookup = (
-        valid_description_source
-        .groupby("StockCode_Key")["Description"]
-        .agg(
-            lambda values: values.value_counts().index[0]
-        )
+        valid_description_source.groupby("StockCode_Key")["Description"]
+        .agg(lambda values: values.value_counts().index[0])
         .to_dict()
     )
 
@@ -628,15 +528,9 @@ def standardize_descriptions(df: pd.DataFrame) -> pd.DataFrame:
     # 8. Apply canonical description lookup
     # ---------------------------------------------------------
 
-    canonical_description = stockcode_key.map(
-        description_lookup
-    )
+    canonical_description = stockcode_key.map(description_lookup)
 
-    working_df["Description"] = (
-        canonical_description.fillna(
-            working_df["Description"]
-        )
-    )
+    working_df["Description"] = canonical_description.fillna(working_df["Description"])
 
     # ---------------------------------------------------------
     # 9. Create Description Present Flag
@@ -649,9 +543,7 @@ def standardize_descriptions(df: pd.DataFrame) -> pd.DataFrame:
     # ---------------------------------------------------------
 
     working_df["Description Present Flag"] = (
-        working_df["Original Description"]
-        .notna()
-        .astype("int8")
+        working_df["Original Description"].notna().astype("int8")
     )
 
     # ---------------------------------------------------------
@@ -670,32 +562,29 @@ def standardize_descriptions(df: pd.DataFrame) -> pd.DataFrame:
         .str.upper()
     )
 
-    working_df["Description Standardized"] = (
-        original_normalized.fillna("<MISSING>")
-        != working_df["Description"].fillna("<MISSING>")
-    )
+    working_df["Description Standardized"] = original_normalized.fillna(
+        "<MISSING>"
+    ) != working_df["Description"].fillna("<MISSING>")
 
     # ---------------------------------------------------------
     # 11. Replace remaining missing descriptions
     # ---------------------------------------------------------
 
     working_df["Description"] = (
-        working_df["Description"]
-        .fillna("NO DESCRIPTION")
-        .astype("string")
+        working_df["Description"].fillna("NO DESCRIPTION").astype("string")
     )
 
     # ---------------------------------------------------------
     # 12. Ensure final description columns have string type
     # ---------------------------------------------------------
 
-    working_df["Original Description"] = (
-        working_df["Original Description"].astype("string")
+    working_df["Original Description"] = working_df["Original Description"].astype(
+        "string"
     )
 
-    working_df["Description Data Quality Note"] = (
-        working_df["Description Data Quality Note"].astype("int8")
-    )
+    working_df["Description Data Quality Note"] = working_df[
+        "Description Data Quality Note"
+    ].astype("int8")
 
     return working_df
 
@@ -722,24 +611,17 @@ def handle_customer_id(
     """
 
     if "Customer ID" not in df.columns:
-        raise ValueError(
-            "Missing required column: Customer ID"
-        )
+        raise ValueError("Missing required column: Customer ID")
 
     working_df = df.copy()
 
     # Preserve whether Customer ID was originally missing.
     working_df["Customer ID Missing Flag"] = (
-        working_df["Customer ID"]
-        .isna()
-        .astype("int8")
+        working_df["Customer ID"].isna().astype("int8")
     )
 
     # Replace missing Customer IDs with sentinel value 0.
-    working_df["Customer ID"] = (
-        working_df["Customer ID"]
-        .fillna(0).astype("int64")
-    )
+    working_df["Customer ID"] = working_df["Customer ID"].fillna(0).astype("int64")
 
     return working_df
 
@@ -819,15 +701,10 @@ def validate_cleaned_data(
         "Customer ID Missing Flag",
     }
 
-    missing_columns = (
-        required_columns - set(df.columns)
-    )
+    missing_columns = required_columns - set(df.columns)
 
     if missing_columns:
-        raise ValueError(
-            "Missing required columns: "
-            f"{sorted(missing_columns)}"
-        )
+        raise ValueError("Missing required columns: " f"{sorted(missing_columns)}")
 
     validation_results = {}
 
@@ -835,13 +712,9 @@ def validate_cleaned_data(
     # 2. Basic dataset validation
     # =========================================================
 
-    validation_results["row_count"] = int(
-        len(df)
-    )
+    validation_results["row_count"] = len(df)
 
-    validation_results["duplicate_rows"] = int(
-        df.duplicated().sum()
-    )
+    validation_results["duplicate_rows"] = int(df.duplicated().sum())
 
     # =========================================================
     # 3. Customer ID validation
@@ -849,9 +722,7 @@ def validate_cleaned_data(
 
     # After cleaning, missing Customer IDs are represented
     # by the sentinel value 0.
-    validation_results["missing_customer_id"] = int(
-        df["Customer ID"].isna().sum()
-    )
+    validation_results["missing_customer_id"] = int(df["Customer ID"].isna().sum())
 
     # Original Customer ID was missing.
     validation_results["customer_id_flag_1"] = int(
@@ -865,25 +736,19 @@ def validate_cleaned_data(
 
     # Flag = 1 must correspond to Customer ID = 0.
     invalid_missing_customer_id_rows = (
-        (df["Customer ID Missing Flag"] == 1)
-        & (df["Customer ID"] != 0)
+        (df["Customer ID Missing Flag"] == 1) & (df["Customer ID"] != 0)
     ).sum()
 
-    validation_results[
-        "invalid_missing_customer_id_rows"
-    ] = int(
+    validation_results["invalid_missing_customer_id_rows"] = int(
         invalid_missing_customer_id_rows
     )
 
     # Flag = 0 must correspond to Customer ID != 0.
     invalid_available_customer_id_rows = (
-        (df["Customer ID Missing Flag"] == 0)
-        & (df["Customer ID"] == 0)
+        (df["Customer ID Missing Flag"] == 0) & (df["Customer ID"] == 0)
     ).sum()
 
-    validation_results[
-        "invalid_available_customer_id_rows"
-    ] = int(
+    validation_results["invalid_available_customer_id_rows"] = int(
         invalid_available_customer_id_rows
     )
 
@@ -895,9 +760,7 @@ def validate_cleaned_data(
         ~df["Customer ID Missing Flag"].isin([0, 1])
     ).sum()
 
-    validation_results[
-        "invalid_customer_id_flag_values"
-    ] = int(
+    validation_results["invalid_customer_id_flag_values"] = int(
         invalid_customer_id_flag_values
     )
 
@@ -905,9 +768,7 @@ def validate_cleaned_data(
     # 5. Description validation
     # =========================================================
 
-    validation_results["missing_description"] = int(
-        df["Description"].isna().sum()
-    )
+    validation_results["missing_description"] = int(df["Description"].isna().sum())
 
     # =========================================================
     # 6. Quantity validation
@@ -915,13 +776,9 @@ def validate_cleaned_data(
 
     # Negative quantities represent returns/cancellations
     # and are therefore reported, not treated as failures.
-    validation_results["negative_quantity"] = int(
-        (df["Quantity"] < 0).sum()
-    )
+    validation_results["negative_quantity"] = int((df["Quantity"] < 0).sum())
 
-    validation_results["zero_quantity"] = int(
-        (df["Quantity"] == 0).sum()
-    )
+    validation_results["zero_quantity"] = int((df["Quantity"] == 0).sum())
 
     # =========================================================
     # 7. Price validation
@@ -929,41 +786,29 @@ def validate_cleaned_data(
 
     # Zero and negative prices have already been classified
     # by handle_quantity_and_price().
-    validation_results["zero_price"] = int(
-        (df["Price"] == 0).sum()
-    )
+    validation_results["zero_price"] = int((df["Price"] == 0).sum())
 
-    validation_results["negative_price"] = int(
-        (df["Price"] < 0).sum()
-    )
+    validation_results["negative_price"] = int((df["Price"] < 0).sum())
 
     # =========================================================
     # 8. InvoiceDate validation
     # =========================================================
 
-    validation_results["missing_invoice_date"] = int(
-        df["InvoiceDate"].isna().sum()
-    )
+    validation_results["missing_invoice_date"] = int(df["InvoiceDate"].isna().sum())
 
     # =========================================================
     # 9. Transaction treatment validation
     # =========================================================
 
-    validation_results[
-        "missing_transaction_type"
-    ] = int(
+    validation_results["missing_transaction_type"] = int(
         df["Transaction Type"].isna().sum()
     )
 
-    validation_results[
-        "missing_quantity_treatment"
-    ] = int(
+    validation_results["missing_quantity_treatment"] = int(
         df["Quantity Treatment"].isna().sum()
     )
 
-    validation_results[
-        "missing_price_treatment"
-    ] = int(
+    validation_results["missing_price_treatment"] = int(
         df["Price Treatment"].isna().sum()
     )
 
@@ -971,15 +816,11 @@ def validate_cleaned_data(
     # 10. Sales-analysis validation
     # =========================================================
 
-    validation_results[
-        "missing_sales_analysis_flag"
-    ] = int(
+    validation_results["missing_sales_analysis_flag"] = int(
         df["Include In Sales Analysis"].isna().sum()
     )
 
-    validation_results[
-        "missing_analytical_transaction_value"
-    ] = int(
+    validation_results["missing_analytical_transaction_value"] = int(
         df["Analytical Transaction Value"].isna().sum()
     )
 
@@ -990,51 +831,23 @@ def validate_cleaned_data(
     validation_results["passed"] = all(
         [
             validation_results["duplicate_rows"] == 0,
-
             validation_results["missing_customer_id"] == 0,
-
-            validation_results[
-                "invalid_missing_customer_id_rows"
-            ] == 0,
-
-            validation_results[
-                "invalid_available_customer_id_rows"
-            ] == 0,
-
-            validation_results[
-                "invalid_customer_id_flag_values"
-            ] == 0,
-
-            validation_results[
-                "missing_invoice_date"
-            ] == 0,
-
-            validation_results[
-                "missing_transaction_type"
-            ] == 0,
-
-            validation_results[
-                "missing_quantity_treatment"
-            ] == 0,
-
-            validation_results[
-                "missing_price_treatment"
-            ] == 0,
-
-            validation_results[
-                "missing_sales_analysis_flag"
-            ] == 0,
-
-            validation_results[
-                "missing_analytical_transaction_value"
-            ] == 0,
+            validation_results["invalid_missing_customer_id_rows"] == 0,
+            validation_results["invalid_available_customer_id_rows"] == 0,
+            validation_results["invalid_customer_id_flag_values"] == 0,
+            validation_results["missing_invoice_date"] == 0,
+            validation_results["missing_transaction_type"] == 0,
+            validation_results["missing_quantity_treatment"] == 0,
+            validation_results["missing_price_treatment"] == 0,
+            validation_results["missing_sales_analysis_flag"] == 0,
+            validation_results["missing_analytical_transaction_value"] == 0,
         ]
     )
 
     return validation_results
 
 
-# 7.-------------------  Validation ---------------------------------- 
+# 7.-------------------  Validation ----------------------------------
 def summarize_quantity_price_treatment(
     df: pd.DataFrame,
 ) -> dict:
@@ -1043,30 +856,13 @@ def summarize_quantity_price_treatment(
     """
 
     summary = {
-        "quantity_treatment": (
-            df["Quantity Treatment"]
-            .value_counts()
-        ),
-        "price_treatment": (
-            df["Price Treatment"]
-            .value_counts()
-        ),
-        "transaction_type": (
-            df["Transaction Type"]
-            .value_counts()
-        ),
-        "quantity_iqr_outliers": int(
-            df["Quantity IQR Outlier"].sum()
-        ),
-        "price_iqr_outliers": int(
-            df["Price IQR Outlier"].sum()
-        ),
-        "non_positive_prices": int(
-            (df["Price"] <= 0).sum()
-        ),
-        "excluded_from_sales_analysis": int(
-            (~df["Include In Sales Analysis"]).sum()
-        ),
+        "quantity_treatment": (df["Quantity Treatment"].value_counts()),
+        "price_treatment": (df["Price Treatment"].value_counts()),
+        "transaction_type": (df["Transaction Type"].value_counts()),
+        "quantity_iqr_outliers": int(df["Quantity IQR Outlier"].sum()),
+        "price_iqr_outliers": int(df["Price IQR Outlier"].sum()),
+        "non_positive_prices": int((df["Price"] <= 0).sum()),
+        "excluded_from_sales_analysis": int((~df["Include In Sales Analysis"]).sum()),
     }
 
     return summary

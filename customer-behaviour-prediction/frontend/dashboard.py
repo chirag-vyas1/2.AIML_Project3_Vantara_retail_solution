@@ -1,22 +1,20 @@
 import os
 
-API_BASE_URL = os.getenv("API_BASE_URL","http://127.0.0.1:8000",)
+API_BASE_URL = os.getenv(
+    "API_BASE_URL",
+    "http://127.0.0.1:8000",
+)
 
-import requests
-import streamlit as st
 from pathlib import Path
-import pandas as pd
+
 import numpy as np
+import pandas as pd
+import requests
 import shap
-import matplotlib.pyplot as plt
+import streamlit as st
 
-
-from src.models.model_persistance import get_project_root
-from src.models.model_persistance import load_model_artifacts
+from src.models.model_persistance import get_project_root, load_model_artifacts
 from src.utils.config_loader import load_config
-from src.explainability.shap_explainer import explain_customer_for_dashboard
-from src.explainability.shap_explainer import explain_global_for_dashboard
-
 
 # ---------------------------------------------------------
 # Vantara Retail Customer Behaviour Prediction
@@ -26,7 +24,12 @@ from src.explainability.shap_explainer import explain_global_for_dashboard
 # python -m streamlit run front-end/dashboard.py
 # ---------------------------------------------------------
 
-st.set_page_config(page_title="Vantara Customer Analytics",page_icon="📊",layout="wide",)
+st.set_page_config(
+    page_title="Vantara Customer Analytics",
+    page_icon="📊",
+    layout="wide",
+)
+
 
 def show_home():
     """Display the dashboard introduction."""
@@ -41,49 +44,41 @@ def show_home():
 
     st.header("Project Overview")
 
-    st.write(
-        """
+    st.write("""
         This project uses the Online Retail II dataset to understand
         customer purchasing behaviour.
 
         The objective is to convert transaction data into useful
         business insights using data analysis and machine learning.
-        """
-    )
+        """)
 
     st.header("What can we analyse?")
 
     st.subheader("1. Customer Segmentation")
-    st.write(
-        """
+    st.write("""
         Group customers with similar purchasing behaviour using
         Gaussian Mixture Model (GMM).
 
         Business question: Which types of customers do we have,
         and how do their purchasing patterns differ?
-        """
-    )
+        """)
 
     st.subheader("2. Customer Churn Prediction")
-    st.write(
-        """
+    st.write("""
         Estimate the probability that a customer belongs to the
         churn class defined by our trained model.
 
         Business question: Which customers may need retention
         attention?
-        """
-    )
+        """)
 
     st.subheader("3. Revenue Analysis")
-    st.write(
-        """
+    st.write("""
         Analyse historical transaction values over time.
 
         Business question: How have sales changed, and are there
         patterns that may help us plan ahead?
-        """
-    )
+        """)
 
     st.divider()
 
@@ -101,17 +96,13 @@ def show_home():
     )
 
 
-from pathlib import Path
-
 import joblib
-import pandas as pd
 import streamlit as st
 
 
 def show_customer_segmentation():
     from pathlib import Path
 
-    import joblib
     import numpy as np
     import pandas as pd
     import streamlit as st
@@ -120,10 +111,7 @@ def show_customer_segmentation():
     project_root = Path(__file__).resolve().parents[1]
 
     customer_features_path = (
-        project_root
-        / "data"
-        / "processed"
-        / "customer_features.csv"
+        project_root / "data" / "processed" / "customer_features.csv"
     )
 
     gmm_artifact_path = (
@@ -161,7 +149,7 @@ def show_customer_segmentation():
         scaler = preprocessing["scaler"]
         feature_names = preprocessing["feature_names"]
 
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         st.error(f"Unable to load data or GMM artifact: {exc}")
         return
 
@@ -171,9 +159,7 @@ def show_customer_segmentation():
         return
 
     missing_columns = [
-        column
-        for column in feature_names
-        if column not in customer_features.columns
+        column for column in feature_names if column not in customer_features.columns
     ]
 
     if missing_columns:
@@ -184,14 +170,9 @@ def show_customer_segmentation():
     X_customer = customer_features.loc[:, feature_names].copy()
 
     try:
-        X_customer = X_customer.apply(
-            pd.to_numeric,
-            errors="raise"
-        )
+        X_customer = X_customer.apply(pd.to_numeric, errors="raise")
 
-        if not np.isfinite(
-            X_customer.to_numpy(dtype=float)
-        ).all():
+        if not np.isfinite(X_customer.to_numpy(dtype=float)).all():
             st.error(
                 "GMM features contain missing or infinite values. "
                 "Apply the same preprocessing used during training."
@@ -201,24 +182,20 @@ def show_customer_segmentation():
         # 6. Scale and predict in memory
         X_scaled = scaler.transform(X_customer)
 
-        customer_features["GMM_Cluster"] = (
-            gmm_model.predict(X_scaled)
-        )
+        customer_features["GMM_Cluster"] = gmm_model.predict(X_scaled)
 
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         st.error(f"Unable to predict customer segments: {exc}")
         return
 
     # 7. Segment filter
-    available_segments = sorted(
-        customer_features["GMM_Cluster"].unique().tolist()
-    )
+    available_segments = sorted(customer_features["GMM_Cluster"].unique().tolist())
 
     selected_segments = st.sidebar.multiselect(
         "Select GMM Segments",
         options=available_segments,
         default=available_segments,
-        format_func=lambda segment: f"Segment {segment}"
+        format_func=lambda segment: f"Segment {segment}",
     )
 
     filtered = customer_features[
@@ -234,16 +211,13 @@ def show_customer_segmentation():
 
     col1, col2, col3 = st.columns(3)
 
-    col1.metric(
-        "Total Customers",
-        f"{filtered['Customer ID'].nunique():,}"
-    )
+    col1.metric("Total Customers", f"{filtered['Customer ID'].nunique():,}")
 
     if "Historical_CLV" in filtered.columns:
         median_clv = filtered["Historical_CLV"].median()
         col2.metric(
             "Median Historical CLV",
-            f"{median_clv:,.2f}" if pd.notna(median_clv) else "N/A"
+            f"{median_clv:,.2f}" if pd.notna(median_clv) else "N/A",
         )
     else:
         col2.metric("Median Historical CLV", "N/A")
@@ -252,11 +226,7 @@ def show_customer_segmentation():
         median_frequency = filtered["Frequency"].median()
         col3.metric(
             "Median Purchase Frequency",
-            (
-                f"{median_frequency:,.1f}"
-                if pd.notna(median_frequency)
-                else "N/A"
-            )
+            (f"{median_frequency:,.1f}" if pd.notna(median_frequency) else "N/A"),
         )
     else:
         col3.metric("Median Purchase Frequency", "N/A")
@@ -265,14 +235,10 @@ def show_customer_segmentation():
     st.subheader("Segment Distribution")
 
     segment_counts = (
-        filtered.groupby("GMM_Cluster")["Customer ID"]
-        .nunique()
-        .sort_index()
+        filtered.groupby("GMM_Cluster")["Customer ID"].nunique().sort_index()
     )
 
-    segment_percentages = (
-        segment_counts / segment_counts.sum() * 100
-    ).round(2)
+    segment_percentages = (segment_counts / segment_counts.sum() * 100).round(2)
 
     col1, col2 = st.columns(2)
 
@@ -285,11 +251,13 @@ def show_customer_segmentation():
         st.bar_chart(segment_percentages)
 
     st.dataframe(
-        pd.DataFrame({
-            "Customer Count": segment_counts,
-            "Percentage (%)": segment_percentages,
-        }),
-        use_container_width=True
+        pd.DataFrame(
+            {
+                "Customer Count": segment_counts,
+                "Percentage (%)": segment_percentages,
+            }
+        ),
+        use_container_width=True,
     )
 
     # 10. Segment comparison
@@ -305,21 +273,16 @@ def show_customer_segmentation():
     ]
 
     comparison_metrics = [
-        column
-        for column in comparison_candidates
-        if column in filtered.columns
+        column for column in comparison_candidates if column in filtered.columns
     ]
 
     if comparison_metrics:
         selected_metric = st.selectbox(
-            "Choose a metric to compare",
-            options=comparison_metrics
+            "Choose a metric to compare", options=comparison_metrics
         )
 
         metric_comparison = (
-            filtered.groupby("GMM_Cluster")[selected_metric]
-            .median()
-            .sort_index()
+            filtered.groupby("GMM_Cluster")[selected_metric].median().sort_index()
         )
 
         st.write(f"Median {selected_metric} by Segment")
@@ -342,23 +305,19 @@ def show_customer_segmentation():
     ]
 
     display_columns = [
-        column
-        for column in display_columns
-        if column in filtered.columns
+        column for column in display_columns if column in filtered.columns
     ]
 
-    st.dataframe(
-        filtered[display_columns],
-        use_container_width=True,
-        hide_index=True
-    )
+    st.dataframe(filtered[display_columns], use_container_width=True, hide_index=True)
+
 
 def show_churn_leaderboard():
+    from pathlib import Path
+
     import numpy as np
     import pandas as pd
     import requests
     import streamlit as st
-    from pathlib import Path
 
     from src.models.model_persistance import (
         get_project_root,
@@ -371,14 +330,9 @@ def show_churn_leaderboard():
     # --------------------------------------------------
     project_root = Path(__file__).resolve().parents[1]
 
-    dataset_path = (
-        project_root
-        / "data"
-        / "processed"
-        / "customer_churn_dataset.csv"
-    )
+    dataset_path = project_root / "data" / "processed" / "customer_churn_dataset.csv"
 
-    #api_url = "http://127.0.0.1:8000/predict/batch"
+    # api_url = "http://127.0.0.1:8000/predict/batch"
     api_url = f"{API_BASE_URL}/predict/batch"
     batch_size = 250
 
@@ -397,7 +351,7 @@ def show_churn_leaderboard():
 
     try:
         customers = pd.read_csv(dataset_path)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         st.error(f"Unable to load customer dataset: {exc}")
         return
 
@@ -410,10 +364,7 @@ def show_churn_leaderboard():
         return
 
     if customers["Customer ID"].duplicated().any():
-        st.error(
-            "Customer IDs are duplicated. "
-            "Please verify the customer dataset."
-        )
+        st.error("Customer IDs are duplicated. " "Please verify the customer dataset.")
         return
 
     # --------------------------------------------------
@@ -432,31 +383,23 @@ def show_churn_leaderboard():
         feature_names = model_bundle["feature_names"]
 
         if not feature_names:
-            st.error(
-                "No feature names were found in the "
-                "saved XGBoost artifact."
-            )
+            st.error("No feature names were found in the " "saved XGBoost artifact.")
             return
 
-    except Exception as exc:
-        st.error(
-            f"Unable to load XGBoost artifact metadata: {exc}"
-        )
+    except Exception as exc:  # noqa: BLE001
+        st.error(f"Unable to load XGBoost artifact metadata: {exc}")
         return
 
     # --------------------------------------------------
     # 4. Validate dataset against model features
     # --------------------------------------------------
     missing_columns = [
-        column
-        for column in feature_names
-        if column not in customers.columns
+        column for column in feature_names if column not in customers.columns
     ]
 
     if missing_columns:
         st.error(
-            "The customer dataset is missing model features: "
-            f"{missing_columns}"
+            "The customer dataset is missing model features: " f"{missing_columns}"
         )
         return
 
@@ -480,10 +423,7 @@ def show_churn_leaderboard():
     if "Frequency" in X.columns:
         frequency = X["Frequency"].to_numpy(dtype=float)
 
-        if not np.equal(
-            frequency,
-            np.floor(frequency)
-        ).all():
+        if not np.equal(frequency, np.floor(frequency)).all():
             st.error(
                 "Frequency contains non-integer values, "
                 "but the API requires integers."
@@ -508,14 +448,9 @@ def show_churn_leaderboard():
         len(customers),
     )
 
-    if (
-        st.session_state["churn_dataset_signature"]
-        != dataset_signature
-    ):
+    if st.session_state["churn_dataset_signature"] != dataset_signature:
         st.session_state["churn_leaderboard"] = None
-        st.session_state["churn_dataset_signature"] = (
-            dataset_signature
-        )
+        st.session_state["churn_dataset_signature"] = dataset_signature
 
     # --------------------------------------------------
     # 6. Generate predictions only when requested
@@ -530,17 +465,13 @@ def show_churn_leaderboard():
 
         try:
             with requests.Session() as session:
-                total_batches = (
-                    len(X) + batch_size - 1
-                ) // batch_size
+                total_batches = (len(X) + batch_size - 1) // batch_size
 
                 for batch_number, start in enumerate(
                     range(0, len(X), batch_size),
                     start=1,
                 ):
-                    batch = X.iloc[
-                        start:start + batch_size
-                    ]
+                    batch = X.iloc[start : start + batch_size]
 
                     response = session.post(
                         api_url,
@@ -561,18 +492,14 @@ def show_churn_leaderboard():
 
                     predictions.extend(batch_predictions)
 
-                    progress.progress(
-                        batch_number / total_batches
-                    )
+                    progress.progress(batch_number / total_batches)
                     status.write(
-                        f"Processing batch {batch_number} "
-                        f"of {total_batches}..."
+                        f"Processing batch {batch_number} " f"of {total_batches}..."
                     )
 
             if len(predictions) != len(customers):
                 raise ValueError(
-                    "Total prediction count does not match "
-                    "the number of customers."
+                    "Total prediction count does not match " "the number of customers."
                 )
 
             # Validate API response
@@ -584,16 +511,11 @@ def show_churn_leaderboard():
             ]
 
             if not all(
-                column in prediction_df.columns
-                for column in required_response_columns
+                column in prediction_df.columns for column in required_response_columns
             ):
-                raise ValueError(
-                    "The API returned an unexpected response."
-                )
+                raise ValueError("The API returned an unexpected response.")
 
-            probabilities = prediction_df[
-                "churn_probability"
-            ].to_numpy(dtype=float)
+            probabilities = prediction_df["churn_probability"].to_numpy(dtype=float)
 
             if (
                 not np.isfinite(probabilities).all()
@@ -602,25 +524,17 @@ def show_churn_leaderboard():
                     probabilities <= 1,
                 ).all()
             ):
-                raise ValueError(
-                    "The API returned invalid churn probabilities."
-                )
+                raise ValueError("The API returned invalid churn probabilities.")
 
-            predicted_classes = prediction_df[
-                "predicted_class"
-            ]
+            predicted_classes = prediction_df["predicted_class"]
 
             if not predicted_classes.isin([0, 1]).all():
-                raise ValueError(
-                    "The API returned an unexpected prediction class."
-                )
+                raise ValueError("The API returned an unexpected prediction class.")
 
             # Attach predictions to original customer records
             leaderboard = customers.copy()
 
-            leaderboard["Predicted_Churn"] = (
-                predicted_classes.to_numpy()
-            )
+            leaderboard["Predicted_Churn"] = predicted_classes.to_numpy()
             leaderboard["Churn_Probability"] = probabilities
 
             # Highest predicted churn probability first
@@ -640,9 +554,7 @@ def show_churn_leaderboard():
             return
 
         except (KeyError, ValueError, TypeError) as exc:
-            st.error(
-                f"Unable to process churn predictions: {exc}"
-            )
+            st.error(f"Unable to process churn predictions: {exc}")
             return
 
         finally:
@@ -655,17 +567,13 @@ def show_churn_leaderboard():
     leaderboard = st.session_state["churn_leaderboard"]
 
     if leaderboard is None:
-        st.info(
-            "Click 'Run Churn Analysis' to generate predictions."
-        )
+        st.info("Click 'Run Churn Analysis' to generate predictions.")
         return
 
     # --------------------------------------------------
     # 8. Summary metrics
     # --------------------------------------------------
-    st.success(
-        f"Predictions generated for {len(leaderboard):,} customers."
-    )
+    st.success(f"Predictions generated for {len(leaderboard):,} customers.")
 
     col1, col2, col3 = st.columns(3)
 
@@ -684,7 +592,6 @@ def show_churn_leaderboard():
         f"{(leaderboard['Churn_Probability'] >= 0.70).sum():,}",
     )
 
-
     # --------------------------------------------------
     # 9. Churn-risk leaderboard and filters
     # --------------------------------------------------
@@ -701,9 +608,7 @@ def show_churn_leaderboard():
         options=[0, 1],
         default=[1],
         format_func=lambda value: (
-            "Predicted Churn = 1"
-            if value == 1
-            else "Predicted Churn = 0"
+            "Predicted Churn = 1" if value == 1 else "Predicted Churn = 0"
         ),
         key="churn_class_filter",
     )
@@ -738,18 +643,12 @@ def show_churn_leaderboard():
     ]
 
     display_columns = [
-        column
-        for column in display_columns
-        if column in filtered_leaderboard.columns
+        column for column in display_columns if column in filtered_leaderboard.columns
     ]
 
-    display_df = filtered_leaderboard[
-        display_columns
-    ].head(number_of_customers).copy()
+    display_df = filtered_leaderboard[display_columns].head(number_of_customers).copy()
 
-    display_df["Churn_Probability"] = (
-        display_df["Churn_Probability"] * 100
-    ).round(2)
+    display_df["Churn_Probability"] = (display_df["Churn_Probability"] * 100).round(2)
 
     display_df = display_df.rename(
         columns={
@@ -771,13 +670,9 @@ def show_churn_leaderboard():
     )
 
     # Download all customers matching the selected class filter
-    download_df = filtered_leaderboard[
-        display_columns
-    ].copy()
+    download_df = filtered_leaderboard[display_columns].copy()
 
-    download_df["Churn_Probability"] = (
-        download_df["Churn_Probability"] * 100
-    ).round(2)
+    download_df["Churn_Probability"] = (download_df["Churn_Probability"] * 100).round(2)
 
     st.download_button(
         label="Download all matching customers as CSV",
@@ -785,6 +680,7 @@ def show_churn_leaderboard():
         file_name="churn_risk_leaderboard.csv",
         mime="text/csv",
     )
+
 
 def show_revenue_trends():
     from pathlib import Path
@@ -797,17 +693,11 @@ def show_revenue_trends():
     # --------------------------------------------------
     project_root = Path(__file__).resolve().parents[1]
 
-    transactions_path = (
-        project_root
-        / "data"
-        / "interim"
-        / "cleaned_transactions.csv"
-    )
+    transactions_path = project_root / "data" / "interim" / "cleaned_transactions.csv"
 
     st.title("Revenue Analysis")
     st.write(
-        "Explore historical revenue trends using the "
-        "cleaned transaction dataset."
+        "Explore historical revenue trends using the " "cleaned transaction dataset."
     )
 
     # --------------------------------------------------
@@ -819,7 +709,7 @@ def show_revenue_trends():
 
     try:
         transactions = pd.read_csv(transactions_path)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         st.error(f"Unable to load transactions: {exc}")
         return
 
@@ -830,16 +720,11 @@ def show_revenue_trends():
     ]
 
     missing_columns = [
-        column
-        for column in required_columns
-        if column not in transactions.columns
+        column for column in required_columns if column not in transactions.columns
     ]
 
     if missing_columns:
-        st.error(
-            f"Required revenue columns are missing: "
-            f"{missing_columns}"
-        )
+        st.error(f"Required revenue columns are missing: " f"{missing_columns}")
         return
 
     # --------------------------------------------------
@@ -856,10 +741,7 @@ def show_revenue_trends():
     )
 
     include_flag = (
-        transactions["Include In Sales Analysis"]
-        .astype(str)
-        .str.strip()
-        .str.lower()
+        transactions["Include In Sales Analysis"].astype(str).str.strip().str.lower()
     )
 
     included_values = {"true", "1", "yes", "y"}
@@ -871,33 +753,23 @@ def show_revenue_trends():
     ].copy()
 
     if sales.empty:
-        st.warning(
-            "No eligible transactions were found for revenue analysis."
-        )
+        st.warning("No eligible transactions were found for revenue analysis.")
         return
 
     # --------------------------------------------------
     # 4. Create monthly revenue series
     # --------------------------------------------------
-    sales["Month"] = (
-        sales["InvoiceDate"]
-        .dt.to_period("M")
-        .dt.to_timestamp()
-    )
+    sales["Month"] = sales["InvoiceDate"].dt.to_period("M").dt.to_timestamp()
 
     monthly_revenue = (
-        sales.groupby("Month")["Analytical Transaction Value"]
-        .sum()
-        .sort_index()
+        sales.groupby("Month")["Analytical Transaction Value"].sum().sort_index()
     )
 
     total_revenue = sales["Analytical Transaction Value"].sum()
     transaction_count = sales["Invoice"].nunique()
 
     average_invoice_value = (
-        sales.groupby("Invoice")["Analytical Transaction Value"]
-        .sum()
-        .mean()
+        sales.groupby("Invoice")["Analytical Transaction Value"].sum().mean()
     )
 
     # --------------------------------------------------
@@ -919,11 +791,7 @@ def show_revenue_trends():
 
     col3.metric(
         "Average Revenue per Invoice",
-        (
-            f"{average_invoice_value:,.2f}"
-            if pd.notna(average_invoice_value)
-            else "N/A"
-        ),
+        (f"{average_invoice_value:,.2f}" if pd.notna(average_invoice_value) else "N/A"),
     )
 
     # --------------------------------------------------
@@ -942,17 +810,11 @@ def show_revenue_trends():
     # --------------------------------------------------
     st.subheader("Monthly Revenue Details")
 
-    monthly_summary = monthly_revenue.rename(
-        "Revenue"
-    ).reset_index()
+    monthly_summary = monthly_revenue.rename("Revenue").reset_index()
 
-    monthly_summary["Month"] = (
-        monthly_summary["Month"].dt.strftime("%Y-%m")
-    )
+    monthly_summary["Month"] = monthly_summary["Month"].dt.strftime("%Y-%m")
 
-    monthly_summary["Revenue"] = (
-        monthly_summary["Revenue"].round(2)
-    )
+    monthly_summary["Revenue"] = monthly_summary["Revenue"].round(2)
 
     st.dataframe(
         monthly_summary,
@@ -961,9 +823,10 @@ def show_revenue_trends():
     )
 
 
-#================================================================
-#--------- Shap and lime explainibility tables--------------
-#================================================================
+# ================================================================
+# --------- Shap and lime explainibility tables--------------
+# ================================================================
+
 
 @st.cache_resource
 def load_shap_dashboard_resources():
@@ -985,27 +848,22 @@ def load_shap_dashboard_resources():
 
     return model, feature_names, explainer
 
+
 @st.cache_data
 def load_customer_churn_data():
     """Load the existing processed customer dataset."""
 
     project_root = Path(get_project_root()).resolve()
 
-    data_path = (
-        project_root
-        / "data"
-        / "processed"
-        / "customer_churn_dataset.csv"
-    )
+    data_path = project_root / "data" / "processed" / "customer_churn_dataset.csv"
 
     if not data_path.is_file():
-        raise FileNotFoundError(
-            f"Customer churn dataset not found: {data_path}"
-        )
+        raise FileNotFoundError(f"Customer churn dataset not found: {data_path}")
 
     return pd.read_csv(data_path)
 
-#---function with fetching model through API --------------------------------
+
+# ---function with fetching model through API --------------------------------
 def show_shap_explainability():
     """Display global and individual SHAP insights via FastAPI."""
 
@@ -1016,19 +874,14 @@ def show_shap_explainability():
     )
 
     project_root = Path(get_project_root()).resolve()
-    data_path = (
-        project_root
-        / "data"
-        / "processed"
-        / "customer_churn_dataset.csv"
-    )
+    data_path = project_root / "data" / "processed" / "customer_churn_dataset.csv"
 
     # ---------------------------------------------------------
     # LOAD CUSTOMER DATA
     # ---------------------------------------------------------
     try:
         customers = pd.read_csv(data_path)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         st.error(f"Unable to load customer data: {exc}")
         return
 
@@ -1064,9 +917,7 @@ def show_shap_explainability():
         return
 
     missing_features = [
-        feature
-        for feature in feature_names
-        if feature not in customers.columns
+        feature for feature in feature_names if feature not in customers.columns
     ]
 
     if missing_features:
@@ -1079,10 +930,12 @@ def show_shap_explainability():
     # ---------------------------------------------------------
     # TABS
     # ---------------------------------------------------------
-    global_tab, individual_tab = st.tabs([
-        "Global customer insights",
-        "Individual customer",
-    ])
+    global_tab, individual_tab = st.tabs(
+        [
+            "Global customer insights",
+            "Individual customer",
+        ]
+    )
 
     # =========================================================
     # GLOBAL SHAP
@@ -1111,15 +964,9 @@ def show_shap_explainability():
 
             X = X.apply(pd.to_numeric, errors="coerce")
 
-            if (
-                X.isna().any().any()
-                or not np.isfinite(
-                    X.to_numpy(dtype=float)
-                ).all()
-            ):
+            if X.isna().any().any() or not np.isfinite(X.to_numpy(dtype=float)).all():
                 st.error(
-                    "Selected customer features contain "
-                    "missing or invalid values."
+                    "Selected customer features contain " "missing or invalid values."
                 )
             else:
                 payload = {
@@ -1147,9 +994,7 @@ def show_shap_explainability():
                         "shap_values",
                     }
 
-                    missing_fields = (
-                        required_fields - result.keys()
-                    )
+                    missing_fields = required_fields - result.keys()
 
                     if missing_fields:
                         st.error(
@@ -1159,14 +1004,10 @@ def show_shap_explainability():
                     else:
                         # Store the complete API response so the
                         # beeswarm can be rendered from returned values.
-                        st.session_state[
-                            "global_shap_api_raw_result"
-                        ] = result
+                        st.session_state["global_shap_api_raw_result"] = result
 
                 except requests.RequestException as exc:
-                    st.error(
-                        f"Global SHAP request failed: {exc}"
-                    )
+                    st.error(f"Global SHAP request failed: {exc}")
 
                     if exc.response is not None:
                         st.code(
@@ -1175,25 +1016,16 @@ def show_shap_explainability():
                         )
 
                 except (ValueError, KeyError, TypeError) as exc:
-                    st.error(
-                        f"Invalid global SHAP response: {exc}"
-                    )
+                    st.error(f"Invalid global SHAP response: {exc}")
 
-        global_result = st.session_state.get(
-            "global_shap_api_raw_result"
-        )
+        global_result = st.session_state.get("global_shap_api_raw_result")
 
         if global_result is not None:
-            st.caption(
-                "Customers analysed: "
-                f"{global_result['customers_analysed']}"
-            )
+            st.caption("Customers analysed: " f"{global_result['customers_analysed']}")
 
             st.markdown("#### Global feature importance")
 
-            importance = pd.DataFrame(
-                global_result["importance"]
-            )
+            importance = pd.DataFrame(global_result["importance"])
 
             st.dataframe(
                 importance,
@@ -1204,8 +1036,8 @@ def show_shap_explainability():
             st.markdown("#### SHAP summary beeswarm")
 
             try:
-                import shap
                 import matplotlib.pyplot as plt
+                import shap
 
                 shap_values = np.asarray(
                     global_result["shap_values"],
@@ -1215,18 +1047,11 @@ def show_shap_explainability():
                     global_result["feature_values"],
                     dtype=float,
                 )
-                returned_features = global_result[
-                    "feature_names"
-                ]
+                returned_features = global_result["feature_names"]
 
                 if shap_values.shape != feature_values.shape:
-                    st.error(
-                        "SHAP values and feature values have "
-                        "different shapes."
-                    )
-                elif shap_values.shape[1] != len(
-                    returned_features
-                ):
+                    st.error("SHAP values and feature values have " "different shapes.")
+                elif shap_values.shape[1] != len(returned_features):
                     st.error(
                         "The returned SHAP feature count does "
                         "not match the feature names."
@@ -1251,10 +1076,8 @@ def show_shap_explainability():
                     st.pyplot(figure)
                     plt.close(figure)
 
-            except Exception as exc:
-                st.error(
-                    f"Unable to render the SHAP beeswarm plot: {exc}"
-                )
+            except Exception as exc:  # noqa: BLE001
+                st.error(f"Unable to render the SHAP beeswarm plot: {exc}")
 
     # =========================================================
     # INDIVIDUAL CUSTOMER SHAP
@@ -1263,22 +1086,13 @@ def show_shap_explainability():
         st.subheader("Why might this customer churn?")
 
         if "Customer ID" not in customers.columns:
-            st.error(
-                "Customer ID is missing from the dataset."
-            )
+            st.error("Customer ID is missing from the dataset.")
             return
 
-        customer_ids = (
-            customers["Customer ID"]
-            .dropna()
-            .drop_duplicates()
-            .tolist()
-        )
+        customer_ids = customers["Customer ID"].dropna().drop_duplicates().tolist()
 
         if not customer_ids:
-            st.warning(
-                "No customer IDs are available."
-            )
+            st.warning("No customer IDs are available.")
             return
 
         selected_id = st.selectbox(
@@ -1291,44 +1105,42 @@ def show_shap_explainability():
             "Explain selected customer",
             key="generate_individual_shap",
         ):
-            selected_rows = customers.loc[
-                customers["Customer ID"] == selected_id
-            ]
+            selected_rows = customers.loc[customers["Customer ID"] == selected_id]
 
             if selected_rows.empty:
                 st.error("Selected customer was not found.")
             else:
                 # Preserve the API's exact model feature order.
-                X_customer = selected_rows[
-                    feature_names
-                ].iloc[[0]].apply(
-                    pd.to_numeric,
-                    errors="coerce",
+                X_customer = (
+                    selected_rows[feature_names]
+                    .iloc[[0]]
+                    .apply(
+                        pd.to_numeric,
+                        errors="coerce",
+                    )
                 )
 
                 if (
                     X_customer.isna().any().any()
-                    or not np.isfinite(
-                        X_customer.to_numpy(dtype=float)
-                    ).all()
+                    or not np.isfinite(X_customer.to_numpy(dtype=float)).all()
                 ):
                     st.error(
-                        "This customer's features contain "
-                        "missing or invalid values."
+                        "This customer's features contain " "missing or invalid values."
                     )
                 else:
                     payload = X_customer.iloc[0].to_dict()
                     # Frequency is defined as a strict integer in the API schema.
 
                     if "Frequency" in payload:
-                         frequency = payload["Frequency"]
+                        frequency = payload["Frequency"]
 
-                         if not float(frequency).is_integer():
-                              st.error("Frequency must be a whole number for the API request.")
-                              st.stop()
+                        if not float(frequency).is_integer():
+                            st.error(
+                                "Frequency must be a whole number for the API request."
+                            )
+                            st.stop()
 
-                         payload["Frequency"] = int(frequency)
-
+                        payload["Frequency"] = int(frequency)
 
                     try:
                         with st.spinner(
@@ -1343,18 +1155,12 @@ def show_shap_explainability():
                             response.raise_for_status()
                             result = response.json()
 
-                        st.session_state[
-                            "individual_shap_api_result"
-                        ] = result
+                        st.session_state["individual_shap_api_result"] = result
 
-                        st.session_state[
-                            "individual_shap_api_customer"
-                        ] = selected_id
+                        st.session_state["individual_shap_api_customer"] = selected_id
 
                     except requests.RequestException as exc:
-                        st.error(
-                            f"Customer SHAP request failed: {exc}"
-                        )
+                        st.error(f"Customer SHAP request failed: {exc}")
 
                         if exc.response is not None:
                             st.code(
@@ -1363,22 +1169,13 @@ def show_shap_explainability():
                             )
 
                     except (ValueError, KeyError, TypeError) as exc:
-                        st.error(
-                            f"Invalid individual SHAP response: {exc}"
-                        )
+                        st.error(f"Invalid individual SHAP response: {exc}")
 
-        individual_result = st.session_state.get(
-            "individual_shap_api_result"
-        )
+        individual_result = st.session_state.get("individual_shap_api_result")
 
-        result_customer_id = st.session_state.get(
-            "individual_shap_api_customer"
-        )
+        result_customer_id = st.session_state.get("individual_shap_api_customer")
 
-        if (
-            individual_result is not None
-            and result_customer_id == selected_id
-        ):
+        if individual_result is not None and result_customer_id == selected_id:
             prediction_col, probability_col = st.columns(2)
 
             with prediction_col:
@@ -1393,9 +1190,7 @@ def show_shap_explainability():
                     f"{individual_result['churn_probability']:.1%}",
                 )
 
-            contributions = pd.DataFrame(
-                individual_result["contributions"]
-            )
+            contributions = pd.DataFrame(individual_result["contributions"])
 
             st.markdown("#### Individual feature contributions")
 
@@ -1407,34 +1202,43 @@ def show_shap_explainability():
 
             st.markdown("#### SHAP waterfall plot")
 
-            required_fields = {"base_value", "feature_names", "feature_values", "shap_values",}
+            required_fields = {
+                "base_value",
+                "feature_names",
+                "feature_values",
+                "shap_values",
+            }
 
             if required_fields.issubset(individual_result):
                 try:
-                    import shap
                     import matplotlib.pyplot as plt
+                    import shap
 
                     waterfall_explanation = shap.Explanation(
-                         values=np.asarray(individual_result["shap_values"],dtype=float,),
-                         base_values=float(individual_result["base_value"]),
-
-                         data=np.asarray(individual_result["feature_values"], dtype=float,),
-                         feature_names=individual_result["feature_names"],)
+                        values=np.asarray(
+                            individual_result["shap_values"],
+                            dtype=float,
+                        ),
+                        base_values=float(individual_result["base_value"]),
+                        data=np.asarray(
+                            individual_result["feature_values"],
+                            dtype=float,
+                        ),
+                        feature_names=individual_result["feature_names"],
+                    )
 
                     shap.plots.waterfall(
-                            waterfall_explanation,
-                            max_display=15,
-                            show=False, )
+                        waterfall_explanation,
+                        max_display=15,
+                        show=False,
+                    )
 
                     figure = plt.gcf()
                     st.pyplot(figure)
                     plt.close(figure)
 
-
-                except Exception as exc:
-                  st.error(
-                        f"Unable to render the SHAP waterfall plot: {exc}")
-
+                except Exception as exc:  # noqa: BLE001
+                    st.error(f"Unable to render the SHAP waterfall plot: {exc}")
 
             st.markdown("#### SHAP contribution chart")
 
@@ -1442,15 +1246,9 @@ def show_shap_explainability():
                 "feature",
                 "shap_value",
             }.issubset(contributions.columns):
-                chart_data = contributions.set_index(
-                    "feature"
-                )[["shap_value"]]
+                chart_data = contributions.set_index("feature")[["shap_value"]]
 
                 st.bar_chart(chart_data)
-
-
-
-
 
             st.info(
                 "This chart shows individual feature contributions. "
@@ -1554,12 +1352,8 @@ def show_csv_batch_scoring():
         st.subheader("Prediction Results")
 
         total_customers = len(result_df)
-        predicted_churners = int(
-            (result_df["Predicted_Class"] == 1).sum()
-        )
-        high_risk = int(
-            (result_df["Churn_Probability"] >= 0.70).sum()
-        )
+        predicted_churners = int((result_df["Predicted_Class"] == 1).sum())
+        high_risk = int((result_df["Churn_Probability"] >= 0.70).sum())
 
         col1, col2, col3 = st.columns(3)
         col1.metric("Customers Scored", f"{total_customers:,}")
@@ -1579,8 +1373,6 @@ def show_csv_batch_scoring():
             file_name="churn_predictions.csv",
             mime="text/csv",
         )
-
-
 
 
 def main():
@@ -1622,4 +1414,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

@@ -1,5 +1,5 @@
-
 from pathlib import Path
+
 import pandas as pd
 
 
@@ -31,15 +31,11 @@ def predict_batch_from_csv(
     model = model_bundle["model"]
 
     # Check required columns before prediction.
-    missing_columns = [
-        name for name in feature_names
-        if name not in input_df.columns
-    ]
+    missing_columns = [name for name in feature_names if name not in input_df.columns]
 
     if missing_columns:
         raise ValueError(
-            "CSV is missing required model features: "
-            + ", ".join(missing_columns)
+            "CSV is missing required model features: " + ", ".join(missing_columns)
         )
 
     # Select columns in exactly the order expected by the model.
@@ -50,14 +46,14 @@ def predict_batch_from_csv(
         X[column] = pd.to_numeric(X[column], errors="raise")
 
     if X.isna().any().any():
-        raise ValueError(
-            "The CSV contains missing values in model feature columns."
-        )
+        raise ValueError("The CSV contains missing values in model feature columns.")
 
-    if not X.map(lambda value: pd.notna(value) and abs(value) != float("inf")).all().all():
-        raise ValueError(
-            "The CSV contains infinite or invalid feature values."
-        )
+    if (
+        not X.map(lambda value: pd.notna(value) and abs(value) != float("inf"))
+        .all()
+        .all()
+    ):
+        raise ValueError("The CSV contains infinite or invalid feature values.")
 
     # Generate churn predictions.
     predicted_classes = model.predict(X).astype(int)

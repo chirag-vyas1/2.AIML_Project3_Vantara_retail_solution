@@ -1,13 +1,11 @@
 import numpy as np
 import pandas as pd
 from IPython.display import display
+from sklearn.preprocessing import StandardScaler
+
 
 # ---- 1. Quality check and audit dataset  ----------------
-def audit_segmentation_features(
-    df,
-    correlation_threshold=0.99,
-    display_report=True
-):
+def audit_segmentation_features(df, correlation_threshold=0.99, display_report=True):
     """
     Audit feature quality and identify potentially redundant
     numerical features. Does not drop any columns.
@@ -29,27 +27,22 @@ def audit_segmentation_features(
 
     quality_report["Data Type"] = df.dtypes.astype(str)
     quality_report["Missing Values"] = df.isna().sum()
-    quality_report["Missing (%)"] = (
-        df.isna().mean() * 100
-    ).round(2)
+    quality_report["Missing (%)"] = (df.isna().mean() * 100).round(2)
     quality_report["Unique Values"] = df.nunique()
 
     quality_report["Infinite Values"] = 0
     quality_report["Standard Deviation"] = np.nan
 
     if not numeric_df.empty:
-        quality_report.loc[
-            numeric_df.columns, "Infinite Values"
-        ] = np.isinf(numeric_df).sum()
+        quality_report.loc[numeric_df.columns, "Infinite Values"] = np.isinf(
+            numeric_df
+        ).sum()
 
-        quality_report.loc[
-            numeric_df.columns, "Standard Deviation"
-        ] = numeric_df.std()
+        quality_report.loc[numeric_df.columns, "Standard Deviation"] = numeric_df.std()
 
-    quality_report["Zero Variance"] = (
-        quality_report["Standard Deviation"].eq(0)
-        & quality_report.index.isin(numeric_df.columns)
-    )
+    quality_report["Zero Variance"] = quality_report["Standard Deviation"].eq(
+        0
+    ) & quality_report.index.isin(numeric_df.columns)
 
     quality_report.index.name = "Feature"
 
@@ -62,29 +55,22 @@ def audit_segmentation_features(
     columns = numeric_df.columns.tolist()
 
     for i, col1 in enumerate(columns):
-        for col2 in columns[i + 1:]:
+        for col2 in columns[i + 1 :]:
             correlation = correlation_matrix.loc[col1, col2]
 
-            if (
-                pd.notna(correlation)
-                and abs(correlation) >= correlation_threshold
-            ):
-                difference = (
-                    numeric_df[col1] - numeric_df[col2]
-                ).abs()
+            if pd.notna(correlation) and abs(correlation) >= correlation_threshold:
+                difference = (numeric_df[col1] - numeric_df[col2]).abs()
 
-                correlated_pairs.append({
-                    "Feature 1": col1,
-                    "Feature 2": col2,
-                    "Correlation": correlation,
-                    "Exact Match": numeric_df[col1].equals(
-                        numeric_df[col2]
-                    ),
-                    "Rows Different": int(
-                        (difference > 1e-9).sum()
-                    ),
-                    "Maximum Absolute Difference": difference.max()
-                })
+                correlated_pairs.append(
+                    {
+                        "Feature 1": col1,
+                        "Feature 2": col2,
+                        "Correlation": correlation,
+                        "Exact Match": numeric_df[col1].equals(numeric_df[col2]),
+                        "Rows Different": int((difference > 1e-9).sum()),
+                        "Maximum Absolute Difference": difference.max(),
+                    }
+                )
 
     correlation_report = pd.DataFrame(
         correlated_pairs,
@@ -94,49 +80,45 @@ def audit_segmentation_features(
             "Correlation",
             "Exact Match",
             "Rows Different",
-            "Maximum Absolute Difference"
-        ]
+            "Maximum Absolute Difference",
+        ],
     )
 
     if not correlation_report.empty:
-        correlation_report["Correlation"] = (
-            correlation_report["Correlation"].round(6)
-        )
-        correlation_report[
-            "Maximum Absolute Difference"
-        ] = correlation_report[
+        correlation_report["Correlation"] = correlation_report["Correlation"].round(6)
+        correlation_report["Maximum Absolute Difference"] = correlation_report[
             "Maximum Absolute Difference"
         ].round(6)
 
         correlation_report = correlation_report.sort_values(
-            "Correlation",
-            key=lambda values: values.abs(),
-            ascending=False
+            "Correlation", key=lambda values: values.abs(), ascending=False
         ).reset_index(drop=True)
 
     # 4. Summary
-    summary = pd.DataFrame({
-        "Metric": [
-            "Rows",
-            "Columns",
-            "Numeric Features",
-            "Non-Numeric Features",
-            "Missing Cells",
-            "Infinite Values",
-            "Zero-Variance Numeric Features",
-            "Highly Correlated Feature Pairs"
-        ],
-        "Value": [
-            len(df),
-            len(df.columns),
-            len(numeric_df.columns),
-            len(df.columns) - len(numeric_df.columns),
-            int(df.isna().sum().sum()),
-            int(np.isinf(numeric_df).sum().sum()),
-            int(quality_report["Zero Variance"].sum()),
-            len(correlation_report)
-        ]
-    })
+    summary = pd.DataFrame(
+        {
+            "Metric": [
+                "Rows",
+                "Columns",
+                "Numeric Features",
+                "Non-Numeric Features",
+                "Missing Cells",
+                "Infinite Values",
+                "Zero-Variance Numeric Features",
+                "Highly Correlated Feature Pairs",
+            ],
+            "Value": [
+                len(df),
+                len(df.columns),
+                len(numeric_df.columns),
+                len(df.columns) - len(numeric_df.columns),
+                int(df.isna().sum().sum()),
+                int(np.isinf(numeric_df).sum().sum()),
+                int(quality_report["Zero Variance"].sum()),
+                len(correlation_report),
+            ],
+        }
+    )
 
     # 5. Notebook-friendly display
     if display_report:
@@ -149,8 +131,7 @@ def audit_segmentation_features(
         print("\nFEATURE QUALITY REPORT")
         display(
             quality_report.sort_values(
-                ["Missing Values", "Infinite Values"],
-                ascending=False
+                ["Missing Values", "Infinite Values"], ascending=False
             )
         )
 
@@ -168,16 +149,12 @@ def audit_segmentation_features(
         "summary": summary,
         "quality_report": quality_report,
         "correlation_matrix": correlation_matrix,
-        "correlation_report": correlation_report
+        "correlation_report": correlation_report,
     }
 
 
-#------ 2. Feature selection ----------------------------------------------------
-def select_segmentation_features(
-    df,
-    exclude_columns=None,
-    display_report=True
-):
+# ------ 2. Feature selection ----------------------------------------------------
+def select_segmentation_features(df, exclude_columns=None, display_report=True):
     """
     Exclude explicitly specified columns from a DataFrame.
 
@@ -195,37 +172,33 @@ def select_segmentation_features(
 
     exclude_columns = list(exclude_columns or [])
 
-    missing_columns = [
-        col for col in exclude_columns
-        if col not in df.columns
-    ]
+    missing_columns = [col for col in exclude_columns if col not in df.columns]
 
-    valid_exclusions = [
-        col for col in exclude_columns
-        if col in df.columns
-    ]
+    valid_exclusions = [col for col in exclude_columns if col in df.columns]
 
     X = df.drop(columns=valid_exclusions).copy()
 
     if display_report:
-        selection_report = pd.DataFrame({
-            "Metric": [
-                "Original Rows",
-                "Original Columns",
-                "Columns Requested for Exclusion",
-                "Columns Actually Excluded",
-                "Columns Not Found",
-                "Selected Features"
-            ],
-            "Value": [
-                len(df),
-                len(df.columns),
-                len(exclude_columns),
-                len(valid_exclusions),
-                len(missing_columns),
-                X.shape[1]
-            ]
-        })
+        selection_report = pd.DataFrame(
+            {
+                "Metric": [
+                    "Original Rows",
+                    "Original Columns",
+                    "Columns Requested for Exclusion",
+                    "Columns Actually Excluded",
+                    "Columns Not Found",
+                    "Selected Features",
+                ],
+                "Value": [
+                    len(df),
+                    len(df.columns),
+                    len(exclude_columns),
+                    len(valid_exclusions),
+                    len(missing_columns),
+                    X.shape[1],
+                ],
+            }
+        )
 
         print("=" * 65)
         print("CUSTOMER SEGMENTATION — FEATURE SELECTION")
@@ -234,9 +207,7 @@ def select_segmentation_features(
         display(selection_report)
 
         print("\nExcluded columns:")
-        display(pd.DataFrame({
-            "Column": valid_exclusions
-        }))
+        display(pd.DataFrame({"Column": valid_exclusions}))
 
         if missing_columns:
             print("Warning — requested columns not found:")
@@ -247,12 +218,7 @@ def select_segmentation_features(
     return X
 
 
-
-#--------3. Feature scaling function -----------------
-from sklearn.preprocessing import StandardScaler
-import pandas as pd
-
-
+# --------3. Feature scaling function -----------------
 def scale_segmentation_features(X, scaler=None):
     """
     Apply Z-score scaling to customer segmentation features.
@@ -292,9 +258,7 @@ def scale_segmentation_features(X, scaler=None):
         scaled_values = scaler.fit_transform(X)
     else:
         if not hasattr(scaler, "feature_names_in_"):
-            raise ValueError(
-                "The supplied scaler must be fitted using named features."
-            )
+            raise ValueError("The supplied scaler must be fitted using named features.")
 
         if list(X.columns) != list(scaler.feature_names_in_):
             raise ValueError(
@@ -303,13 +267,6 @@ def scale_segmentation_features(X, scaler=None):
 
         scaled_values = scaler.transform(X)
 
-    X_scaled = pd.DataFrame(
-        scaled_values,
-        columns=X.columns,
-        index=X.index
-    )
+    X_scaled = pd.DataFrame(scaled_values, columns=X.columns, index=X.index)
 
-    return {
-        "X_scaled": X_scaled,
-        "scaler": scaler
-    }
+    return {"X_scaled": X_scaled, "scaler": scaler}

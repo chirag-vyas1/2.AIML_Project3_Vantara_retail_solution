@@ -1,29 +1,16 @@
-
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-
-from sklearn.metrics import silhouette_score
-from sklearn.metrics import davies_bouldin_score
-
-from sklearn.cluster import KMeans
-
+from sklearn.cluster import DBSCAN, KMeans
+from sklearn.metrics import davies_bouldin_score, silhouette_score
 from sklearn.mixture import GaussianMixture
-
-
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-
-from sklearn.cluster import DBSCAN
-from sklearn.metrics import silhouette_score, davies_bouldin_score
-from sklearn.neighbors import NearestNeighbors
 
 ################################################################
 # 1. ---- K-means clustering Experiments ------
 ################################################################
 
-#----- 1.1. to run experiment on clustering ----------
+
+# ----- 1.1. to run experiment on clustering ----------
 def run_kmeans_experiments(
     X,
     k_values=range(2, 11),
@@ -68,10 +55,7 @@ def run_kmeans_experiments(
     if not X.columns.is_unique:
         raise ValueError("Feature names must be unique.")
 
-    if not all(
-        pd.api.types.is_numeric_dtype(dtype)
-        for dtype in X.dtypes
-    ):
+    if not all(pd.api.types.is_numeric_dtype(dtype) for dtype in X.dtypes):
         raise ValueError("All features must be numeric.")
 
     if not np.isfinite(X.to_numpy(dtype=float)).all():
@@ -88,9 +72,7 @@ def run_kmeans_experiments(
         or not 2 <= k < len(X)
         for k in k_values
     ):
-        raise ValueError(
-            "Each k must be an integer between 2 and len(X) - 1."
-        )
+        raise ValueError("Each k must be an integer between 2 and len(X) - 1.")
 
     if len(set(k_values)) != len(k_values):
         raise ValueError("Candidate k values must be unique.")
@@ -98,21 +80,14 @@ def run_kmeans_experiments(
     if n_init < 1:
         raise ValueError("n_init must be at least 1.")
 
-    if (
-        silhouette_sample_size is not None
-        and silhouette_sample_size < 2
-    ):
-        raise ValueError(
-            "silhouette_sample_size must be at least 2 or None."
-        )
+    if silhouette_sample_size is not None and silhouette_sample_size < 2:
+        raise ValueError("silhouette_sample_size must be at least 2 or None.")
 
     results = []
     models = {}
 
     sample_size = (
-        None
-        if silhouette_sample_size is None
-        else min(silhouette_sample_size, len(X))
+        None if silhouette_sample_size is None else min(silhouette_sample_size, len(X))
     )
 
     for k in k_values:
@@ -131,11 +106,13 @@ def run_kmeans_experiments(
             random_state=random_state,
         )
 
-        results.append({
-            "k": k,
-            "inertia": model.inertia_,
-            "silhouette_score": score,
-        })
+        results.append(
+            {
+                "k": k,
+                "inertia": model.inertia_,
+                "silhouette_score": score,
+            }
+        )
 
         models[k] = model
 
@@ -145,7 +122,7 @@ def run_kmeans_experiments(
     }
 
 
-#------1.2. visualize k-means experiement --------------------------------
+# ------1.2. visualize k-means experiement --------------------------------
 def visualize_kmeans_experiments(results_df):
     """
     Visualize K-Means experiment results using:
@@ -171,23 +148,19 @@ def visualize_kmeans_experiments(results_df):
     missing_columns = required_columns - set(results_df.columns)
 
     if missing_columns:
-        raise ValueError(
-            f"Missing required columns: {sorted(missing_columns)}"
-        )
+        raise ValueError(f"Missing required columns: {sorted(missing_columns)}")
 
     if results_df.empty:
         raise ValueError("Experiment results cannot be empty.")
 
     if not np.isfinite(
-        results_df[
-            ["k", "inertia", "silhouette_score"]
-        ].to_numpy(dtype=float)
+        results_df[["k", "inertia", "silhouette_score"]].to_numpy(dtype=float)
     ).all():
         raise ValueError("Experiment results contain invalid values.")
 
     results_df = results_df.sort_values("k")
 
-    fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+    _fig, axes = plt.subplots(1, 2, figsize=(14, 5))
 
     # Elbow curve
     axes[0].plot(
@@ -217,7 +190,7 @@ def visualize_kmeans_experiments(results_df):
     plt.show()
 
 
-#------ 1.3. fit_kmeans_clustering ----------------------------------------------------
+# ------ 1.3. fit_kmeans_clustering ----------------------------------------------------
 def fit_kmeans_cluster(
     X,
     n_clusters,
@@ -258,10 +231,7 @@ def fit_kmeans_cluster(
     if not X.columns.is_unique:
         raise ValueError("Feature names must be unique.")
 
-    if not all(
-        pd.api.types.is_numeric_dtype(dtype)
-        for dtype in X.dtypes
-    ):
+    if not all(pd.api.types.is_numeric_dtype(dtype) for dtype in X.dtypes):
         raise ValueError("All features must be numeric.")
 
     if not np.isfinite(X.to_numpy(dtype=float)).all():
@@ -272,9 +242,7 @@ def fit_kmeans_cluster(
         or isinstance(n_clusters, (bool, np.bool_))
         or not 2 <= n_clusters < len(X)
     ):
-        raise ValueError(
-            "n_clusters must be between 2 and len(X) - 1."
-        )
+        raise ValueError("n_clusters must be between 2 and len(X) - 1.")
 
     if n_init < 1:
         raise ValueError("n_init must be at least 1.")
@@ -301,7 +269,8 @@ def fit_kmeans_cluster(
         "cluster_sizes": cluster_sizes,
     }
 
-#------ 1.4. Evaluate kmeans model ----------------------------------------------------
+
+# ------ 1.4. Evaluate kmeans model ----------------------------------------------------
 def evaluate_kmeans_cluster(X, model, labels):
     """
     Evaluate the final fitted K-Means clustering model.
@@ -341,9 +310,7 @@ def evaluate_kmeans_cluster(X, model, labels):
     labels = np.asarray(labels)
 
     if labels.ndim != 1 or len(labels) != len(X):
-        raise ValueError(
-            "labels must contain one cluster assignment per row in X."
-        )
+        raise ValueError("labels must contain one cluster assignment per row in X.")
 
     if pd.isna(labels).any():
         raise ValueError("Cluster labels cannot contain missing values.")
@@ -351,14 +318,10 @@ def evaluate_kmeans_cluster(X, model, labels):
     n_clusters = len(np.unique(labels))
 
     if n_clusters < 2 or n_clusters >= len(X):
-        raise ValueError(
-            "Evaluation requires between 2 and len(X) - 1 clusters."
-        )
+        raise ValueError("Evaluation requires between 2 and len(X) - 1 clusters.")
 
     if n_clusters != model.n_clusters:
-        raise ValueError(
-            "The number of unique labels does not match model.n_clusters."
-        )
+        raise ValueError("The number of unique labels does not match model.n_clusters.")
 
     # Calculate evaluation metrics
     inertia = model.inertia_
@@ -393,13 +356,12 @@ def evaluate_kmeans_cluster(X, model, labels):
     }
 
 
-
-
 ####################################################################
-#----- 2. GMM clustering Experiments ----------------------------------
+# ----- 2. GMM clustering Experiments ----------------------------------
 ####################################################################
 
-#------ 1.1 GMM run experiment methods -----------------------------
+
+# ------ 1.1 GMM run experiment methods -----------------------------
 def run_gmm_experiments(
     X,
     n_components_values=range(2, 11),
@@ -441,9 +403,7 @@ def run_gmm_experiments(
         or not 2 <= n < len(X)
         for n in component_values
     ):
-        raise ValueError(
-            "Each component count must be between 2 and len(X) - 1."
-        )
+        raise ValueError("Each component count must be between 2 and len(X) - 1.")
 
     if len(set(component_values)) != len(component_values):
         raise ValueError("Component counts must be unique.")
@@ -451,18 +411,11 @@ def run_gmm_experiments(
     if n_init < 1 or max_iter < 1:
         raise ValueError("n_init and max_iter must be positive.")
 
-    if (
-        silhouette_sample_size is not None
-        and silhouette_sample_size < 2
-    ):
-        raise ValueError(
-            "silhouette_sample_size must be at least 2 or None."
-        )
+    if silhouette_sample_size is not None and silhouette_sample_size < 2:
+        raise ValueError("silhouette_sample_size must be at least 2 or None.")
 
     sample_size = (
-        None
-        if silhouette_sample_size is None
-        else min(silhouette_sample_size, len(X))
+        None if silhouette_sample_size is None else min(silhouette_sample_size, len(X))
     )
 
     results = []
@@ -491,17 +444,17 @@ def run_gmm_experiments(
             else np.nan
         )
 
-        results.append({
-            "n_components": n_components,
-            "bic": model.bic(X),
-            "aic": model.aic(X),
-            "silhouette_score": score,
-            "converged": model.converged_,
-            "iterations": model.n_iter_,
-            "smallest_cluster_size": int(
-                pd.Series(labels).value_counts().min()
-            ),
-        })
+        results.append(
+            {
+                "n_components": n_components,
+                "bic": model.bic(X),
+                "aic": model.aic(X),
+                "silhouette_score": score,
+                "converged": model.converged_,
+                "iterations": model.n_iter_,
+                "smallest_cluster_size": int(pd.Series(labels).value_counts().min()),
+            }
+        )
 
         models[n_components] = model
 
@@ -511,7 +464,7 @@ def run_gmm_experiments(
     }
 
 
-#-------- 1.2 visualize gmm --------------------------------
+# -------- 1.2 visualize gmm --------------------------------
 def visualize_gmm_experiments(results_df):
     """
     Visualize GMM experiment results:
@@ -523,21 +476,17 @@ def visualize_gmm_experiments(results_df):
     if not isinstance(results_df, pd.DataFrame):
         raise TypeError("results_df must be a pandas DataFrame.")
 
-    required = {
-        "n_components", "bic", "aic", "silhouette_score"
-    }
+    required = {"n_components", "bic", "aic", "silhouette_score"}
     missing = required - set(results_df.columns)
 
     if missing:
-        raise ValueError(
-            f"Missing required columns: {sorted(missing)}"
-        )
+        raise ValueError(f"Missing required columns: {sorted(missing)}")
     if results_df.empty:
         raise ValueError("Experiment results cannot be empty.")
 
     results_df = results_df.sort_values("n_components")
 
-    fig, axes = plt.subplots(1, 3, figsize=(18, 5))
+    _fig, axes = plt.subplots(1, 3, figsize=(18, 5))
 
     plots = [
         ("bic", "GMM Bayesian Information Criterion (BIC)"),
@@ -561,7 +510,7 @@ def visualize_gmm_experiments(results_df):
     plt.show()
 
 
-#--------1.3 fit GMM cluster --------------------------------
+# --------1.3 fit GMM cluster --------------------------------
 def fit_gmm_cluster(
     X,
     n_components,
@@ -598,9 +547,7 @@ def fit_gmm_cluster(
         or isinstance(n_components, (bool, np.bool_))
         or not 2 <= n_components < len(X)
     ):
-        raise ValueError(
-            "n_components must be between 2 and len(X) - 1."
-        )
+        raise ValueError("n_components must be between 2 and len(X) - 1.")
 
     model = GaussianMixture(
         n_components=n_components,
@@ -633,7 +580,7 @@ def fit_gmm_cluster(
     }
 
 
-#------- 1.4 evaluate GMM clustering -----------------------
+# ------- 1.4 evaluate GMM clustering -----------------------
 def evaluate_gmm_cluster(X, model, labels):
     """
     Evaluate a fitted GMM clustering model.
@@ -651,18 +598,14 @@ def evaluate_gmm_cluster(X, model, labels):
     labels = np.asarray(labels)
 
     if labels.ndim != 1 or len(labels) != len(X):
-        raise ValueError(
-            "Provide one cluster label for each row in X."
-        )
+        raise ValueError("Provide one cluster label for each row in X.")
     if pd.isna(labels).any():
         raise ValueError("Cluster labels cannot contain missing values.")
 
     n_clusters = len(np.unique(labels))
 
     if not 2 <= n_clusters < len(X):
-        raise ValueError(
-            "Evaluation requires between 2 and len(X) - 1 clusters."
-        )
+        raise ValueError("Evaluation requires between 2 and len(X) - 1 clusters.")
 
     if n_clusters != model.n_components:
         raise ValueError(
@@ -702,11 +645,11 @@ def evaluate_gmm_cluster(X, model, labels):
 
 
 ####################################################################
-#----- 3. DBSCAN clustering Experiments ----------------------------------
+# ----- 3. DBSCAN clustering Experiments ----------------------------------
 ####################################################################
 
 
-#--- 3.1 DBSCAN clustering Experiment --------------------------------
+# --- 3.1 DBSCAN clustering Experiment --------------------------------
 def run_dbscan_experiments(
     X,
     eps_values=(2.0, 3.0, 4.0, 5.0, 6.0),
@@ -743,9 +686,7 @@ def run_dbscan_experiments(
         raise ValueError("Every eps value must be positive and finite.")
 
     if any(
-        not isinstance(m, (int, np.integer))
-        or isinstance(m, (bool, np.bool_))
-        or m < 1
+        not isinstance(m, (int, np.integer)) or isinstance(m, (bool, np.bool_)) or m < 1
         for m in min_samples_values
     ):
         raise ValueError("min_samples values must be positive integers.")
@@ -787,16 +728,18 @@ def run_dbscan_experiments(
                     non_noise_labels,
                 )
 
-            results.append({
-                "eps": eps,
-                "min_samples": min_samples,
-                "n_clusters": n_clusters,
-                "noise_count": n_noise,
-                "noise_percentage": n_noise / len(X) * 100,
-                "assigned_count": n_assigned,
-                "silhouette_score": silhouette,
-                "davies_bouldin_index": db_index,
-            })
+            results.append(
+                {
+                    "eps": eps,
+                    "min_samples": min_samples,
+                    "n_clusters": n_clusters,
+                    "noise_count": n_noise,
+                    "noise_percentage": n_noise / len(X) * 100,
+                    "assigned_count": n_assigned,
+                    "silhouette_score": silhouette,
+                    "davies_bouldin_index": db_index,
+                }
+            )
 
             models[(eps, min_samples)] = model
 
@@ -805,7 +748,8 @@ def run_dbscan_experiments(
         "models": models,
     }
 
-#--- 3.2 DBBSCAN visualaizing ----------------------------------------------------------------
+
+# --- 3.2 DBBSCAN visualaizing ----------------------------------------------------------------
 def visualize_dbscan_experiments(results_df):
     """
     Visualize DBSCAN silhouette scores and noise percentages.
@@ -831,13 +775,11 @@ def visualize_dbscan_experiments(results_df):
 
     plot_df = results_df.copy()
     plot_df["configuration"] = plot_df.apply(
-        lambda row: (
-            f"eps={row['eps']}, min_samples={row['min_samples']}"
-        ),
+        lambda row: (f"eps={row['eps']}, min_samples={row['min_samples']}"),
         axis=1,
     )
 
-    fig, axes = plt.subplots(1, 2, figsize=(16, 6))
+    _fig, axes = plt.subplots(1, 2, figsize=(16, 6))
 
     axes[0].bar(
         plot_df["configuration"],
@@ -860,7 +802,8 @@ def visualize_dbscan_experiments(results_df):
     plt.tight_layout()
     plt.show()
 
-#---- 3.3 fit DBSCAN --------------------------------
+
+# ---- 3.3 fit DBSCAN --------------------------------
 def fit_dbscan_cluster(X, eps, min_samples=5):
     """
     Fit DBSCAN using the selected parameters.
@@ -912,7 +855,7 @@ def fit_dbscan_cluster(X, eps, min_samples=5):
     }
 
 
-#------ 3.4 Evaluate dbScan --------------------------------
+# ------ 3.4 Evaluate dbScan --------------------------------
 def evaluate_dbscan_cluster(X, labels):
     """
     Evaluate DBSCAN cluster assignments.

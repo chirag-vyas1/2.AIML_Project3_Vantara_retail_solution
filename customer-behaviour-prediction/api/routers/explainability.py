@@ -1,12 +1,9 @@
 import numpy as np
 import pandas as pd
-
-import shap
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from api.schemas.prediction import CustomerFeatures
-
 
 router = APIRouter(
     prefix="/explain/shap",
@@ -33,17 +30,13 @@ def get_shap_values(explanation, model):
         classes = list(model.classes_)
 
         if 1 not in classes:
-            raise ValueError(
-                "The model does not contain churn class 1."
-            )
+            raise ValueError("The model does not contain churn class 1.")
 
         class_index = classes.index(1)
         values = values[:, :, class_index]
 
     if values.ndim != 2:
-        raise ValueError(
-            f"Unexpected SHAP output shape: {values.shape}"
-        )
+        raise ValueError(f"Unexpected SHAP output shape: {values.shape}")
 
     return values
 
@@ -90,15 +83,15 @@ def explain_customer(
         else:
             base_value = float(base_values[0, 0])
 
-        contributions = pd.DataFrame({
-            "feature": feature_names,
-            "value": X_customer.iloc[0].to_numpy(dtype=float),
-            "shap_value": shap_values[0],
-        })
-
-        contributions["absolute_shap"] = (
-            contributions["shap_value"].abs()
+        contributions = pd.DataFrame(
+            {
+                "feature": feature_names,
+                "value": X_customer.iloc[0].to_numpy(dtype=float),
+                "shap_value": shap_values[0],
+            }
         )
+
+        contributions["absolute_shap"] = contributions["shap_value"].abs()
 
         contributions = contributions.sort_values(
             "absolute_shap",
@@ -123,6 +116,7 @@ def explain_customer(
             detail="Unable to generate the customer SHAP explanation.",
         ) from exc
 
+
 @router.post("/global")
 def explain_global(
     payload: GlobalShapRequest,
@@ -135,10 +129,7 @@ def explain_global(
     feature_names = bundle["feature_names"]
     explainer = request.app.state.shap_explainer
 
-    records = [
-        customer.model_dump()
-        for customer in payload.customers
-    ]
+    records = [customer.model_dump() for customer in payload.customers]
 
     X = pd.DataFrame(records, columns=feature_names)
 
@@ -146,12 +137,12 @@ def explain_global(
         explanation = explainer(X)
         shap_values = get_shap_values(explanation, model)
 
-        importance = pd.DataFrame({
-            "feature": feature_names,
-            "mean_absolute_shap": np.abs(
-                shap_values
-            ).mean(axis=0),
-        })
+        importance = pd.DataFrame(
+            {
+                "feature": feature_names,
+                "mean_absolute_shap": np.abs(shap_values).mean(axis=0),
+            }
+        )
 
         importance = importance.sort_values(
             "mean_absolute_shap",
@@ -165,7 +156,6 @@ def explain_global(
             "feature_values": X.to_numpy(dtype=float).tolist(),
             "shap_values": shap_values.tolist(),
             "importance": importance.to_dict(orient="records"),
-
         }
 
     except (ValueError, IndexError, KeyError) as exc:

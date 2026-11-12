@@ -1,13 +1,14 @@
+from contextlib import asynccontextmanager
 
 import shap
-from contextlib import asynccontextmanager
 from fastapi import FastAPI
+
+from api.routers.explainability import router as explainability_router
 from api.routers.metadata import router as metadata_router
 from api.routers.predict import router as prediction_router
-from src.models.model_persistance import get_project_root
-from src.models.model_persistance import load_model_artifacts
+from src.models.model_persistance import get_project_root, load_model_artifacts
 from src.utils.config_loader import load_config
-from api.routers.explainability import router as explainability_router
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -29,12 +30,14 @@ async def lifespan(app: FastAPI):
 
     yield
 
+
 app = FastAPI(
     title="Vantara Customer Behaviour Prediction API",
     description="API for customer churn prediction.",
     version="1.0.0",
     lifespan=lifespan,
 )
+
 
 @app.get("/health")
 def health_check():
